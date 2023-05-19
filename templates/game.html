@@ -27,13 +27,6 @@
           {% endfor %}
         </td>
         <td>
-
-            <form hidden="hidden" method="post" id="game-form-Small">
-              <input type="text" name="letter" placeholder="Enter a letter" required="true">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <input type="submit" value="Submit">
-            </form>
-
             <form method="post" id="game-form-Big">
               {% for letter in letters %}
                 <button type="submit" name="letter" value="{{ letter }}" {% if letter | lower in letters_guessed %}disabled{% endif %}>
@@ -73,6 +66,6 @@
     </table>
   </div>
 
-  <script src='{{ url_for('static', filename='script.js') }}'></script>
+
 </body>
 </html>
