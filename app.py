@@ -1,19 +1,20 @@
-
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
+from sentry_sdk.integrations.pure_eval import PureEvalIntegration
 
 sentry_sdk.init(
     dsn="https://474c61bce8ab4c388b8b4cc4d620d503@o1363527.ingest.sentry.io/4505211270266880",
     integrations=[
-        FlaskIntegration(),
+        FlaskIntegration(),PureEvalIntegration(),
     ],
 
     # Set traces_sample_rate to 1.0 to capture 100%
     # of transactions for performance monitoring.
     # We recommend adjusting this value in production.
-    traces_sample_rate=1.0
-)
+    traces_sample_rate=1.0,
+    send_default_pii=True,
 
+)
 
 import os
 import random
@@ -24,9 +25,6 @@ from flask_wtf.csrf import CSRFProtect
 import accounts
 import firebaseDB
 import game as play_logic
-
-
-
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24).hex().encode('utf-8').decode('latin-1').encode('utf-8')
@@ -88,15 +86,15 @@ def game():
 
 @app.route('/game/<word>')
 def game_over(word):
-    return "<h1>Game over! The word was " + word + "</h1><script>setTimeout(function(){window.location.href = '/';}, " \
-                                                   "5000);</script> +<style>body{background-color: black; color: " \
+    return "<h1>(っ °Д °;)っ " + word.capitalize() + "</h1><script>setTimeout(function(){window.location.href = '/';}, " \
+                                                   "5000);</script><style>body{background-color: black; color: " \
                                                    "white;}</style> "
 
 
 @app.route('/game/<word>/success')
 def game_success(word):
-    return "<h1>You won! The word was " + word + "</h1><script>setTimeout(function(){window.location.href = '/';}, " \
-                                                 "5000);</script> +<style>body{background-color: black; color: " \
+    return "<h1> O(∩_∩)O </h1><script>setTimeout(function(){window.location.href = '/';}, " \
+                                                 "5000);</script><style>body{background-color: black; color: " \
                                                  "white;}</style> "
 
 
@@ -139,10 +137,6 @@ def logout():
     return redirect(url_for('login'))
 
 
-@app.route('/add/<int:score>')
-def add_score(score):
-    firebaseDB.add_points(session['username'], score)
-    return redirect(url_for('game'))
 
 
 @app.route('/session_data')
