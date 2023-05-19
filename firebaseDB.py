@@ -47,7 +47,7 @@ def get_leaderboard():
     users = getUsers()  # Assuming you have a function named getUsers() that returns the user data
 
     # Create the leaderboard with username and score
-    leaderboard: list[dict[str, Any]] = []
+    leaderboard = []
     for user in users:
         email = user['email']
         if 'username' in user and user['username'] != '':
@@ -77,7 +77,7 @@ def register(username, password, email):
     return True
 
 
-def getUser(username) -> str | None:
+def getUser(username):
     # the username can be the username or the email.
     # There might be no username field, but there will always be an email field
     users = getUsers()
