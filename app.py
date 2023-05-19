@@ -1,3 +1,20 @@
+
+import sentry_sdk
+from sentry_sdk.integrations.flask import FlaskIntegration
+
+sentry_sdk.init(
+    dsn="https://474c61bce8ab4c388b8b4cc4d620d503@o1363527.ingest.sentry.io/4505211270266880",
+    integrations=[
+        FlaskIntegration(),
+    ],
+
+    # Set traces_sample_rate to 1.0 to capture 100%
+    # of transactions for performance monitoring.
+    # We recommend adjusting this value in production.
+    traces_sample_rate=1.0
+)
+
+
 import os
 import random
 
@@ -7,6 +24,9 @@ from flask_wtf.csrf import CSRFProtect
 import accounts
 import firebaseDB
 import game as play_logic
+
+
+
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24).hex().encode('utf-8').decode('latin-1').encode('utf-8')
