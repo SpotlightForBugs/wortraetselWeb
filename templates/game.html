@@ -3,6 +3,17 @@
 <head>
   <title>Hangman Game</title>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+
+<!-- Bootstrap JS -->
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+<!-- jQuery -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+
+
+
 </head>
 <body>
   <table class="header">
@@ -22,21 +33,23 @@
       <tr>
         <td>
           {{ drawing | safe }}
+        <br>
 
-          {% for foo in word %}
+          {% for letter in word %}
 
-            {{ foo if foo in letters_guessed else '_' }}
+            {{ letter if letter in letters_guessed else '_' }}
           {% endfor %}
         </td>
         <td>
             <form method="post" id="game-form-Big">
-              {% for letter in letters %}
-                <button type="submit" name="letter" value="{{ letter }}" {% if letter | lower in letters_guessed %}disabled{% endif %}>
-                  {{ letter }}
-                </button>
-              {% endfor %}
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            </form>
+  {% for letter in letters %}
+                {% if not letter | lower in letters_guessed %}
+
+    <button type="submit" name="letter" value="{{ letter }}">{{ letter }}</button>
+      {% endif %}
+  {% endfor %}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
 
         </td>
       </tr>
@@ -92,7 +105,23 @@
 
 </script>
 
+<style>
+  /* Add CSS styles for mobile devices */
+  #game-form-Big {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    max-width: 100%;
+  }
 
+  #game-form-Big button {
+    width: 45px;
+    height: 45px;
+    margin: 5px;
+    font-size: 18px;
+  }
+</style>
 
 
 </body>
