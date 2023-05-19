@@ -4,7 +4,7 @@ from sentry_sdk.integrations.flask import FlaskIntegration
 from sentry_sdk.integrations.pure_eval import PureEvalIntegration
 
 sentry_sdk.init(
-    dsn="https://474c61bce8ab4c388b8b4cc4d620d503@o1363527.ingest.sentry.io/4505211270266880",
+    dsn="https://7c71cffadff9423a983843ddd3fe96a3@o1363527.ingest.sentry.io/4505154639364096",
     integrations=[
         FlaskIntegration(),PureEvalIntegration(),
     ],
@@ -14,6 +14,8 @@ sentry_sdk.init(
     # We recommend adjusting this value in production.
     traces_sample_rate=1.0,
     send_default_pii=True,
+    server_name="Hangman@Web",
+    environment="web"
 
 )
 
