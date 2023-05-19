@@ -22,7 +22,9 @@
       <tr>
         <td>
           {{ drawing | safe }}
+
           {% for foo in word %}
+
             {{ foo if foo in letters_guessed else '_' }}
           {% endfor %}
         </td>
@@ -46,7 +48,11 @@
       <th>User Score</th>
     </tr>
     <tr>
-      <td>{{ user_score }}</td>
+      <td>{% for name in leaderboard %}
+        {% if name.username == username %}
+          {{ name.score }}
+        {% endif %}
+      {% endfor %}</td>
     </tr>
   </table>
 
@@ -65,6 +71,28 @@
       {% endfor %}
     </table>
   </div>
+
+
+<script>
+    const username = "{{ username }}";
+    //make the username in a golden color inside the leaderboard
+    var leaderboard = document.getElementsByClassName("leaderboard")[0];
+    var table = leaderboard.getElementsByTagName("table")[0];
+    var rows = table.getElementsByTagName("tr");
+    for (var i = 0; i < rows.length; i++) {
+        var row = rows[i];
+        var cols = row.getElementsByTagName("td");
+        for (var j = 0; j < cols.length; j++) {
+            var col = cols[j];
+            if (col.innerHTML === username) {
+                col.style.color = "gold";
+            }
+        }
+    }
+
+</script>
+
+
 
 
 </body>
