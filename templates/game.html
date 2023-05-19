@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Hangman Game</title>
+  <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <table class="header">
+    <tr>
+      <td class="username">{{ username }}</td>
+      <td class="login-logout">{{ login_status }}</td>
+      <td class="language">{{ user_language }}</td>
+    </tr>
+  </table>
+
+  <div class="game-area">
+    <table class="hangman-table">
+      <tr>
+        <th></th>
+        <th></th>
+      </tr>
+      <tr>
+        <td>
+          {{ drawing | safe }}
+          {% for foo in word %}
+            {{ foo if foo in letters_guessed else '_' }}
+          {% endfor %}
+        </td>
+        <td>
+
+            <form hidden="hidden" method="post" id="game-form-Small">
+              <input type="text" name="letter" placeholder="Enter a letter" required="true">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="submit" value="Submit">
+            </form>
+
+            <form method="post" id="game-form-Big">
+              {% for letter in letters %}
+                <button type="submit" name="letter" value="{{ letter }}" {% if letter | lower in letters_guessed %}disabled{% endif %}>
+                  {{ letter }}
+                </button>
+              {% endfor %}
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            </form>
+
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="score-board">
+    <tr>
+      <th>User Score</th>
+    </tr>
+    <tr>
+      <td>{{ user_score }}</td>
+    </tr>
+  </table>
+
+  <div class="leaderboard">
+    <h2>Leaderboard</h2>
+    <table>
+      <tr>
+        <th>Username</th>
+        <th>Score</th>
+      </tr>
+      {% for user in leaderboard %}
+        <tr>
+          <td>{{ user.username }}</td>
+          <td>{{ user.score }}</td>
+        </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <script src='{{ url_for('static', filename='script.js') }}'></script>
+</body>
+</html>

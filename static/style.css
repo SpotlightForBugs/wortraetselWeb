@@ -1,0 +1,56 @@
+/* CSS styling for the layout */
+body {
+  font-family: Arial, sans-serif;
+}
+
+.header {
+  background-color: #f2f2f2;
+  padding: 10px;
+}
+
+.username {
+  font-weight: bold;
+}
+
+.login-logout {
+  margin-left: 10px;
+}
+
+table {
+  margin-top: 20px;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 10px;
+  text-align: left;
+}
+
+th {
+  background-color: #f2f2f2;
+}
+
+.hangman-table {
+  margin-top: 20px;
+  border-collapse: collapse;
+}
+
+.hangman-table th,
+.hangman-table td {
+  padding: 10px;
+  text-align: left;
+  border: 1px solid black;
+}
+
+.game-area {
+  margin-top: 20px;
+}
+
+.score-board {
+  margin-top: 20px;
+}
+
+.leaderboard {
+  margin-top: 10px;
+}
