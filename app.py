@@ -6,7 +6,7 @@ from sentry_sdk.integrations.pure_eval import PureEvalIntegration
 sentry_sdk.init(
     dsn="https://7c71cffadff9423a983843ddd3fe96a3@o1363527.ingest.sentry.io/4505154639364096",
     integrations=[
-        FlaskIntegration(),PureEvalIntegration(),
+        FlaskIntegration(), PureEvalIntegration(),
     ],
 
     # Set traces_sample_rate to 1.0 to capture 100%
@@ -97,8 +97,8 @@ def game_over(word):
 @app.route('/game/<word>/success')
 def game_success(word):
     return "<h1> O(∩_∩)O </h1><script>setTimeout(function(){window.location.href = '/';}, " \
-                                                 "5000);</script><style>body{background-color: black; color: " \
-                                                 "white;}</style> "
+           "5000);</script><style>body{background-color: black; color: " \
+           "white;}</style> "
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -153,10 +153,10 @@ def before_request():
             sentry_sdk.set_user({"username": uname})
 
 
-
 @app.errorhandler(500)
 def server_error_handler(error):
     return render_template("500.html", sentry_event_id=last_event_id()), 500
+
 
 if __name__ == '__main__':
     app.run(port=8080)

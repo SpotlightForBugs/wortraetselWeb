@@ -61,14 +61,14 @@
 
   <table class="score-board">
     <tr>
-      <th>User Score</th>
-    </tr>
-    <tr>
-      <td>{% for name in leaderboard %}
+      <th>Score: {% for name in leaderboard %}
         {% if name.username == username %}
           {{ name.score }}
         {% endif %}
-      {% endfor %}</td>
+      {% endfor %}</th>
+    </tr>
+    <tr>
+      <td></td>
     </tr>
   </table>
 
