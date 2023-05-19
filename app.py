@@ -1,4 +1,5 @@
 import sentry_sdk
+from sentry_sdk import last_event_id
 from sentry_sdk.integrations.flask import FlaskIntegration
 from sentry_sdk.integrations.pure_eval import PureEvalIntegration
 
@@ -137,20 +138,23 @@ def logout():
     return redirect(url_for('login'))
 
 
-
-
-@app.route('/session_data')
-def get_all_session_data():
-    """Get all session data"""
-    return session
-
-
 @app.before_request
 def before_request():
     # Check if the user is not logged in and the requested path is not the login page
     if 'username' not in session and request.path not in allowed_paths:
         return redirect(url_for('login'))
+    elif 'username' in session:
+        uname = firebaseDB.getUser(session['username'])['username']
+        if '@' in uname:
+            sentry_sdk.set_user({"email": uname})
+        else:
+            sentry_sdk.set_user({"username": uname})
 
+
+
+@app.errorhandler(500)
+def server_error_handler(error):
+    return render_template("500.html", sentry_event_id=last_event_id()), 500
 
 if __name__ == '__main__':
     app.run(port=8080)
