@@ -1,3 +1,5 @@
+{% extends 'scripts.html' %}
+{% block content %}
 <!DOCTYPE html>
 <html>
 <head>
@@ -8,7 +10,7 @@
     {% if error %}
         <p>{{ error }}</p>
     {% endif %}
-    <form method="POST" action="{{ url_for('login') }}">
+    <form method="POST" action="{{ url_for('login') }}" class="login-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="username">Username:</label>
         <input type="text" id="username" name="username" required><br><br>
@@ -32,40 +34,45 @@ cookieconsent.run({"notice_banner_type":"headline","consent_type":"express","pal
 </body>
 </html>
 
-<style>
-    body {
-        font-family: Arial, Helvetica, sans-serif;
-    }
-    h2 {
-        color: #000000;
-    }
-    p {
-        color: #000000;
-    }
-    form {
-        border: 3px solid #f1f1f1;
-    }
-    input[type=text], input[type=password] {
-        width: 100%;
-        padding: 12px 20px;
-        margin: 8px 0;
-        display: inline-block;
-        border: 1px solid #ccc;
-        box-sizing: border-box;
-    }
-    input[type=submit] {
-        background-color: #4CAF50;
-        color: white;
-        padding: 14px 20px;
-        margin: 8px 0;
-        border: none;
-        cursor: pointer;
-    }
-    input[type=submit]:hover {
-        opacity: 0.8;
-    }
-    .container {
-        padding: 16px;
-    }
-</style>
+  <style>
+        body {
+            background-color: #f1f1f1;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .login-form {
+            background-color: #ffffff;
+            margin: 50px auto;
+            padding: 20px;
+            width: 70%;
+            min-width: 300px;
+        }
+        .login-form input[type=text], .login-form input[type=password], .login-form input[type=email] {
+            width: 100%;
+            padding: 12px 20px;
+            margin: 8px 0;
+            display: block;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+        .login-form input[type=submit] {
+            width: 100%;
+            background-color: #4CAF50;
+            color: #ffffff;
+            padding: 14px 20px;
+            margin: 8px 0;
+            border: none;
+            cursor: pointer;
+        }
+        .login-form input[type=submit]:hover {
+            background-color: #45a049;
+        }
+        a {
+            color: dodgerblue;
+        }
 
+        .container {
+            padding: 16px;
+        }
+    </style>
+
+{% endblock %}
