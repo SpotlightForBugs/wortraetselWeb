@@ -161,9 +161,9 @@ def before_request():
         return redirect(url_for('login'))
     elif 'username' in session:
         uname = session['username']
-        if '@' in uname:
+        if uname and '@' in uname:
             sentry_sdk.set_user({"email": uname})
-        else:
+        elif uname:
             sentry_sdk.set_user({"username": uname})
 
 
