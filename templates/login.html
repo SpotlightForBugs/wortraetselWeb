@@ -13,7 +13,7 @@
     <form method="POST" action="{{ url_for('login') }}" class="login-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <label for="username">Username:</label>
-        <input type="text" id="username" name="username" required><br><br>
+        <input type="email" placeholder="Email-Adresse" id="username" name="email" required><br><br>
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required><br><br>
         <input type="submit" value="Login">

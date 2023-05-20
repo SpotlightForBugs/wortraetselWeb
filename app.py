@@ -2,6 +2,9 @@ import sentry_sdk
 from sentry_sdk import last_event_id
 from sentry_sdk.integrations.flask import FlaskIntegration
 from sentry_sdk.integrations.pure_eval import PureEvalIntegration
+import accounts
+import game as play_logic
+import firebaseDB
 
 sentry_sdk.init(
     dsn="https://7c71cffadff9423a983843ddd3fe96a3@o1363527.ingest.sentry.io/4505154639364096",
@@ -25,16 +28,20 @@ import random
 from flask import Flask, render_template, request, redirect, url_for, session
 from flask_wtf.csrf import CSRFProtect
 
-import accounts
-import firebaseDB
-import game as play_logic
+import firebase_admin
+from firebase_admin import credentials, auth
+from firebase_admin import firestore
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24).hex().encode('utf-8').decode('latin-1').encode('utf-8')
 csrf = CSRFProtect(app)
 allowed_paths = ['/login', '/register', '/users', '/draw', '/session_data']
-firebaseDB.init()
 
+if not firebase_admin._apps:
+    cred = credentials.Certificate("serviceAccountKey.json")
+    firebase_admin.initialize_app(cred)
+
+db = firestore.client()
 
 @app.route('/', methods=['GET', 'POST'])
 def game():
@@ -66,7 +73,7 @@ def game():
             return redirect('/game/' + word)
 
         return render_template('game.html', leaderboard=firebaseDB.get_leaderboard(),
-                               username=firebaseDB.getUser(session['username'])['username'],
+                               username=accounts.getUsername(session['username'])['username'],
                                drawing=play_logic.generate_hangman(session["wrong_guesses"], 200, 200),
                                letters=[chr(i) for i in range(65, 91)],
                                word=session['word'], letters_guessed=session['letters'], score=session['score'],
@@ -107,11 +114,17 @@ def login():
         return redirect(url_for('game'))
 
     if request.method == 'POST':
-        if accounts.login(request.form['username'], request.form['password']):
-            session['username'] = request.form['username']
-            return redirect(url_for('game'))
-        else:
-            return render_template('login.html', error="Invalid username or password")
+        email = request.form['email']
+        password = request.form['password']
+        try:
+            user = auth.get_user_by_email(email)
+            if user:
+                auth_user = accounts.login(email, password)
+                session['username'] = auth_user
+                return redirect(url_for('game'))
+        except Exception as e:
+            sentry_sdk.capture_exception(e)
+            return render_template('login.html', error="Invalid email or password")
     else:
         return render_template('login.html')
 
@@ -122,14 +135,15 @@ def register():
         return redirect(url_for('game'))
 
     if request.method == 'POST':
-        # do the passwords match?
-        if request.form['password'] != request.form['password2']:
-            return render_template('register.html', error="Passwords do not match")
-        if accounts.register(request.form['username'], request.form['password'], request.form['email']):
-            session['username'] = request.form['username']
-            return redirect(url_for('game'))
-        else:
-            return render_template('register.html', error="Username already exists")
+        email = request.form['email']
+        password = request.form['password']
+        try:
+            user = accounts.register(email, password)
+            if user:
+                session['username'] = email
+                return redirect(url_for('game'))
+        except:
+            return render_template('register.html', error="Email already exists")
     else:
         return render_template('register.html')
 
@@ -146,7 +160,7 @@ def before_request():
     if 'username' not in session and request.path not in allowed_paths:
         return redirect(url_for('login'))
     elif 'username' in session:
-        uname = firebaseDB.getUser(session['username'])['username']
+        uname = session['username']
         if '@' in uname:
             sentry_sdk.set_user({"email": uname})
         else:
@@ -155,8 +169,9 @@ def before_request():
 
 @app.errorhandler(500)
 def server_error_handler(error):
+    print(error)
     return render_template("500.html", sentry_event_id=last_event_id()), 500
 
 
 if __name__ == '__main__':
-    app.run(port=8080)
+    app.run(port=8080, debug=True)

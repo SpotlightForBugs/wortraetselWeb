@@ -177,17 +177,6 @@ def check_game_status(word, guessed_letters, wrong_tries):
     return f"Won: {word} withing {12 - len(guessed_letters)} tries"
 
 
-"""
-    Calculates the points for the user
-    
-    :param all_guesses: The total amount of guesses (type: int)
-    :param word: The word that was guessed (type: string)
-    :param guessed_letters: The letters that were guessed (type: list)
-    :param success: Whether the game was won or lost (type: boolean)
-    :return: The amount of points the user got (type: int)
-"""
-
-
 def calculate_points(wrong_guesses: int, word: str, guessed_letters: list, success: bool):
     points = 0
 
@@ -206,4 +195,4 @@ def calculate_points(wrong_guesses: int, word: str, guessed_letters: list, succe
 
 def finish_game(username: str, word: str, all_guesses: list, wrong_guesses: int, success: bool):
     points = calculate_points(wrong_guesses, word, all_guesses, success)
-    firebaseDB.add_points(username, points)
+    firebaseDB.setScore(username, points)	
