@@ -5,6 +5,7 @@ from sentry_sdk.integrations.pure_eval import PureEvalIntegration
 import accounts
 import game as play_logic
 import firebaseDB
+from flask import escape
 
 sentry_sdk.init(
     dsn="https://7c71cffadff9423a983843ddd3fe96a3@o1363527.ingest.sentry.io/4505154639364096",
@@ -50,11 +51,11 @@ def game():
         session['letters'] = []
         session['score'] = 0
         session['wrong_guesses'] = 0
-    if request.method == "GET":
+    if request.method == "GET" and 'username' in session:
 
         if all(letter in session['letters'] for letter in session['word']) and not session['wrong_guesses'] >= 12:
             play_logic.finish_game(session['username'], word=session['word'], wrong_guesses=session['wrong_guesses'],
-                                   success=True, all_guesses=session['letters'])
+                                   success=True, all_guesses=session['letters'],legacy_account=accounts.is_legacy(session['username']))
             word = session['word']
             session['word'] = play_logic.getRandomWord('de')
             session['letters'] = []
@@ -64,7 +65,7 @@ def game():
 
         elif session['wrong_guesses'] >= 12:
             play_logic.finish_game(session['username'], word=session['word'], wrong_guesses=session['wrong_guesses'],
-                                   success=False, all_guesses=session['letters'])
+                                   success=False, all_guesses=session['letters'],legacy_account=accounts.is_legacy(session['username']))
             word = session['word']
             session['word'] = play_logic.getRandomWord('de')
             session['letters'] = []
@@ -80,7 +81,7 @@ def game():
                                wrong_guesses=session['wrong_guesses'],
                                status=play_logic.check_game_status(session['word'], session['letters'],
                                                                    session['wrong_guesses']))
-    else:
+    elif request.method == "GET" and 'username' in session:
         letter = request.form['letter'].lower()
         print(letter + " " + str(session['letters']))
         if letter not in session['letters']:
@@ -92,20 +93,23 @@ def game():
             else:
                 session['wrong_guesses'] += 1
         return redirect(url_for('game'))
+    
+    else:
+        return redirect(url_for('login'))
+
 
 
 @app.route('/game/<word>')
 def game_over(word):
-    return "<h1>(っ °Д °;)っ " + word.capitalize() + "</h1><script>setTimeout(function(){window.location.href = '/';}, " \
+    return "<h1>(っ °Д °;)っ " + (word.capitalize()) + "</h1><script>setTimeout(function(){window.location.href = '/';}, " \
                                                    "5000);</script><style>body{background-color: black; color: " \
                                                    "white;}</style> "
-
 
 @app.route('/game/<word>/success')
 def game_success(word):
     return "<h1> O(∩_∩)O </h1><script>setTimeout(function(){window.location.href = '/';}, " \
            "5000);</script><style>body{background-color: black; color: " \
-           "white;}</style> "
+           "white;}</style>"
 
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -118,14 +122,19 @@ def login():
         password = request.form['password']
         try:
             user = auth.get_user_by_email(email)
-            if user:
-                auth_user = accounts.login(email, password)
-                session['username'] = auth_user
-                return redirect(url_for('game'))
-        except Exception as e:
+            print(f"User is {user} with email {email}")
+        except:
             return render_template('login.html', error="Invalid email or password")
+        if user:
+                auth_user = accounts.login(email, password)
+                if auth_user:
+                    session['username'] = auth_user
+                    return redirect(url_for('game'))
+                else:
+                    return render_template('login.html', error="Your Session has expired, please login again. Did you change your password?")
+            
     else:
-        return render_template('login.html')
+        return render_template('login.html', error="Invalid email or password")
 
 
 @app.route('/register', methods=['GET', 'POST'])
