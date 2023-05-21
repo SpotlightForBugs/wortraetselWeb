@@ -27,14 +27,25 @@
       
       
       <td class="language_switcher">
+        <label for="language">Change Language:</label>
         <form method="post" id="language-form" action="{{ url_for('set_language') }}">
-          <select name="language" onchange="this.form.submit()">
+          <select name="language" onchange="this.form.submit(); verify_selection();">
             {% for language in all_languages %}
-              <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>{{ language }}</option>
+              <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>{{ language }}
+              </option>
             {% endfor %}
           </select>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </form>
+      </td>
+
+      <td class="user_language"><img src="https://flagsapi.com/{{user_language| replace('en','GB') | upper}}/flat/64.png"> 
+    
+    {% if user_language == 'en' %}
+    <img src="https://flagsapi.com/US/flat/64.png">
+    {% endif %}
+
+      
       </td>
 
 
@@ -151,6 +162,22 @@ document.addEventListener('DOMContentLoaded', function () {
 cookieconsent.run({"notice_banner_type":"headline","consent_type":"express","palette":"dark","language":"de","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"https://hangman.spotlightforbugs.eu"});
 });
 </script>
+
+<script>
+  function verify_selection() {
+
+    //ask the user if he is sure to change the language, because the game will be restarted and the progress will be lost
+    var r = confirm("Are you sure you want to change the language? The game will be restarted and your progress will be lost.");
+    if (r == true) {
+      document.getElementById("language-form").submit();
+    } else {
+    document.getElementById("language-form").reset();
+    }
+
+
+
+  }
+
 
 
 {% endblock %}
