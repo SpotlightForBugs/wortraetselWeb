@@ -29,7 +29,7 @@
       <td class="language_switcher">
         <label for="language">Change Language:</label>
         <form method="post" id="language-form" action="{{ url_for('set_language') }}">
-          <select name="language" onchange="this.form.submit(); verify_selection();">
+          <select name="language" onchange="verify_selection();">
             {% for language in all_languages %}
               <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>{{ language }}
               </option>
@@ -177,7 +177,7 @@ cookieconsent.run({"notice_banner_type":"headline","consent_type":"express","pal
 
 
   }
-
+</script>
 
 
 {% endblock %}
