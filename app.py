@@ -123,7 +123,6 @@ def login():
                 session['username'] = auth_user
                 return redirect(url_for('game'))
         except Exception as e:
-            sentry_sdk.capture_exception(e)
             return render_template('login.html', error="Invalid email or password")
     else:
         return render_template('login.html')
@@ -162,9 +161,9 @@ def before_request():
         return redirect(url_for('login'))
     elif 'username' in session:
         uname = session['username']
-        if '@' in uname:
+        if uname and '@' in uname:
             sentry_sdk.set_user({"email": uname})
-        else:
+        elif uname:
             sentry_sdk.set_user({"username": uname})
 
 
