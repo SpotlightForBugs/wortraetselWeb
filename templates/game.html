@@ -2,7 +2,7 @@
 {% block content %}
 
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ user_language }}">
 <head>
   <title>Hangman Game</title>
   <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
@@ -22,8 +22,22 @@
   <table class="header">
     <tr>
       <td class="username">{{ username }}</td>
-      <td class="login-logout">{{ login_status }}</td>
-      <td class="language">{{ user_language }}</td>
+      <!--<td class="login-logout">{{url_for('logout') }}</td> -->
+
+      
+      
+      <td class="language_switcher">
+        <form method="post" id="language-form" action="{{ url_for('set_language') }}">
+          <select name="language" onchange="this.form.submit()">
+            {% for language in all_languages %}
+              <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>{{ language }}</option>
+            {% endfor %}
+          </select>
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        </form>
+      </td>
+
+
     </tr>
   </table>
 
