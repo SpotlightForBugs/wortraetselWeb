@@ -4,6 +4,8 @@
 <html>
 <head>
     <title>Login</title>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2749310903595106"
+     crossorigin="anonymous"></script>
 </head>
 <body>
     <h2>Login</h2>
@@ -12,8 +14,8 @@
     {% endif %}
     <form method="POST" action="{{ url_for('login') }}" class="login-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label for="username">Username:</label>
-        <input type="email" placeholder="Email-Adresse" id="username" name="email" required><br><br>
+        <label for="email">Email:</label>
+        <input type="email" placeholder="Email-Adresse" id="email" name="email" required><br><br>
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required><br><br>
         <input type="submit" value="Login">
