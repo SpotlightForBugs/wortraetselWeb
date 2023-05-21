@@ -137,8 +137,9 @@ def register():
     if request.method == 'POST':
         email = request.form['email']
         password = request.form['password']
+        username = request.form['username']
         try:
-            user = accounts.register(email, password)
+            user = accounts.register(email, password, username)
             if user:
                 session['username'] = email
                 return redirect(url_for('game'))

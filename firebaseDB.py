@@ -18,7 +18,7 @@ def get_leaderboard():
     init()
     leaderboard = []
     for user in db.collection("users").order_by("score", direction=firestore.Query.DESCENDING).stream():
-        if user.to_dict()["username"]:
+        if user.to_dict().get("username"): # using get() to avoid KeyError (username is not set for all users) 
             display_name = user.to_dict()["username"]
         else:
             display_name = user.to_dict()["email"].split("@")[0]
@@ -84,11 +84,11 @@ def setScore(username_or_email, score,overwrite=False):
     return False
 
 
-def add_user_to_db(email):
+def add_user_to_db(email, username):
     db = getDB()
     users = getUsers()
     for user in users:
         if user['email'] == email:
             return False
-    db.collection('users').add({'email': email, 'score': 0})
+    db.collection('users').add({'email': email, 'score': 0, 'username': username})
     return True

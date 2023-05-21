@@ -43,11 +43,11 @@ def login(email, password):
     
     
     
-def register(email, password):
+def register(email, password, username):
     try:
         user = auth.create_user(email=email, password=password)
         return user.uid
-        firebaseDB.add_user_to_db(email)
+        firebaseDB.add_user_to_db(email,username)
     except auth.EmailAlreadyExistsError:
         print("Email already exists")
         return login(email, password)
