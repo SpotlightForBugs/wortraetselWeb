@@ -63,7 +63,6 @@ def game():
                 wrong_guesses=session["wrong_guesses"],
                 success=True,
                 all_guesses=session["letters"],
-                legacy_account=accounts.is_legacy(session["username"]),
             )
             word = session["word"]
             session["word"] = play_logic.getRandomWord(session["language"])

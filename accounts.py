@@ -70,7 +70,7 @@ def register(email, password, username):
     :doc-author: @Spotlightforbugs
     """
     try:
-        user = auth.create_user(email=email, password=password)
+        user = auth.create_user(email=email, password=password, display_name=username)
         firebaseDB.add_user_to_db(email, username)
         return user.uid
     except auth.EmailAlreadyExistsError:
@@ -90,7 +90,14 @@ def getUsername(email):
     # we return the displayname of the user if it exists, otherwise we return the email without the domain
     auth_user = auth.get_user_by_email(email)
     if auth_user.display_name:
-        return {"username": auth_user.display_name}
+        return {"username": auth_user.display_name, "legacy": False}
+
+    db = firebaseDB.getDB()
+    users_ref = db.collection("users")
+    for doc in users_ref.stream():
+        if doc.to_dict()["email"] == email:
+            if doc.to_dict().get("username"):
+                return {"username": doc.to_dict()["username"], "legacy": True}
     return {"username": email.split("@")[0]}
 
 
@@ -102,5 +109,9 @@ def is_legacy_user(email):  # checks if the user is a legacy user (has no userna
     :return: A boolean value (true or false)
     :doc-author: @Spotlightforbugs
     """
-    if getUsername(email)["username"] == email.split("@")[0]:
+    if getUsername(email)["legacy"]:
         return True
+
+
+def is_legacy(username_or_email):
+    return is_legacy_user(email=username_or_email)
