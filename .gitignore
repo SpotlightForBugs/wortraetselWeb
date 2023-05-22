@@ -1,3 +1,5 @@
 /serviceAccountKey.json
 .pycache/
 .pyc
+.vscode
+__pycache__
