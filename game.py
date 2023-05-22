@@ -271,6 +271,6 @@ def calculate_points(
     return points
 
 
-def finish_game(username: str, word: str, all_guesses: list, wrong_guesses: int, success: bool, legacy_account: bool):
+def finish_game(username: str, word: str, all_guesses: list, wrong_guesses: int, success: bool, legacy_account=False):
     points = calculate_points(wrong_guesses, word, all_guesses, success)
     firebaseDB.setScore(username, points)
