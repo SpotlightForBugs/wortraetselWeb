@@ -24,7 +24,15 @@ sentry_sdk.init(
 import os
 import random
 
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    send_from_directory,
+)
 from flask_wtf.csrf import CSRFProtect
 
 import firebase_admin
@@ -34,7 +42,15 @@ from firebase_admin import firestore
 app = Flask(__name__)
 app.secret_key = os.urandom(24).hex().encode("utf-8").decode("latin-1").encode("utf-8")
 csrf = CSRFProtect(app)
-allowed_paths = ["/login", "/register", "/users", "/draw", "/session_data"]
+allowed_paths = [
+    "/login",
+    "/register",
+    "/users",
+    "/draw",
+    "/session_data",
+    "favicon.ico",
+    "robots.txt",
+]
 
 if not firebase_admin._apps:
     cred = credentials.Certificate("serviceAccountKey.json")
@@ -231,6 +247,15 @@ def before_request():
             sentry_sdk.set_user({"email": uname})
         elif uname:
             sentry_sdk.set_user({"username": uname})
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path, "static"),
+        "favicon.ico",
+        mimetype="image/vnd.microsoft.icon",
+    )
 
 
 @app.errorhandler(500)

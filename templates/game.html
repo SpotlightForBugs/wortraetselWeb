@@ -28,7 +28,7 @@
       
       
       <td class="language_switcher">
-        <label for="language">Change Language:</label>
+        <p>Change language:</p>
         <form method="post" id="language-form" action="{{ url_for('set_language') }}">
           <select name="language" onchange="verify_selection();">
             {% for language in all_languages %}
@@ -40,7 +40,8 @@
         </form>
       </td>
 
-      <td class="user_language"><img src="https://flagsapi.com/{{user_language| replace('en','GB') | upper}}/shiny/64.png"> 
+    
+      <td class="user_language">Your selected language: <br><img src="https://flagsapi.com/{{user_language| replace('en','GB') | upper}}/shiny/64.png"> 
     
     {% if user_language == 'en' %}
     <img src="https://flagsapi.com/US/shiny/64.png">
