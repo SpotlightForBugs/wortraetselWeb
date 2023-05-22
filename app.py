@@ -102,6 +102,7 @@ def game():
             ),
             user_language=session["language"],
             all_languages=play_logic.getLanguages(),
+            dark_mode=session.get("dark_mode", False),
         )
     elif request.method == "POST":
         letter = request.form["letter"].lower()
@@ -131,6 +132,17 @@ def set_language():
                 session["score"] = 0
                 session["wrong_guesses"] = 0
 
+    return redirect(url_for("game"))
+
+
+@app.route("/set_dark_mode", methods=["POST"])
+def dark_mode():
+    if request.method == "POST":
+        if "dark_mode" in request.form:
+            if session.get("dark_mode", False):
+                session["dark_mode"] = False
+            else:
+                session["dark_mode"] = True
     return redirect(url_for("game"))
 
 

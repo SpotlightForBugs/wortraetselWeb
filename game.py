@@ -5,7 +5,7 @@ import zufallsworte as german_words
 
 import firebaseDB
 
-globals()["LANGUAGES"] = ["en", "de", "fi"]
+globals()["LANGUAGES"] = ["en", "de", "fi", "fr"]
 
 
 def isValidLanguage(language):
@@ -44,6 +44,12 @@ def getRandomWord(language):
                 .replace("ß", "ss")
                 .lower()
             )
+        elif language == "fr":
+            french_api = "https://raw.githubusercontent.com/lorenbrichter/Words/master/Words/fr.txt"
+            translationTable = str.maketrans("éàèùâêîôûç", "eaeuaeiouc")
+            french_api_words = requests.get(french_api).text.lower()
+            french_api_words = french_api_words.translate(translationTable).split("\n")
+            return random.choice(french_api_words)
 
 
 def generate_hangman(tries, n, m):
@@ -271,6 +277,13 @@ def calculate_points(
     return points
 
 
-def finish_game(username: str, word: str, all_guesses: list, wrong_guesses: int, success: bool, legacy_account=False):
+def finish_game(
+    username: str,
+    word: str,
+    all_guesses: list,
+    wrong_guesses: int,
+    success: bool,
+    legacy_account=False,
+):
     points = calculate_points(wrong_guesses, word, all_guesses, success)
     firebaseDB.setScore(username, points)

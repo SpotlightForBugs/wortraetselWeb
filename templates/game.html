@@ -23,7 +23,7 @@
   <table class="header">
     <tr>
       <td class="username">{{ username }}</td>
-      <!--<td class="login-logout">{{url_for('logout') }}</td> -->
+      <td class="login-logout"><button onclick="location.href='{{ url_for('logout') }}'">Logout</button></td> 
 
       
       
@@ -45,9 +45,20 @@
     {% if user_language == 'en' %}
     <img src="https://flagsapi.com/US/shiny/64.png">
     {% endif %}
+    </td>
 
-      
-      </td>
+    <td class="toggle_dark_mode">
+        <form action="{{ url_for('dark_mode') }}" method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if dark_mode %}
+        <button type="submit" name="dark_mode" value="dark_mode">Light Mode</button>
+        {% else %}
+        <button type="submit" name="dark_mode" value="dark_mode">Dark Mode</button>
+        {% endif %}
+        </form>
+    </td>
+
+ 
 
 
     </tr>
@@ -127,7 +138,12 @@
         for (var j = 0; j < cols.length; j++) {
             var col = cols[j];
             if (col.innerHTML === username) {
+
+              
                 col.style.color = "gold";
+                {% if dark_mode %}
+                col.style.color = "blue";
+                {% endif %}
             }
         }
     }
@@ -179,6 +195,29 @@ cookieconsent.run({"notice_banner_type":"headline","consent_type":"express","pal
 
   }
 </script>
+
+
+
+
+
+{% if dark_mode %}
+
+<style>
+
+@media (prefers-color-scheme: dark) {
+  html { filter: invert(100%); }
+  img { filter: invert(100%); }
+  
+
+
+
+}
+
+</style>
+
+{% endif %}
+
+
 
 
 {% endblock %}

@@ -54,3 +54,37 @@ th {
 .leaderboard {
   margin-top: 10px;
 }
+
+
+/* Make all links black */
+a {
+  color: black;
+}
+
+a:hover {
+  color: black;
+}
+
+a:visited {
+  color: black;
+}
+
+a:active {
+  color: black;
+}
+
+a:link {
+  color: black;
+}
+
+/* make the selected text black */
+::selection {
+  background: #000000;
+  color: #ffffff;
+}
+
+::-moz-selection {
+  background: #000000;
+  color: #ffffff;
+}
+
