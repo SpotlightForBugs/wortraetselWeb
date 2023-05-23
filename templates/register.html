@@ -19,26 +19,50 @@
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" required><br><br>
         <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br><br>
+        <input type="password" id="password" name="password" pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$" 
+            title="Password must contain at least 8 characters, including one uppercase letter, one lowercase letter, one digit, and one special character." required>
+        <div id="password-strength-meter"></div><br><br>
         <label for="confirm_password">Confirm Password:</label>
-        <input type="password" id="confirm_password" name="password2" required><br><br>
+        <input type="password" id="confirm_password" name="password2" required>
+        <p id="password-match-message" style="display: none; color: red;">Passwords do not match</p><br><br>
         <input type="submit" value="Register">
     </form>
     <p>Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
 
-<script type="text/javascript" src="//www.freeprivacypolicy.com/public/cookie-consent/4.1.0/cookie-consent.js" charset="UTF-8"></script>
-<script type="text/javascript" charset="UTF-8">
-document.addEventListener('DOMContentLoaded', function () {
-cookieconsent.run({"notice_banner_type":"headline","consent_type":"express","palette":"dark","language":"de","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"https://hangman.spotlightforbugs.eu"});
-});
-</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js"></script>
+    <script>
+        const passwordInput = document.getElementById('password');
+        const confirmInput = document.getElementById('confirm_password');
+        const passwordStrengthMeter = document.getElementById('password-strength-meter');
+        const passwordMatchMessage = document.getElementById('password-match-message');
 
-<a href="#" id="open_preferences_center">Cookie-Einstellungen</a>
+        passwordInput.addEventListener('input', function () {
+            const password = passwordInput.value;
+            const strength = zxcvbn(password).score; // Evaluates password strength from 0 to 4
+            const strengthText = ['Very Weak', 'Weak', 'Fair', 'Strong', 'Very Strong'];
+            const strengthClass = ['very-weak', 'weak', 'fair', 'strong', 'very-strong'];
 
+            passwordStrengthMeter.innerHTML = 'Password Strength: ' + strengthText[strength];
+            passwordStrengthMeter.className = 'password-strength ' + strengthClass[strength];
 
-</body>
-</html>
+            if (confirmInput.value !== '') {
+                checkPasswordMatch();
+            }
+        });
 
+        confirmInput.addEventListener('input', checkPasswordMatch);
+
+        function checkPasswordMatch() {
+            const password = passwordInput.value;
+            const confirmPassword = confirmInput.value;
+
+            if (password === confirmPassword) {
+                passwordMatchMessage.style.display = 'none';
+            } else {
+                passwordMatchMessage.style.display = 'block';
+            }
+        }
+    </script>
 
     <style>
         body {
@@ -79,6 +103,38 @@ cookieconsent.run({"notice_banner_type":"headline","consent_type":"express","pal
         .container {
             padding: 16px;
         }
+
+        .password-strength {
+            margin-top: 10px;
+            font-weight: bold;
+        }
+
+        .very-weak {
+            color: red;
+        }
+
+        .weak {
+            color: orange;
+        }
+
+        .fair {
+            color: yellow;
+        }
+
+        .strong {
+            color: green;
+        }
+
+        .very-strong {
+            color: darkgreen;
+        }
+
+        #password-match-message {
+            margin-top: 5px;
+            font-weight: bold;
+        }
     </style>
+</body>
+</html>
 
 {% endblock %}
