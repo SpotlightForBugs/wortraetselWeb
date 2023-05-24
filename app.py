@@ -176,7 +176,7 @@ def game_over(word):
 @app.route("/game/<word>/success")
 def game_success(word):
     return (
-        "<h1> O(∩_∩)O </h1><script>setTimeout(function(){window.location.href = '/';}, "
+        "<h1> Super, du hast es erraten. Das Wort war "+word.capitalize()+ " </h1><script>setTimeout(function(){window.location.href = '/';}, "
         "5000);</script><style>body{background-color: black; color: "
         "white;}</style>"
     )
