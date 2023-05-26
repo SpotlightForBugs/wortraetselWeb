@@ -29,6 +29,8 @@
   <script>
   
   
+  const delay = ms => new Promise(res => setTimeout(res, ms));
+  
   function getRandomWord() {
   return fetch("https://random-word-api.vercel.app/api?words=1")
     .then(response => response.json())
@@ -106,7 +108,9 @@ function waitForWord() {
 		  document.getElementById('wordDisplay').textContent = selectedWord;
         document.getElementById('result').textContent = 'Congratulations! You guessed the word.';
         removeLetterButtons();
-        document.removeEventListener('keydown', handleKeyDown);
+        setTimeout(function(){
+   window.location.reload();
+}, 5000);
       } else {
         displayWord();
         removeLetterButton(guess);
@@ -120,7 +124,10 @@ function waitForWord() {
             document.getElementById('result').textContent = 'Game Over! You ran out of attempts.';
             document.getElementById('wordDisplay').textContent = selectedWord;
             removeLetterButtons();
-            document.removeEventListener('keydown', handleKeyDown);
+            setTimeout(function(){
+   window.location.reload();
+}, 5000);
+            
           } else {
             drawHangman(incorrectGuesses);
           }
@@ -224,5 +231,8 @@ function waitForWord() {
     // Create letter buttons after the DOM content is loaded
     document.addEventListener('DOMContentLoaded', waitForWord);
   </script>
+  <a href="/login">Login</a>
+  <br>
+  <a href="/register">Register</a>
   
   {% endblock %}
