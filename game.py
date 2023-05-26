@@ -29,7 +29,7 @@ def getRandomWord(language):
                 .lower()
             )
         elif language == "en":
-            english_api = "https://random-word-api.herokuapp.com/word?number=1"
+            english_api = "https://random-word-api.vercel.app/api?words=1"
             return requests.get(english_api).json()[0].lower()
         elif language == "fi":
             finnish_word_list = requests.get(
