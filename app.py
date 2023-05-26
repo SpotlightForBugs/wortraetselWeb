@@ -48,8 +48,9 @@ allowed_paths = [
     "/users",
     "/draw",
     "/session_data",
-    "favicon.ico",
-    "robots.txt",
+    "/favicon.ico",
+    "/robots.txt",
+    "/demo"
 ]
 
 if not firebase_admin._apps:
@@ -134,6 +135,12 @@ def game():
 
     else:
         return redirect(url_for("login"))
+        
+
+@app.route("/demo")
+def demo():
+    return render_template("demo.html")
+     
 
 
 @app.route("/set_language", methods=["POST"])
