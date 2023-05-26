@@ -256,20 +256,7 @@ function waitForWord() {
       }
     }
 
-    // Handle keydown events to process user's guesses
-    function handleKeyDown(event) {
-      const key = event.key.toLowerCase();
-
-      // Only process alphabetic keys
-      if (key.match(/[a-z]/)) {
-        if (guessedLetters.includes(key)) {
-          // Letter has already been guessed
-          return;
-        }
-
-        handleGuess(key);
-      }
-    }
+  
 
     // Function to remove letter buttons
     function removeLetterButtons() {
@@ -300,8 +287,7 @@ function waitForWord() {
       }
     }
 
-    // Attach keydown event listener to the document
-    document.addEventListener('keydown', handleKeyDown);
+    
 
     
 
