@@ -231,8 +231,10 @@ function waitForWord() {
     // Create letter buttons after the DOM content is loaded
     document.addEventListener('DOMContentLoaded', waitForWord);
   </script>
-  <a href="/login">Login</a>
+
+  <a class="btn btn-primary" href="/login" role="button">Login</a>
   <br>
-  <a href="/register">Register</a>
+
+  <a class="btn btn-primary" href="/register" role="button">Register</a>
   
   {% endblock %}
