@@ -21,6 +21,7 @@
 </head>
 <body>
   <h1>Play the demo (english only)</h1>  
+   <a class="btn btn-primary" href="/login" role="button">Login</a><a class="btn btn-primary" href="/register" role="button">Register</a>
   <canvas id="hangmanCanvas" width="400" height="400"></canvas>
   <h2 id="wordDisplay"></h2>
   <h2 id="result"></h2>
@@ -232,9 +233,6 @@ function waitForWord() {
     document.addEventListener('DOMContentLoaded', waitForWord);
   </script>
 
-  <a class="btn btn-primary" href="/login" role="button">Login</a>
-  <br>
-
-  <a class="btn btn-primary" href="/register" role="button">Register</a>
+ 
   
   {% endblock %}
