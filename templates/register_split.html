@@ -11,16 +11,15 @@
 	<!--{% if not username %}-->
 	<h1>Hello, new user</h1>
 	<!--{% else %}-->
-	<h1>Hello, {{username | capitalize }}</h1>
+	<h1>Hello, {{ username | capitalize }}</h1>
 	
 	<div class="container">
-		<!--{% if not username or not email or not password%}-->
+		<!--{% if not username or not email or not password %}-->
 		<form class="form form-control " method="post">
 			<!--{% else %}-->
 			<form class="form form-control" method="post" action="{{ url_for('register') }}">
-				<!--{% endif%}-->
+				<!--{% endif %}-->
 			
-				
 			<!--{% if not username %}-->
 			<br />
 			<input type="text" placeholder="your nickname" width="100%" name="username" autocomplete="1" class="form-control shadow-sm" required="">
@@ -34,13 +33,10 @@
 			<input type="password" name="password2" value="" placeholder="confirm your password" class="form-control shadow-sm" required="">
 			<!--{% endif %}-->
 			
-			<input type="hidden" value="{{csrf_token()}} name="csrf_token">
+			<input type="hidden" value="{{ csrf_token() }}" name="csrf_token">
 			
 			<input type="submit" class="btn btn-primary shadow" role="button" value="continue">
 		</form>
-		
 	</div>
-	
-	
 </body>
 </html>
