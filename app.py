@@ -160,10 +160,7 @@ def set_language():
 
 @app.route("/set_dark_mode", methods=["POST"])
 def dark_mode():
-    if (
-        request.method == "POST"
-        and "dark_mode" in request.form
-    ):
+    if request.method == "POST" and "dark_mode" in request.form:
         if session.get("dark_mode", False):
             session["dark_mode"] = False
         else:

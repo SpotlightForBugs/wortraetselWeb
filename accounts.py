@@ -95,10 +95,7 @@ def getUsername(email):
     db = firebaseDB.getDB()
     users_ref = db.collection("users")
     for doc in users_ref.stream():
-        if (
-            doc.to_dict()["email"] == email
-            and doc.to_dict().get("username")
-        ):
+        if doc.to_dict()["email"] == email and doc.to_dict().get("username"):
             return {"username": doc.to_dict()["username"], "legacy": True}
     return {"username": email.split("@")[0]}
 
