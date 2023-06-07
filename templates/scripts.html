@@ -32,8 +32,10 @@ Sentry.init({
 </script>
 
 <script>
+{% if username %}
 window.clarity("identify", "{{ username }}");
 console.log("Recognized your username as {{ username }}");
+{% endif %}
 </script>
 
 
