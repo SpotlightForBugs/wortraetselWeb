@@ -64,7 +64,7 @@ db = firestore.client()
 @app.route("/", methods=["GET", "POST"])
 def game():
     if "word" not in session:
-        if not "language" in session:
+        if "language" not in session:
             session["language"] = "de"
         session["word"] = play_logic.getRandomWord(session["language"])
         session["letters"] = []
@@ -239,11 +239,11 @@ def register():
 @app.route("/register_split", methods=["GET", "POST"])
 def register_split():
     if request.method == "POST":
-        if not "uname" in session:
+        if "uname" not in session:
             session["uname"] = request.form.get("username", False)
-        if not "username" in session:
+        if "username" not in session:
             session["username"] = request.form.get("email", False)
-        if not "password" in session:
+        if "password" not in session:
             if request.form.get("password") and request.form.get("password") != "":
                 session["password"] = request.form.get("password", False)
 
