@@ -1,87 +1,95 @@
-{% extends 'scripts.html' %}
-{% block content %}
+{% extends 'scripts.html' %} {% block content %}
 <!DOCTYPE html>
 <html>
-<head>
+  <head>
     <title>Login</title>
-    
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2749310903595106"
-     crossorigin="anonymous"></script>
-</head>
-<body>
+    <script
+      async
+      src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2749310903595106"
+      crossorigin="anonymous"
+    ></script>
+  </head>
+  <body>
     <h2>Login</h2>
     {% if error %}
-        <p>{{ error }}</p>
+    <p>{{ error }}</p>
     {% endif %}
     <form method="POST" action="{{ url_for('login') }}" class="login-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        <label for="email">Email:</label>
-        <input type="email" placeholder="Email-Adresse" id="email" name="email" required><br><br>
-        <label for="password">Password:</label>
-        <input type="password" id="password" name="password" required><br><br>
-        <input type="submit" value="Login">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <label for="email">Email:</label>
+      <input
+        type="email"
+        placeholder="Email-Adresse"
+        id="email"
+        name="email"
+        required
+      /><br /><br />
+      <label for="password">Password:</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        required
+      /><br /><br />
+      <input type="submit" value="Login" />
     </form>
-    <p>Don't have an account? <a href="{{ url_for('register') }}">Register instead!</a></p>
+    <p>
+      Don't have an account?
+      <a href="{{ url_for('register') }}">Register instead!</a>
+    </p>
 
+    <br />
 
+    <style>
+      body {
+        background-color: #f1f1f1;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      .login-form {
+        background-color: #ffffff;
+        margin: 50px auto;
+        padding: 20px;
+        width: 70%;
+        min-width: 300px;
+      }
+      .login-form input[type="text"],
+      .login-form input[type="password"],
+      .login-form input[type="email"] {
+        width: 100%;
+        padding: 12px 20px;
+        margin: 8px 0;
+        display: block;
+        border: 1px solid #ccc;
+        box-sizing: border-box;
+      }
+      .login-form input[type="submit"] {
+        width: 100%;
+        background-color: #4caf50;
+        color: #ffffff;
+        padding: 14px 20px;
+        margin: 8px 0;
+        border: none;
+        cursor: pointer;
+      }
+      .login-form input[type="submit"]:hover {
+        background-color: #45a049;
+      }
+      a {
+        color: dodgerblue;
+      }
 
-
-<br>
-
-
-  <style>
-        body {
-            background-color: #f1f1f1;
-            font-family: Arial, Helvetica, sans-serif;
-        }
-        .login-form {
-            background-color: #ffffff;
-            margin: 50px auto;
-            padding: 20px;
-            width: 70%;
-            min-width: 300px;
-        }
-        .login-form input[type=text], .login-form input[type=password], .login-form input[type=email] {
-            width: 100%;
-            padding: 12px 20px;
-            margin: 8px 0;
-            display: block;
-            border: 1px solid #ccc;
-            box-sizing: border-box;
-        }
-        .login-form input[type=submit] {
-            width: 100%;
-            background-color: #4CAF50;
-            color: #ffffff;
-            padding: 14px 20px;
-            margin: 8px 0;
-            border: none;
-            cursor: pointer;
-        }
-        .login-form input[type=submit]:hover {
-            background-color: #45a049;
-        }
-        a {
-            color: dodgerblue;
-        }
-
-        .container {
-            padding: 16px;
-        }
+      .container {
+        padding: 16px;
+      }
     </style>
-    
-    
-  
-  
-  <br>
-  <a href="/demo">Play the Demo</a>
- <br> 
-  <a href="#" id="open_preferences_center">Cookie-Einstellungen</a>
-  
-</body>
-</html>
 
-     
+    <br />
+    <a href="/demo">Play the Demo</a>
+    <br />
+    <a href="#" id="open_preferences_center">Cookie-Einstellungen</a>
+  </body>
+</html>
 
 {% endblock %}

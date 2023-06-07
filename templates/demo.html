@@ -1,8 +1,7 @@
-{% extends 'scripts.html' %}
-{% block content %}
+{% extends 'scripts.html' %} {% block content %}
 
 <head>
-<style>
+  <style>
     canvas {
       border: 1px solid black;
     }
@@ -16,60 +15,56 @@
       margin: 5px;
     }
   </style>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" type="text/javascript"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css"
+    integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65"
+    crossorigin="anonymous"
+  />
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
+    type="text/javascript"
+  ></script>
 </head>
 <body>
-  <h1>Play the demo (english only)</h1>  
-   <a class="btn btn-primary" href="/login" role="button">Login</a><a class="btn btn-primary" href="/register" role="button">Register</a>
+  <h1>Play the demo (english only)</h1>
+  <a class="btn btn-primary" href="/login" role="button">Login</a
+  ><a class="btn btn-primary" href="/register" role="button">Register</a>
   <canvas id="hangmanCanvas" width="400" height="400"></canvas>
   <h2 id="wordDisplay"></h2>
   <h2 id="result"></h2>
   <div class="letters"></div>
 
   <script>
-  
-  
-  const delay = ms => new Promise(res => setTimeout(res, ms));
-  
-  function getRandomWord() {
-  return fetch("https://random-word-api.vercel.app/api?words=1")
-    .then(response => response.json())
-    .then(data => data[0])
-    .catch(error => {
-      console.error("Error fetching random word:", error);
-      return null;
-    });
-}
+    const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
+    function getRandomWord() {
+      return fetch("https://random-word-api.vercel.app/api?words=1")
+        .then((response) => response.json())
+        .then((data) => data[0])
+        .catch((error) => {
+          console.error("Error fetching random word:", error);
+          return null;
+        });
+    }
 
+    const canvas = document.getElementById("hangmanCanvas");
+    const context = canvas.getContext("2d");
 
-  
-    const canvas = document.getElementById('hangmanCanvas');
-    const context = canvas.getContext('2d');
-
-    
-
-    
     let selectedWord;
-    
-    
-    getRandomWord().then(result => {
-  selectedWord = result;
-  
-});
 
-function waitForWord() {
-  if (typeof selectedWord === 'undefined') {
-    setTimeout(waitForWord, 100); // Wait for 100 milliseconds before checking again
-  } else {
-  displayWord();
-  createLetterButtons();
-    
-  }
-}
+    getRandomWord().then((result) => {
+      selectedWord = result;
+    });
 
-
+    function waitForWord() {
+      if (typeof selectedWord === "undefined") {
+        setTimeout(waitForWord, 100); // Wait for 100 milliseconds before checking again
+      } else {
+        displayWord();
+        createLetterButtons();
+      }
+    }
 
     // Create an array to track guessed letters
     const guessedLetters = [];
@@ -79,16 +74,16 @@ function waitForWord() {
 
     // Function to display the current state of the word
     function displayWord() {
-      let display = '';
+      let display = "";
       for (const letter of selectedWord) {
         if (guessedLetters.includes(letter)) {
           display += letter;
         } else {
-          display += '_';
+          display += "_";
         }
-        display += ' ';
+        display += " ";
       }
-      document.getElementById('wordDisplay').textContent = display;
+      document.getElementById("wordDisplay").textContent = display;
     }
 
     // Function to check if the word has been fully guessed
@@ -106,12 +101,13 @@ function waitForWord() {
       guessedLetters.push(guess);
 
       if (hasWon()) {
-		  document.getElementById('wordDisplay').textContent = selectedWord;
-        document.getElementById('result').textContent = 'Congratulations! You guessed the word.';
+        document.getElementById("wordDisplay").textContent = selectedWord;
+        document.getElementById("result").textContent =
+          "Congratulations! You guessed the word.";
         removeLetterButtons();
-        setTimeout(function(){
-   window.location.reload();
-}, 5000);
+        setTimeout(function () {
+          window.location.reload();
+        }, 5000);
       } else {
         displayWord();
         removeLetterButton(guess);
@@ -121,14 +117,14 @@ function waitForWord() {
           incorrectGuesses++;
           if (incorrectGuesses === 6) {
             // Reached maximum number of incorrect guesses
-			drawHangman(6);
-            document.getElementById('result').textContent = 'Game Over! You ran out of attempts.';
-            document.getElementById('wordDisplay').textContent = selectedWord;
+            drawHangman(6);
+            document.getElementById("result").textContent =
+              "Game Over! You ran out of attempts.";
+            document.getElementById("wordDisplay").textContent = selectedWord;
             removeLetterButtons();
-            setTimeout(function(){
-   window.location.reload();
-}, 5000);
-            
+            setTimeout(function () {
+              window.location.reload();
+            }, 5000);
           } else {
             drawHangman(incorrectGuesses);
           }
@@ -194,12 +190,10 @@ function waitForWord() {
       }
     }
 
-  
-
     // Function to remove letter buttons
     function removeLetterButtons() {
-      const letterButtons = document.querySelectorAll('.letter-button');
-      letterButtons.forEach(button => button.remove());
+      const letterButtons = document.querySelectorAll(".letter-button");
+      letterButtons.forEach((button) => button.remove());
     }
 
     // Function to remove a specific letter button
@@ -210,29 +204,24 @@ function waitForWord() {
 
     // Create buttons for each letter of the alphabet
     function createLetterButtons() {
-      const lettersContainer = document.querySelector('.letters');
-      const alphabet = 'abcdefghijklmnopqrstuvwxyz';
+      const lettersContainer = document.querySelector(".letters");
+      const alphabet = "abcdefghijklmnopqrstuvwxyz";
 
       for (const letter of alphabet) {
-        const button = document.createElement('button');
+        const button = document.createElement("button");
         button.textContent = letter;
         button.id = `letter-${letter}`;
-        button.classList.add('letter-button');
-		button.classList.add('btn');
-		button.classList.add('btn-danger');
-        button.addEventListener('click', () => handleGuess(letter));
+        button.classList.add("letter-button");
+        button.classList.add("btn");
+        button.classList.add("btn-danger");
+        button.addEventListener("click", () => handleGuess(letter));
         lettersContainer.appendChild(button);
       }
     }
 
-    
-
-    
-
     // Create letter buttons after the DOM content is loaded
-    document.addEventListener('DOMContentLoaded', waitForWord);
+    document.addEventListener("DOMContentLoaded", waitForWord);
   </script>
 
- 
-  
   {% endblock %}
+</body>
