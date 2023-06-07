@@ -1,6 +1,5 @@
 import firebase_admin
 from firebase_admin import credentials
-from firebase_admin import auth
 from firebase_admin import firestore
 
 
@@ -36,7 +35,10 @@ def getDocumentFor(username_or_email):
     db = getDB()
     users = getUsers()
     for user in users:
-        if user.get("username") == username_or_email or user.get("email") == username_or_email: 
+        if (
+            user.get("username") == username_or_email
+            or user.get("email") == username_or_email
+        ):
             for document in db.collection("users").get():
                 if document.to_dict()["username"] == user["username"]:
                     return document.reference
@@ -48,7 +50,10 @@ def getDocumentDFor(username_or_email):
     db = getDB()
     users = getUsers()
     for user in users:
-        if user.get("username") == username_or_email or user.get("email") == username_or_email:
+        if (
+            user.get("username") == username_or_email
+            or user.get("email") == username_or_email
+        ):
             for document in db.collection("users").get():
                 if document.to_dict()["username"] == user["username"]:
                     return document
