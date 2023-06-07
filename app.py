@@ -120,7 +120,7 @@ def game():
 		 all_languages=play_logic.getLanguages(),
 		 dark_mode=session.get("dark_mode", False),
 		)
-	elif request.method == "POST":
+	if request.method == "POST":
 		letter = request.form["letter"].lower()
 		print(letter + " " + str(session["letters"]))
 		if letter not in session["letters"]:
@@ -131,9 +131,7 @@ def game():
 			else:
 				session["wrong_guesses"] += 1
 		return redirect(url_for("game"))
-
-	else:
-		return redirect(url_for("login"))
+	return redirect(url_for("login"))
 
 
 @app.route("/demo")
@@ -201,11 +199,10 @@ def login():
 			if auth_user:
 				session["username"] = auth_user
 				return redirect(url_for("game"))
-			else:
-				return render_template(
-				 "login.html",
-				 error="Your Session has expired. Did you change your password?",
-				)
+			return render_template(
+			 "login.html",
+			 error="Your Session has expired. Did you change your password?",
+			)
 
 	else:
 		return render_template("login.html", error="Invalid email or password")
@@ -259,7 +256,7 @@ def before_request():
 	# Check if the user is not logged in and the requested path is not the login page
 	if "username" not in session and request.path not in allowed_paths:
 		return redirect(url_for("login"))
-	elif "username" in session:
+	if "username" in session:
 		uname = session["username"]
 		if uname and "@" in uname:
 			sentry_sdk.set_user({"email": uname})

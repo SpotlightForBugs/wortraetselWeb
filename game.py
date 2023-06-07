@@ -28,10 +28,10 @@ def getRandomWord(language):
                 .replace("ß", "ss")
                 .lower()
             )
-        elif language == "en":
+        if language == "en":
             english_api = "https://random-word-api.vercel.app/api?words=1"
             return requests.get(english_api).json()[0].lower()
-        elif language == "fi":
+        if language == "fi":
             finnish_word_list = requests.get(
                 "https://raw.githubusercontent.com/hugovk/everyfinnishword/master/kaikkisanat.txt"
             ).text.split("\n")
@@ -44,7 +44,7 @@ def getRandomWord(language):
                 .replace("ß", "ss")
                 .lower()
             )
-        elif language == "fr":
+        if language == "fr":
             french_api = "https://raw.githubusercontent.com/lorenbrichter/Words/master/Words/fr.txt"
             translationTable = str.maketrans("éàèùâêîôûç", "eaeuaeiouc")
             french_api_words = requests.get(french_api).text.lower()
