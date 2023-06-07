@@ -22,7 +22,6 @@ sentry_sdk.init(
 )
 
 import os
-import random
 
 from flask import (
     Flask,
