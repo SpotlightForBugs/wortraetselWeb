@@ -41,7 +41,7 @@ from firebase_admin import credentials, auth
 from firebase_admin import firestore
 
 app = Flask(__name__)
-app.secret_key = "jndjfenifejhegj94588475847;%(…/(%/…4(€"
+app.secret_key = os.environ.get("SECRETKEY")
 csrf = CSRFProtect(app)
 allowed_paths = [
  "/login",
