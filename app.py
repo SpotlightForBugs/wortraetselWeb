@@ -143,27 +143,28 @@ def demo():
 
 @app.route("/set_language", methods=["POST"])
 def set_language():
-    if request.method == "POST":
-        if "language" in request.form:
-            if request.form["language"] in play_logic.getLanguages():
-                session["language"] = request.form["language"]
-                # reset the game
-                session["word"] = play_logic.getRandomWord(session["language"])
-                session["letters"] = []
-                session["score"] = 0
-                session["wrong_guesses"] = 0
+    if (
+        request.method == "POST"
+        and "language" in request.form
+        and request.form["language"] in play_logic.getLanguages()
+    ):
+        session["language"] = request.form["language"]
+        # reset the game
+        session["word"] = play_logic.getRandomWord(session["language"])
+        session["letters"] = []
+        session["score"] = 0
+        session["wrong_guesses"] = 0
 
     return redirect(url_for("game"))
 
 
 @app.route("/set_dark_mode", methods=["POST"])
 def dark_mode():
-    if request.method == "POST":
-        if "dark_mode" in request.form:
-            if session.get("dark_mode", False):
-                session["dark_mode"] = False
-            else:
-                session["dark_mode"] = True
+    if request.method == "POST" and "dark_mode" in request.form:
+        if session.get("dark_mode", False):
+            session["dark_mode"] = False
+        else:
+            session["dark_mode"] = True
     return redirect(url_for("game"))
 
 
@@ -243,9 +244,12 @@ def register_split():
             session["uname"] = request.form.get("username", False)
         if "username" not in session:
             session["username"] = request.form.get("email", False)
-        if "password" not in session:
-            if request.form.get("password") and request.form.get("password") != "":
-                session["password"] = request.form.get("password", False)
+        if (
+            "password" not in session
+            and request.form.get("password")
+            and request.form.get("password") != ""
+        ):
+            session["password"] = request.form.get("password", False)
 
     return render_template(
         "register_split.html",
