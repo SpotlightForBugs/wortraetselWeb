@@ -169,14 +169,19 @@ def dark_mode():
 
 @app.route("/game/<word>")
 def game_over(word):
-    with open ("static/assets\killed.svg", "r") as killed_image:
+    with open("static/assets\killed.svg", "r") as killed_image:
         killed_image = killed_image.read()
-    
+
         return (
-            "<p style='font-size: 50px; color: red;'>Du hast verloren. Das Wort war " + word.capitalize() + "</p>" + killed_image + "<script>setTimeout(function(){window.location.href = '/';}, "
-        "5000);</script>"
+            "<p style='font-size: 50px; color: red;'>Du hast verloren. Das Wort war "
+            + word.capitalize()
+            + "</p>"
+            + killed_image
+            + "<script>setTimeout(function(){window.location.href = '/';}, "
+            "5000);</script>"
         )
-    
+
+
 @app.route("/game/<word>/success")
 def game_success(word):
     return (
