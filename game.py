@@ -72,8 +72,9 @@ def generate_hangman(tries, n, m):
     
     if tries > len(image_list) - 1:
         html = f'<h1>YOU SHOULD BE DEAD, MOM...</h1>'
+    
         return html
-    return f'<image src="static/assets/{image_list[tries]}{image_extension}" width="{n}" height="{m}"/> {tries=} {n=} {m=}' 
+    return f'<image src="static/assets/{image_list[tries]}{image_extension}" width="{n}" height="{m}"/>' 
 
 def check_game_status(word, guessed_letters, wrong_tries):
     if wrong_tries >= 9:
