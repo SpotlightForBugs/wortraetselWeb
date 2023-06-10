@@ -147,6 +147,62 @@ window.clarity("identify", "{{ username }}")
   }
 </script>
 
+<script>
+function isLetter(str) {
+  
+  
+return str.length === 1 && str.match(/[a-z]/i);
+
+}
+</script>
+
+
+
+<script>
+isOnMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent); 
+//if not on mobile, allow the user to use the keyboard. only click non-tried letters 
+if (!isOnMobile) {
+
+  document.addEventListener('keydown', function(event) {
+  letter = String.fromCharCode(event.keyCode).toUpperCase();	
+  letters_guessed = {{ letters_guessed | tojson }};
+  
+
+
+  //if letters_guessed does not contain the letter, then create a hidden form and submit it
+  if (!letters_guessed.includes(letter) && isLetter(letter)) {
+    var form = document.createElement("form");
+    form.setAttribute("method", "post");
+    form.setAttribute("action", "{{ url_for('game') }}");
+
+    var hiddenField = document.createElement("input");
+    hiddenField.setAttribute("type", "hidden");
+    hiddenField.setAttribute("name", "letter");
+    hiddenField.setAttribute("value", letter);
+
+    var csrfField = document.createElement("input");
+    csrfField.setAttribute("type", "hidden");
+    csrfField.setAttribute("name", "csrf_token");
+    csrfField.setAttribute("value", "{{ csrf_token() }}");
+
+    form.appendChild(hiddenField);
+    form.appendChild(csrfField);
+
+    document.body.appendChild(form);
+    
+
+    form.submit();
+    
+    setTimeout(function(){ location.reload(); }, 1000);
+
+  }
+  });
+
+}
+
+
+</script>
+
 <style>
   /* Add CSS styles for mobile devices */
   #game-form-Big {
