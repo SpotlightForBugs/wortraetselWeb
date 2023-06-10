@@ -83,28 +83,36 @@ window.clarity("identify", "{{ username }}")
       <tr>
         <td>
           {{ drawing | safe }}
-        <br>
-
+          <br>
+  
           {% for letter in word %}
-
             {{ letter if letter in letters_guessed else '_' }}
           {% endfor %}
         </td>
         <td>
-            <form method="post" id="game-form-Big">
-  {% for letter in letters %}
-                {% if not letter | lower in letters_guessed %}
-
-    <button type="submit" name="letter" value="{{ letter }}">{{ letter }}</button>
-      {% endif %}
-  {% endfor %}
-  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-</form>
-
+          <form method="post" id="game-form-Big">
+            {% for letter in letters %}
+              {% if letter | lower not in letters_guessed %}
+                <button type="submit" name="letter" value="{{ letter }}" style="color: black;">{{ letter }}</button>
+              {% else %}
+              
+                {% if letter | lower  in word | lower and letter | lower in letters_guessed %} <!-- if the letter is in the word and has been guessed -->
+                  <button type="submit" name="letter" value="{{ letter }}" disabled class="btn btn-success disabled" onclick="return false;">{{ letter }} </button>
+                {% elif letter |lower not in word | lower and letter | lower in letters_guessed %}
+                  <button type="submit" name="letter" value="{{ letter }}" class="btn btn-danger disabled" disabled>{{ letter }}</button>
+                {% else %}
+                  <button type="submit" name="letter" value="{{ letter }}" disabled>{{ letter }}</button>
+                {% endif %}
+              {% endif %}
+            {% endfor %}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          </form>
         </td>
       </tr>
     </table>
   </div>
+  
+  
 
   <table class="score-board">
     <tr>

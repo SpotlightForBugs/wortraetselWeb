@@ -72,7 +72,7 @@ def game():
     if request.method == "GET":
         if (
             all(letter in session["letters"] for letter in session["word"])
-            and not session["wrong_guesses"] >= 12
+            and not session["wrong_guesses"] >= 9
         ):
             play_logic.finish_game(
                 session["username"],
@@ -88,7 +88,7 @@ def game():
             session["wrong_guesses"] = 0
             return redirect("/game/" + word + "/success")
 
-        elif session["wrong_guesses"] >= 12:
+        elif session["wrong_guesses"] >= 9:
             play_logic.finish_game(
                 session["username"],
                 word=session["word"],
@@ -108,7 +108,7 @@ def game():
             "game.html",
             leaderboard=firebaseDB.get_leaderboard(),
             username=accounts.getUsername(session["username"])["username"],
-            drawing=play_logic.generate_hangman(session["wrong_guesses"], 200, 200),
+            drawing=play_logic.generate_hangman(session["wrong_guesses"], 1000, 1000),
             letters=[chr(i) for i in range(65, 91)],
             word=session["word"],
             letters_guessed=session["letters"],
@@ -169,15 +169,14 @@ def dark_mode():
 
 @app.route("/game/<word>")
 def game_over(word):
-    return (
-        "<h1>(っ °Д °;)っ "
-        + (word.capitalize())
-        + "</h1><script>setTimeout(function(){window.location.href = '/';}, "
-        "5000);</script><style>body{background-color: black; color: "
-        "white;}</style> "
-    )
-
-
+    with open ("static/assets\killed.svg", "r") as killed_image:
+        killed_image = killed_image.read()
+    
+        return (
+            "<p style='font-size: 50px; color: red;'>Du hast verloren. Das Wort war " + word.capitalize() + "</p>" + killed_image + "<script>setTimeout(function(){window.location.href = '/';}, "
+        "5000);</script>"
+        )
+    
 @app.route("/game/<word>/success")
 def game_success(word):
     return (

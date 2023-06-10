@@ -53,210 +53,35 @@ def getRandomWord(language):
 
 
 def generate_hangman(tries, n, m):
-    canvas_width = n
-    canvas_height = m
-
-    # Calculate the size of each cell in the canvas
-    cell_width = canvas_width // 7
-    cell_height = canvas_height // 12
-
-    # Start building the HTML string
-    html = '<canvas width="{}" height="{}"></canvas>'.format(
-        canvas_width, canvas_height
-    )
-    html += "<script>"
-    html += 'var canvas = document.querySelector("canvas");'
-    html += 'var ctx = canvas.getContext("2d");'
-
-    # Draw the hangman figure based on the number of tries left
-    if tries >= 0:
-        # Draw the scaffold
-        html += "ctx.beginPath();"
-        html += "ctx.moveTo({0}, {1});".format(cell_width, canvas_height - cell_height)
-        html += "ctx.lineTo({0}, {1});".format(
-            canvas_width - cell_width, canvas_height - cell_height
-        )
-        html += "ctx.lineTo({0}, {1});".format(canvas_width - cell_width, cell_height)
-        html += "ctx.lineTo({0}, {1});".format(
-            canvas_width - 2 * cell_width, cell_height
-        )
-        html += "ctx.stroke();"
-
-        if tries >= 1:
-            # Draw the head
-            html += "ctx.beginPath();"
-            html += "ctx.arc({0}, {1}, {2}, 0, Math.PI * 2);".format(
-                canvas_width - 2 * cell_width,
-                cell_height + 2 * cell_height,
-                cell_height,
-            )
-            html += "ctx.stroke();"
-
-            if tries >= 2:
-                # Draw the eyes
-                html += "ctx.beginPath();"
-                html += "ctx.arc({0}, {1}, {2}, 0, Math.PI * 2);".format(
-                    canvas_width - 2 * cell_width - 10,
-                    cell_height + 2 * cell_height - 5,
-                    2,
-                )
-                html += "ctx.stroke();"
-
-                html += "ctx.beginPath();"
-                html += "ctx.arc({0}, {1}, {2}, 0, Math.PI * 2);".format(
-                    canvas_width - 2 * cell_width + 10,
-                    cell_height + 2 * cell_height - 5,
-                    2,
-                )
-                html += "ctx.stroke();"
-
-                if tries >= 3:
-                    # Draw the mouth
-                    html += "ctx.beginPath();"
-                    html += "ctx.arc({0}, {1}, {2}, Math.PI * 0.25, Math.PI * 0.75, false);".format(
-                        canvas_width - 2 * cell_width, cell_height + 2 * cell_height, 10
-                    )
-                    html += "ctx.stroke();"
-
-                    if tries >= 4:
-                        # Draw the body
-                        html += "ctx.beginPath();"
-                        html += "ctx.moveTo({0}, {1});".format(
-                            canvas_width - 2 * cell_width, cell_height + 3 * cell_height
-                        )
-                        html += "ctx.lineTo({0}, {1});".format(
-                            canvas_width - 2 * cell_width, cell_height + 7 * cell_height
-                        )
-                        html += "ctx.stroke();"
-
-                        if tries >= 5:
-                            # Draw the left arm
-                            html += "ctx.beginPath();"
-                            html += "ctx.moveTo({0}, {1});".format(
-                                canvas_width - 2 * cell_width,
-                                cell_height + 4 * cell_height,
-                            )
-                            html += "ctx.lineTo({0}, {1});".format(
-                                canvas_width - 3 * cell_width,
-                                cell_height + 6 * cell_height,
-                            )
-                            html += "ctx.stroke();"
-
-                            if tries >= 6:
-                                # Draw the right arm
-                                html += "ctx.beginPath();"
-                                html += "ctx.moveTo({0}, {1});".format(
-                                    canvas_width - 2 * cell_width,
-                                    cell_height + 4 * cell_height,
-                                )
-                                html += "ctx.lineTo({0}, {1});".format(
-                                    canvas_width - cell_width,
-                                    cell_height + 6 * cell_height,
-                                )
-                                html += "ctx.stroke();"
-
-                                if tries >= 7:
-                                    # Draw the left leg
-                                    html += "ctx.beginPath();"
-                                    html += "ctx.moveTo({0}, {1});".format(
-                                        canvas_width - 2 * cell_width,
-                                        cell_height + 7 * cell_height,
-                                    )
-                                    html += "ctx.lineTo({0}, {1});".format(
-                                        canvas_width - 3 * cell_width,
-                                        canvas_height - cell_height,
-                                    )
-                                    html += "ctx.stroke();"
-
-                                    if tries >= 8:
-                                        # Draw the right leg
-                                        html += "ctx.beginPath();"
-                                        html += "ctx.moveTo({0}, {1});".format(
-                                            canvas_width - 2 * cell_width,
-                                            cell_height + 7 * cell_height,
-                                        )
-                                        html += "ctx.lineTo({0}, {1});".format(
-                                            canvas_width - cell_width,
-                                            canvas_height - cell_height,
-                                        )
-                                        html += "ctx.stroke();"
-
-                                        if tries >= 9:
-                                            # Draw the left eyebrow
-                                            html += "ctx.beginPath();"
-                                            html += "ctx.moveTo({0}, {1});".format(
-                                                canvas_width - 2 * cell_width - 15,
-                                                cell_height + 2 * cell_height - 15,
-                                            )
-                                            html += "ctx.lineTo({0}, {1});".format(
-                                                canvas_width - 2 * cell_width - 5,
-                                                cell_height + 2 * cell_height - 5,
-                                            )
-                                            html += "ctx.stroke();"
-
-                                            if tries >= 10:
-                                                # Draw the right eyebrow
-                                                html += "ctx.beginPath();"
-                                                html += "ctx.moveTo({0}, {1});".format(
-                                                    canvas_width - 2 * cell_width + 5,
-                                                    cell_height + 2 * cell_height - 5,
-                                                )
-                                                html += "ctx.lineTo({0}, {1});".format(
-                                                    canvas_width - 2 * cell_width + 15,
-                                                    cell_height + 2 * cell_height - 15,
-                                                )
-                                                html += "ctx.stroke();"
-
-                                                if tries >= 11:
-                                                    # Draw the hat
-                                                    html += "ctx.beginPath();"
-                                                    html += (
-                                                        "ctx.moveTo({0}, {1});".format(
-                                                            canvas_width
-                                                            - 2 * cell_width
-                                                            - 20,
-                                                            cell_height
-                                                            + 2 * cell_height
-                                                            - 20,
-                                                        )
-                                                    )
-                                                    html += (
-                                                        "ctx.lineTo({0}, {1});".format(
-                                                            canvas_width
-                                                            - 2 * cell_width
-                                                            + 20,
-                                                            cell_height
-                                                            + 2 * cell_height
-                                                            - 20,
-                                                        )
-                                                    )
-                                                    html += "ctx.stroke();"
-
-                                                    if tries >= 12:
-                                                        # Draw the "dead" sign
-                                                        html += (
-                                                            'ctx.font = "20px Arial";'
-                                                        )
-                                                        html += 'ctx.fillText("X", {0}, {1});'.format(
-                                                            canvas_width
-                                                            - 2 * cell_width
-                                                            - 5,
-                                                            cell_height
-                                                            + 2 * cell_height
-                                                            + 5,
-                                                        )
-
-    html += "</script>"
-    return html
-
+    # the svg images are: static/assets/base.svg, static/assets/Hangman1_01_Zeichenflache_1.svg to static/assets/Hangman8_01_Zeichenflache_1.svg, last is called killed.svg
+    image_list = [
+        "base",
+        "Hangman1_01_Zeichenflache_1",
+        "Hangman2_01_Zeichenflache_1",
+        "Hangman3_01_Zeichenflache_1",
+        "Hangman4_01_Zeichenflache_1",
+        "Hangman5_01_Zeichenflache_1",
+        "Hangman6_01_Zeichenflache_1",
+        "Hangman7_01_Zeichenflache_1",
+        "Hangman8_01_Zeichenflache_1",
+        "killed",
+    ] 
+    
+    image_extension = ".svg"
+    
+    
+    if tries > len(image_list) - 1:
+        html = f'<h1>YOU SHOULD BE DEAD, MOM...</h1>'
+        return html
+    return f'<image src="static/assets/{image_list[tries]}{image_extension}" width="{n}" height="{m}"/> {tries=} {n=} {m=}' 
 
 def check_game_status(word, guessed_letters, wrong_tries):
-    if wrong_tries >= 12:
+    if wrong_tries >= 9:
         return "lost"
     for letter in word:
         if letter not in guessed_letters:
-            return f"Playing: {12 - (wrong_tries)} tries left"
-    return f"Won: {word} withing {12 - len(guessed_letters)} tries"
+            return f"Playing: {9 - (wrong_tries)} tries left"
+    return f"Won: {word} withing {9 - len(guessed_letters)} tries"
 
 
 def calculate_points(
