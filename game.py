@@ -65,16 +65,16 @@ def generate_hangman(tries, n, m):
         "Hangman7_01_Zeichenflache_1",
         "Hangman8_01_Zeichenflache_1",
         "killed",
-    ] 
-    
+    ]
+
     image_extension = ".svg"
-    
-    
+
     if tries > len(image_list) - 1:
-        html = f'<h1>YOU SHOULD BE DEAD, MOM...</h1>'
-    
+        html = f"<h1>YOU SHOULD BE DEAD, MOM...</h1>"
+
         return html
-    return f'<image src="static/assets/{image_list[tries]}{image_extension}" width="{n}" height="{m}"/>' 
+    return f'<image src="static/assets/{image_list[tries]}{image_extension}" width="{n}" height="{m}"/>'
+
 
 def check_game_status(word, guessed_letters, wrong_tries):
     if wrong_tries >= 9:
