@@ -2,6 +2,7 @@
 {% block content %}
 
 <!DOCTYPE html>
+<meta viewport="width=device-width, initial-scale=1.0">
 <html lang="{{ user_language }}">
 <head>
   <title>Hangman Game</title>
@@ -29,143 +30,121 @@ window.clarity("identify", "{{ username }}")
 
 </head>
 <body>
-  <table class="header">
-    <tr>
-      <td class="username">{{ username }}</td>
-      <td class="login-logout"><button onclick="location.href='{{ url_for('logout') }}'">Logout</button></td> 
-
-      
-      
-      <td class="language_switcher">
+  <div class="container">
+    <div class="header d-flex justify-content-between align-items-center">
+      <div class="username">{{ username }}</div>
+      <button class="btn btn-primary" onclick="location.href='{{ url_for('logout') }}'">Logout</button>
+      <div class="language-switcher">
         <p>Change language:</p>
         <form method="post" id="language-form" action="{{ url_for('set_language') }}">
-          <select name="language" onchange="verify_selection();">
+          <select name="language" onchange="verify_selection();" class="form-control">
             {% for language in all_languages %}
-              <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>{{ language }}
-              </option>
+              <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>{{ language }}</option>
             {% endfor %}
           </select>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         </form>
-      </td>
+      </div>
 
-    
-      <td class="user_language">Your selected language: <br><img src="https://flagsapi.com/{{user_language| replace('en','GB') | upper}}/shiny/64.png"> 
-    
-    {% if user_language == 'en' %}
-    <img src="https://flagsapi.com/US/shiny/64.png">
-    {% endif %}
-    </td>
-
-    <td class="toggle_dark_mode">
-        <form action="{{ url_for('dark_mode') }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        {% if dark_mode %}
-        <button type="submit" name="dark_mode" value="dark_mode">Light Mode</button>
-        {% else %}
-        <button type="submit" name="dark_mode" value="dark_mode">Dark Mode</button>
+      <div class="user-language">
+        Your selected language: <br>
+        <img src="https://flagsapi.com/{{user_language| replace('en','GB') | upper}}/shiny/64.png">
+        {% if user_language == 'en' %}
+        <img src="https://flagsapi.com/US/shiny/64.png">
         {% endif %}
+      </div>
+
+      <div class="toggle-dark-mode">
+        <form action="{{ url_for('dark_mode') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          {% if dark_mode %}
+          <button type="submit" name="dark_mode" value="dark_mode" class="btn btn-light">Light Mode</button>
+          {% else %}
+          <button type="submit" name="dark_mode" value="dark_mode" class="btn btn-dark">Dark Mode</button>
+          {% endif %}
         </form>
-    </td>
+      </div>
+    </div>
 
- 
-
-
-    </tr>
-  </table>
-
-  <div class="game-area">
-    <table class="hangman-table">
-      <tr>
-        <th></th>
-        <th></th>
-      </tr>
-      <tr>
-        <td>
-          {{ drawing | safe }}
-          <br>
+    <div class="game-area">
+      <div class="hangman-table">
+        <div class="row">
+          <div class="col-6">
+            <img src="{{drawing}}" alt="Hangman" class="hangman-image" width="100%">
+            <br>
   
-          {% for letter in word %}
-            {{ letter if letter in letters_guessed else '_' }}
-          {% endfor %}
-        </td>
-        <td>
-          <form method="post" id="game-form-Big">
-            {% for letter in letters %}
-              {% if letter | lower not in letters_guessed %}
-                <button type="submit" name="letter" value="{{ letter }}" style="color: black;">{{ letter }}</button>
-              {% else %}
-              
-                {% if letter | lower  in word | lower and letter | lower in letters_guessed %} <!-- if the letter is in the word and has been guessed -->
-                  <button type="submit" name="letter" value="{{ letter }}" disabled class="btn btn-success disabled" onclick="return false;">{{ letter }} </button>
+            {% for letter in word %}
+              {{ letter if letter in letters_guessed else '_' }}
+            {% endfor %}
+          </div>
+          <div class="col-6">
+            <form method="post" id="game-form-Big">
+              {% for letter in letters %}
+                {% if letter | lower not in letters_guessed %}
+                  <button type="submit" name="letter" value="{{ letter }}" class="btn btn-primary">{{ letter }}</button>
+                {% else %}
+                {% if letter | lower in word | lower and letter | lower in letters_guessed %} <!-- if the letter is in the word and has been guessed -->
+                  <button type="submit" name="letter" value="{{ letter }}" disabled class="btn btn-success">{{ letter }}</button>
                 {% elif letter |lower not in word | lower and letter | lower in letters_guessed %}
                   <button type="submit" name="letter" value="{{ letter }}" class="btn btn-danger disabled" disabled>{{ letter }}</button>
                 {% else %}
                   <button type="submit" name="letter" value="{{ letter }}" disabled>{{ letter }}</button>
                 {% endif %}
-              {% endif %}
-            {% endfor %}
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          </form>
-        </td>
-      </tr>
-    </table>
-  </div>
+                {% endif %}
+              {% endfor %}
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
   
-  
-
-  <table class="score-board">
-    <tr>
-      <th>Score: {% for name in leaderboard %}
+    <div class="score-board">
+      <h3>Score: {% for name in leaderboard %}
         {% if name.username == username %}
           {{ name.score }}
         {% endif %}
-      {% endfor %}</th>
-    </tr>
-    <tr>
-      <td></td>
-    </tr>
-  </table>
+      {% endfor %}</h3>
+    </div>
 
-  <div class="leaderboard">
-    <h2>Leaderboard</h2>
-    <table>
-      <tr>
-        <th>Username</th>
-        <th>Score</th>
-      </tr>
-      {% for user in leaderboard %}
-        <tr>
-          <td>{{ user.username }}</td>
-          <td>{{ user.score }}</td>
-        </tr>
-      {% endfor %}
-    </table>
+    <div class="leaderboard">
+      <h2>Leaderboard</h2>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Username</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for user in leaderboard %}
+            <tr>
+              <td>{{ user.username }}</td>
+              <td>{{ user.score }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
   </div>
+
+  <div class="container">
+    <a href="#" id="open-preferences-center">Cookie-Einstellungen</a>
+  </div>
+</body>
+</html>
 
 
 <script>
-    const username = "{{ username }}";
-    //make the username in a golden color inside the leaderboard
-    var leaderboard = document.getElementsByClassName("leaderboard")[0];
-    var table = leaderboard.getElementsByTagName("table")[0];
-    var rows = table.getElementsByTagName("tr");
-    for (var i = 0; i < rows.length; i++) {
-        var row = rows[i];
-        var cols = row.getElementsByTagName("td");
-        for (var j = 0; j < cols.length; j++) {
-            var col = cols[j];
-            if (col.innerHTML === username) {
-
-              
-                col.style.color = "gold";
-                {% if dark_mode %}
-                col.style.color = "blue";
-                {% endif %}
-            }
-        }
+  function verify_selection() {
+    // Ask the user if they are sure to change the language because the game will be restarted and the progress will be lost.
+    var r = confirm("Are you sure you want to change the language? The game will be restarted and your progress will be lost.");
+    if (r == true) {
+      document.getElementById("language-form").submit();
+    } else {
+      document.getElementById("language-form").reset();
     }
-
+  }
 </script>
 
 <style>
@@ -185,51 +164,30 @@ window.clarity("identify", "{{ username }}")
     font-size: 18px;
   }
 </style>
-<br \>
-<a href="#" id="open_preferences_center">Cookie-Einstellungen</a>
-</body>
-</html>
-
-
-<script>
-  function verify_selection() {
-
-    //ask the user if he is sure to change the language, because the game will be restarted and the progress will be lost
-    var r = confirm("Are you sure you want to change the language? The game will be restarted and your progress will be lost.");
-    if (r == true) {
-      document.getElementById("language-form").submit();
-    } else {
-    document.getElementById("language-form").reset();
-    }
-
-
-
-  }
-</script>
-
-
-
-
 
 {% if dark_mode %}
-
 <style>
-
-@media (prefers-color-scheme: dark) {
-  html { filter: invert(100%); }
-  img { filter: invert(100%); }
-  svg { filter: invert(100%); }
-  
-
-
-
-}
-
+  /* Add CSS styles for dark mode */
+  html {
+    filter: invert(100%);
+    -webkit-filter: invert(100%);
+  }
+  .btn {
+    filter: none;
+    -webkit-filter: none;
+  }
+  img {
+    filter: invert(100%);
+    -webkit-filter: invert(100%);
+  }
+  svg {
+    filter: invert(100%);
+    -webkit-filter: invert(100%);
+  }
+  .username, .score-board h3 {
+    color: gold;
+  }
 </style>
-
 {% endif %}
-
-
-
 
 {% endblock %}
