@@ -169,7 +169,7 @@ def dark_mode():
 
 @app.route("/game/<word>")
 def game_over(word):
-    with open ("static/assets\killed.svg", "r") as killed_image:
+    with open ("static/assets/killed.svg", "r") as killed_image:
         killed_image = killed_image.read()
     
         return (
