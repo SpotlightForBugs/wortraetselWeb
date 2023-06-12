@@ -189,7 +189,8 @@ def game_success(word):
         + word.capitalize()
         + " </h1><script>setTimeout(function(){window.location.href = '/';}, "
         "5000);</script><style>body{background-color: beige; color: "
-        "white;}</style>" + "<img src='/static/assets/won.svg' width='1000' height='1000'>"
+        "white;}</style>"
+        + "<img src='/static/assets/won.svg' width='1000' height='1000'>"
     )
 
 
