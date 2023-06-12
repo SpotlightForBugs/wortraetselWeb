@@ -169,14 +169,19 @@ def dark_mode():
 
 @app.route("/game/<word>")
 def game_over(word):
-    with open ("static/assets/killed.svg", "r") as killed_image:
+    with open("static/assets/killed.svg", "r") as killed_image:
         killed_image = killed_image.read()
-    
+
         return (
-            "<p style='font-size: 50px; color: red;'>Du hast verloren. Das Wort war " + word.capitalize() + "</p>" + killed_image + "<script>setTimeout(function(){window.location.href = '/';}, "
-        "5000);</script>"
+            "<p style='font-size: 50px; color: red;'>Du hast verloren. Das Wort war "
+            + word.capitalize()
+            + "</p>"
+            + killed_image
+            + "<script>setTimeout(function(){window.location.href = '/';}, "
+            "5000);</script>"
         )
-    
+
+
 @app.route("/game/<word>/success")
 def game_success(word):
     return (
@@ -184,7 +189,8 @@ def game_success(word):
         + word.capitalize()
         + " </h1><script>setTimeout(function(){window.location.href = '/';}, "
         "5000);</script><style>body{background-color: black; color: "
-        "white;}</style>" + "<img src='https://i.pinimg.com/originals/99/20/03/992003f7e6447a6e779f6aea878e066a.jpg' width='1000' height='1000'>"
+        "white;}</style>"
+        + "<img src='https://i.pinimg.com/originals/99/20/03/992003f7e6447a6e779f6aea878e066a.jpg' width='1000' height='1000'>"
     )
 
 
