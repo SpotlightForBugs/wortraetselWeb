@@ -30,41 +30,60 @@ window.clarity("identify", "{{ username }}")
 
 </head>
 <body>
+	
   <div class="container">
-    <div class="header d-flex justify-content-between align-items-center">
-      <div class="username">{{ username }}</div>
-      <button class="btn btn-primary" onclick="location.href='{{ url_for('logout') }}'">Logout</button>
-      <div class="language-switcher">
-        <p>Change language:</p>
-        <form method="post" id="language-form" action="{{ url_for('set_language') }}">
-          <select name="language" onchange="verify_selection();" class="form-control">
-            {% for language in all_languages %}
-              <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>{{ language }}</option>
-            {% endfor %}
-          </select>
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-        </form>
-      </div>
+    <nav class="navbar navbar-expand-md">
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarMenu" aria-controls="navbarMenu" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarMenu">
+        <div class="header d-flex justify-content-between align-items-center">
+          <div class="username">{{ username }}</div>
+          <button class="btn btn-primary" onclick="location.href='{{ url_for('logout') }}'">Logout</button>
+          <div class="language-switcher">
+            <p>Change language:</p>
+            <form method="post" id="language-form" action="{{ url_for('set_language') }}">
+              <select name="language" onchange="verify_selection();" class="form-control">
+                {% for language in all_languages %}
+                  <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>{{ language }}</option>
+                {% endfor %}
+              </select>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            </form>
+          </div>
 
-      <div class="user-language">
-        Your selected language: <br>
-        <img src="https://flagsapi.com/{{user_language| replace('en','GB') | upper}}/shiny/64.png">
-        {% if user_language == 'en' %}
-        <img src="https://flagsapi.com/US/shiny/64.png">
-        {% endif %}
-      </div>
+          <div class="user-language">
+            Your selected language: <br>
+            <img src="https://flagsapi.com/{{user_language| replace('en','GB') | upper}}/shiny/64.png">
+            {% if user_language == 'en' %}
+            <img src="https://flagsapi.com/US/shiny/64.png">
+            {% endif %}
+          </div>
 
-      <div class="toggle-dark-mode">
-        <form action="{{ url_for('dark_mode') }}" method="post">
-          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-          {% if dark_mode %}
-          <button type="submit" name="dark_mode" value="dark_mode" class="btn btn-light">Light Mode</button>
-          {% else %}
-          <button type="submit" name="dark_mode" value="dark_mode" class="btn btn-dark">Dark Mode</button>
-          {% endif %}
-        </form>
+          <div class="toggle-dark-mode">
+            <form action="{{ url_for('dark_mode') }}" method="post">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              {% if dark_mode %}
+              <button type="submit" name="dark_mode" value="dark_mode" class="btn btn-light">Light Mode</button>
+              {% else %}
+              <button type="submit" name="dark_mode" value="dark_mode" class="btn btn-dark">Dark Mode</button>
+              {% endif %}
+            </form>
+          </div>
+        </div>
       </div>
-    </div>
+    </nav>
+
+	
+
+  <div class="container">
+    <a href="#" id="open-preferences-center">Cookie-Einstellungen</a>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.5.1
 
     <div class="game-area">
       <div class="hangman-table">
