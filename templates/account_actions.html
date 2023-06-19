@@ -1,5 +1,5 @@
 {% if logged_in %}
-    <a href="{{ url('logout') }}">Logout</a>
+<a href="{{ url('logout') }}">Logout</a>
 {% elif not logged_in %}
-    <a href="{{ url('login') }}">Login</a>
+<a href="{{ url('login') }}">Login</a>
 {% endif %}

@@ -1,5 +1,4 @@
-<meta viewport="width=device-width, initial-scale=1.0">
-
+<meta viewport="width=device-width, initial-scale=1.0" />
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
@@ -9,45 +8,63 @@
   crossorigin="anonymous"
 ></script>
 <script>
-Sentry.init({
-  dsn: "https://7c71cffadff9423a983843ddd3fe96a3@o1363527.ingest.sentry.io/4505154639364096",
+  Sentry.init({
+    dsn: "https://7c71cffadff9423a983843ddd3fe96a3@o1363527.ingest.sentry.io/4505154639364096",
 
-  // This sets the sample rate to be 10%. You may want this to be 100% while
-  // in development and sample at a lower rate in production
-  replaysSessionSampleRate: 1.0,
+    // This sets the sample rate to be 10%. You may want this to be 100% while
+    // in development and sample at a lower rate in production
+    replaysSessionSampleRate: 1.0,
 
-  // If the entire session is not sampled, use the below sample rate to sample
-  // sessions when an error occurs.
-  replaysOnErrorSampleRate: 1.0,
+    // If the entire session is not sampled, use the below sample rate to sample
+    // sessions when an error occurs.
+    replaysOnErrorSampleRate: 1.0,
 
-  integrations: [
-    new Sentry.Replay({}),
-  ],
-});
+    integrations: [new Sentry.Replay({})],
+  });
 </script>
 
-<script type="text/javascript"> //This is for Clarity (https://clarity.microsoft.com/)
-    (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-    })(window, document, "clarity", "script", "h6i65okq8v");
+<script type="text/javascript">
+  //This is for Clarity (https://clarity.microsoft.com/)
+  (function (c, l, a, r, i, t, y) {
+    c[a] =
+      c[a] ||
+      function () {
+        (c[a].q = c[a].q || []).push(arguments);
+      };
+    t = l.createElement(r);
+    t.async = 1;
+    t.src = "https://www.clarity.ms/tag/" + i;
+    y = l.getElementsByTagName(r)[0];
+    y.parentNode.insertBefore(t, y);
+  })(window, document, "clarity", "script", "h6i65okq8v");
 </script>
 
 <script>
-{% if username %}
-window.clarity("identify", "{{ username }}");
-console.log("Recognized your username as {{ username }}");
-{% endif %}
+  {% if username %}
+  window.clarity("identify", "{{ username }}");
+  console.log("Recognized your username as {{ username }}");
+  {% endif %}
 </script>
 
-
-<script type="text/javascript" src="//www.freeprivacypolicy.com/public/cookie-consent/4.1.0/cookie-consent.js" charset="UTF-8"></script>
+<script
+  type="text/javascript"
+  src="//www.freeprivacypolicy.com/public/cookie-consent/4.1.0/cookie-consent.js"
+  charset="UTF-8"
+></script>
 <script type="text/javascript" charset="UTF-8">
-document.addEventListener('DOMContentLoaded', function () {
-cookieconsent.run({"notice_banner_type":"headline","consent_type":"express","palette":"dark","language":"de","page_load_consent_levels":["strictly-necessary"],"notice_banner_reject_button_hide":false,"preferences_center_close_button_hide":false,"page_refresh_confirmation_buttons":false,"website_name":"https://hangman.spotlightforbugs.eu"});
-});
+  document.addEventListener("DOMContentLoaded", function () {
+    cookieconsent.run({
+      notice_banner_type: "headline",
+      consent_type: "express",
+      palette: "dark",
+      language: "de",
+      page_load_consent_levels: ["strictly-necessary"],
+      notice_banner_reject_button_hide: false,
+      preferences_center_close_button_hide: false,
+      page_refresh_confirmation_buttons: false,
+      website_name: "https://hangman.spotlightforbugs.eu",
+    });
+  });
 </script>
 
-{% block content %}
-{%endblock%}
+{% block content %} {%endblock%}
