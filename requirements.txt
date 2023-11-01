@@ -43,3 +43,4 @@ urllib3==1.26.17
 zufallsworte==0.0.6
 Gunicorn
 sentry-sdk[flask,pure_eval]
+werkzeug>=3.0.1 # not directly required, pinned by Snyk to avoid a vulnerability
