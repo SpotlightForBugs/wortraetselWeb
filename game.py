@@ -1,11 +1,48 @@
 import random
+from pathlib import Path
 
 import requests as requests
 import zufallsworte as german_words
 
-import firebaseDB
-
 globals()["LANGUAGES"] = ["en", "de", "fi", "fr"]
+
+_WORD_LISTS = {}
+
+
+def _local_words(name):
+    if name not in _WORD_LISTS:
+        path = Path(__file__).resolve().parent / "data" / f"{name}.txt"
+        words = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            word = line.strip().lower()
+            if len(word) >= 3 and word.isalpha():
+                words.append(word)
+        _WORD_LISTS[name] = words
+    return _WORD_LISTS[name]
+
+
+def _ascii_word(word):
+    return (
+        word.lower()
+        .replace("ä", "ae")
+        .replace("ö", "oe")
+        .replace("ü", "ue")
+        .replace("ß", "ss")
+    )
+
+
+def _remote_lines(url):
+    if url in _WORD_LISTS:
+        return _WORD_LISTS[url]
+    try:
+        response = requests.get(url, timeout=8)
+        response.raise_for_status()
+    except requests.RequestException:
+        return []
+    lines = [line.strip() for line in response.text.splitlines() if line.strip()]
+    if lines:
+        _WORD_LISTS[url] = lines
+    return lines
 
 
 def isValidLanguage(language):
@@ -19,37 +56,24 @@ def getLanguages() -> list:
 def getRandomWord(language):
     if isValidLanguage(language):
         if language == "de":
-            return (
-                german_words.zufallswoerter(1)[0]
-                .lower()
-                .replace("ä", "ae")
-                .replace("ö", "oe")
-                .replace("ü", "ue")
-                .replace("ß", "ss")
-                .lower()
-            )
+            return _ascii_word(german_words.zufallswoerter(1)[0])
         if language == "en":
-            english_api = "https://random-word-api.vercel.app/api?words=1"
-            return requests.get(english_api).json()[0].lower()
+            return random.choice(_local_words("en"))
         if language == "fi":
-            finnish_word_list = requests.get(
+            finnish_words = _remote_lines(
                 "https://raw.githubusercontent.com/hugovk/everyfinnishword/master/kaikkisanat.txt"
-            ).text.split("\n")
-            return (
-                random.choice(finnish_word_list)
-                .lower()
-                .replace("ä", "ae")
-                .replace("ö", "oe")
-                .replace("ü", "ue")
-                .replace("ß", "ss")
-                .lower()
             )
+            if not finnish_words:
+                return random.choice(("kissa", "talo", "omena", "metsa", "koulu"))
+            return _ascii_word(random.choice(finnish_words))
         if language == "fr":
-            french_api = "https://raw.githubusercontent.com/lorenbrichter/Words/master/Words/fr.txt"
-            translationTable = str.maketrans("éàèùâêîôûç", "eaeuaeiouc")
-            french_api_words = requests.get(french_api).text.lower()
-            french_api_words = french_api_words.translate(translationTable).split("\n")
-            return random.choice(french_api_words)
+            french_words = _remote_lines(
+                "https://raw.githubusercontent.com/lorenbrichter/Words/master/Words/fr.txt"
+            )
+            if not french_words:
+                return random.choice(("maison", "jardin", "livre", "soleil", "ecole"))
+            translation_table = str.maketrans("éàèùâêîôûç", "eaeuaeiouc")
+            return random.choice(french_words).lower().translate(translation_table)
 
 
 def generate_hangman(tries, n, m):
@@ -112,4 +136,6 @@ def finish_game(
     legacy_account=False,
 ):
     points = calculate_points(wrong_guesses, word, all_guesses, success)
+    import firebaseDB
+
     firebaseDB.setScore(username, points)
