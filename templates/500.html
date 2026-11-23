@@ -1,11 +1,12 @@
-{% extends 'scripts.html' %}
-{% block title %}Something went wrong{% endblock %}
+{% extends 'scripts.html' %} {% block title %}Something went wrong{% endblock %}
 {% block content %}
 <main class="auth-wrap">
   <section class="auth-card">
     <h2>Something went wrong</h2>
     <p>The error was reported. You can head back and try again.</p>
-    <p class="auth-links"><a href="{{ url_for('game') }}">Back to the game</a></p>
+    <p class="auth-links">
+      <a href="{{ url_for('game') }}">Back to the game</a>
+    </p>
   </section>
 </main>
 {% if sentry_event_id %}
@@ -14,5 +15,4 @@
     Sentry.showReportDialog({ eventId: "{{ sentry_event_id }}" });
   }
 </script>
-{% endif %}
-{% endblock %}
+{% endif %} {% endblock %}

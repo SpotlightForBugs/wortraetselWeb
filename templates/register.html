@@ -1,6 +1,5 @@
-{% extends 'scripts.html' %}
-{% block title %}Register{% endblock %}
-{% block content %}
+{% extends 'scripts.html' %} {% block title %}Register{% endblock %} {% block
+content %}
 <main class="auth-wrap">
   <section class="auth-card">
     <h2>Register</h2>
@@ -19,7 +18,9 @@
       <input type="password" id="confirm_password" name="password2" required />
       <input type="submit" value="Register" />
     </form>
-    <p class="auth-links">Already have an account? <a href="{{ url_for('login') }}">Login</a></p>
+    <p class="auth-links">
+      Already have an account? <a href="{{ url_for('login') }}">Login</a>
+    </p>
   </section>
 </main>
 {% endblock %}

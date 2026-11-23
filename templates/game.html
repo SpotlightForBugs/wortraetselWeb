@@ -1,16 +1,30 @@
-{% extends 'scripts.html' %}
-{% block title %}Hangman Game{% endblock %}
-{% block content %}
+{% extends 'scripts.html' %} {% block title %}Hangman Game{% endblock %} {%
+block content %}
 <main class="page">
   <header class="header">
     <div class="username">{{ username }}</div>
     <div class="header-actions">
       <div class="language-switcher">
         <p>Change language</p>
-        <form method="post" id="language-form" action="{{ url_for('set_language') }}">
-          <select name="language" onchange="verify_selection();">
+        <form
+          method="post"
+          id="language-form"
+          action="{{ url_for('set_language') }}"
+        >
+          <select name="language" onchange="verify_selection()">
             {% for language in all_languages %}
-            <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>{{ language }}</option>
+            <option
+              value="{{ language }}"
+              {%
+              if
+              language=""
+              ="user_language"
+              %}selected{%
+              endif
+              %}
+            >
+              {{ language }}
+            </option>
             {% endfor %}
           </select>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -24,50 +38,107 @@
           alt="{{ user_language }}"
         />
         {% if user_language == 'en' %}
-        <img src="https://flagsapi.com/US/shiny/64.png" width="32" height="32" alt="US" />
+        <img
+          src="https://flagsapi.com/US/shiny/64.png"
+          width="32"
+          height="32"
+          alt="US"
+        />
         {% endif %}
       </div>
       <form action="{{ url_for('dark_mode') }}" method="post">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         {% if dark_mode %}
-        <button type="submit" name="dark_mode" value="dark_mode" class="btn btn-light">Light Mode</button>
+        <button
+          type="submit"
+          name="dark_mode"
+          value="dark_mode"
+          class="btn btn-light"
+        >
+          Light Mode
+        </button>
         {% else %}
-        <button type="submit" name="dark_mode" value="dark_mode" class="btn btn-dark">Dark Mode</button>
+        <button
+          type="submit"
+          name="dark_mode"
+          value="dark_mode"
+          class="btn btn-dark"
+        >
+          Dark Mode
+        </button>
         {% endif %}
       </form>
-      <button class="btn btn-primary" onclick="location.href='{{ url_for('logout') }}'">Logout</button>
+      <button
+        class="btn btn-primary"
+        onclick="location.href='{{ url_for('logout') }}'"
+      >
+        Logout
+      </button>
     </div>
   </header>
 
   <section class="game-area">
     <div class="panel">
       <div class="stage">
-        <img src="{{ drawing }}" alt="Hangman" class="hangman-image" width="640" height="480" />
+        <img
+          src="{{ drawing }}"
+          alt="Hangman"
+          class="hangman-image"
+          width="640"
+          height="480"
+        />
       </div>
       <div class="word" aria-label="word">
         {% for letter in word %}
-        <span class="tile">{{ letter if letter in letters_guessed else '' }}</span>
+        <span class="tile"
+          >{{ letter if letter in letters_guessed else '' }}</span
+        >
         {% endfor %}
       </div>
     </div>
     <div class="panel letters-panel">
       <form method="post" id="game-form-Big" action="{{ url_for('game') }}">
-        {% for letter in letters %}
-          {% if letter | lower not in letters_guessed %}
-          <button type="submit" name="letter" value="{{ letter }}" class="btn btn-primary">{{ letter }}</button>
-          {% elif letter | lower in word | lower %}
-          <button type="submit" name="letter" value="{{ letter }}" disabled class="btn btn-success">{{ letter }}</button>
-          {% else %}
-          <button type="submit" name="letter" value="{{ letter }}" disabled class="btn btn-danger">{{ letter }}</button>
-          {% endif %}
-        {% endfor %}
+        {% for letter in letters %} {% if letter | lower not in letters_guessed
+        %}
+        <button
+          type="submit"
+          name="letter"
+          value="{{ letter }}"
+          class="btn btn-primary"
+        >
+          {{ letter }}
+        </button>
+        {% elif letter | lower in word | lower %}
+        <button
+          type="submit"
+          name="letter"
+          value="{{ letter }}"
+          disabled
+          class="btn btn-success"
+        >
+          {{ letter }}
+        </button>
+        {% else %}
+        <button
+          type="submit"
+          name="letter"
+          value="{{ letter }}"
+          disabled
+          class="btn btn-danger"
+        >
+          {{ letter }}
+        </button>
+        {% endif %} {% endfor %}
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       </form>
     </div>
   </section>
 
   <section class="panel score-board">
-    <h3>Score: {% for name in leaderboard %}{% if name.username == username %}{{ name.score }}{% endif %}{% endfor %}</h3>
+    <h3>
+      Score: {% for name in leaderboard %}{% if name.username == username %}{{
+      name.score }}{% endif %}{% endfor %}
+    </h3>
   </section>
 
   <section class="panel leaderboard">
@@ -92,7 +163,9 @@
 </main>
 <script>
   function verify_selection() {
-    var r = confirm("Are you sure you want to change the language? The game will be restarted and your progress will be lost.");
+    var r = confirm(
+      "Are you sure you want to change the language? The game will be restarted and your progress will be lost.",
+    );
     if (r == true) {
       document.getElementById("language-form").submit();
     } else {
@@ -123,7 +196,9 @@
       if (!/^[A-Z]$/.test(letter)) {
         return;
       }
-      var button = form.querySelector('button[value="' + letter + '"]:not([disabled])');
+      var button = form.querySelector(
+        'button[value="' + letter + '"]:not([disabled])',
+      );
       if (!button) {
         return;
       }
