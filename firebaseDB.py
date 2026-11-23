@@ -26,7 +26,9 @@ def get_leaderboard():
         else:
             display_name = user.to_dict()["email"].split("@")[0]
 
-        leaderboard.append({"username": display_name, "score": user.to_dict().get("score")})
+        leaderboard.append(
+            {"username": display_name, "score": user.to_dict().get("score")}
+        )
 
     import game
 
