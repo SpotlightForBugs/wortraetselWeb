@@ -46,16 +46,6 @@ from firebase_admin import firestore
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRETKEY")
 csrf = CSRFProtect(app)
-allowed_paths = [
-    "/login",
-    "/register",
-    "/users",
-    "/draw",
-    "/session_data",
-    "/favicon.ico",
-    "/robots.txt",
-    "/register_split",
-]
 
 if not firebase_admin._apps:
     cred = credentials.Certificate("serviceAccountKey.json")
@@ -81,40 +71,25 @@ def game():
             all(letter in session["letters"] for letter in session["word"])
             and not session["wrong_guesses"] >= 9
         ):
-            play_logic.finish_game(
-                session["username"],
-                word=session["word"],
-                wrong_guesses=session["wrong_guesses"],
-                success=True,
-                all_guesses=session["letters"],
-            )
-            word = session["word"]
-            session["word"] = play_logic.getRandomWord(session["language"])
-            session["letters"] = []
-            session["score"] = 0
-            session["wrong_guesses"] = 0
+            word = _close_round(success=True)
             return redirect("/game/" + word + "/success")
 
         elif session["wrong_guesses"] >= 9:
-            play_logic.finish_game(
-                session["username"],
-                word=session["word"],
-                wrong_guesses=session["wrong_guesses"],
-                success=False,
-                all_guesses=session["letters"],
-                legacy_account=accounts.is_legacy(session["username"]),
-            )
-            word = session["word"]
-            session["word"] = play_logic.getRandomWord(session["language"])
-            session["letters"] = []
-            session["score"] = 0
-            session["wrong_guesses"] = 0
+            word = _close_round(success=False)
             return redirect("/game/" + word)
 
+        guest = "username" not in session
+        if guest:
+            display_name = "Guest"
+        else:
+            display_name = accounts.getUsername(session["username"])["username"]
         return render_template(
             "game.html",
             leaderboard=firebaseDB.get_leaderboard(),
-            username=accounts.getUsername(session["username"])["username"],
+            username=display_name,
+            guest=guest,
+            save_offer=guest and session.get("save_offer", False),
+            pending_score=session.get("pending_score", 0),
             drawing=play_logic.generate_hangman(session["wrong_guesses"], 1000, 1000),
             letters=[chr(i) for i in range(65, 91)],
             word=session["word"],
@@ -134,10 +109,18 @@ def game():
         letter = request.form["letter"].lower()
         print(letter + " " + str(session["letters"]))
         if letter not in session["letters"]:
+            hits_before = session["score"]
             session["letters"].append(letter)
             if letter in session["word"]:
                 session["score"] += 1
                 print(f"The letter {letter} is in the word {session['word']}")
+                if play_logic.should_offer_save(
+                    logged_in="username" in session,
+                    dismissed=session.get("save_dismissed", False),
+                    letter_in_word=True,
+                    hits_before=hits_before,
+                ):
+                    session["save_offer"] = True
             else:
                 session["wrong_guesses"] += 1
         return redirect(url_for("game"))
@@ -171,18 +154,73 @@ def dark_mode():
     return redirect(url_for("game"))
 
 
-def _result_page(message, image_src):
+def _result_page(message, image_src, guest=False):
     safe_message = escape(message)
     safe_src = escape(image_src, quote=True)
+    if guest:
+        pending = session.get("pending_score", 0)
+        extra = (
+            f"<p class='gate-lead'>This round is worth {pending} on the leaderboard. "
+            "It stays in this browser until you create an account.</p>"
+            "<a class='signup-cta' href='/register'>Save this score</a>"
+            "<p class='auth-links'><a href='/'>Keep playing</a></p>"
+        )
+        follow = ""
+    else:
+        extra = ""
+        follow = "<script>setTimeout(function(){window.location.href='/';},5000);</script>"
     return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         "<title>Hangman</title><link rel='stylesheet' href='/static/style.css'>"
         "</head><body><main class='auth-wrap'><section class='auth-card result-card'>"
-        f"<p>{safe_message}</p><img alt='' src='{safe_src}'>"
-        "</section></main><script>setTimeout(function(){window.location.href='/';},5000);</script>"
+        f"<p>{safe_message}</p><img alt='' src='{safe_src}'>{extra}"
+        f"</section></main>{follow}"
         "</body></html>"
     )
+
+
+def _close_round(success):
+    word = session["word"]
+    if "username" in session:
+        if success:
+            play_logic.finish_game(
+                session["username"],
+                word=word,
+                wrong_guesses=session["wrong_guesses"],
+                success=True,
+                all_guesses=session["letters"],
+            )
+        else:
+            play_logic.finish_game(
+                session["username"],
+                word=word,
+                wrong_guesses=session["wrong_guesses"],
+                success=False,
+                all_guesses=session["letters"],
+                legacy_account=accounts.is_legacy(session["username"]),
+            )
+    else:
+        points = play_logic.calculate_points(
+            session["wrong_guesses"], word, session["letters"], success
+        )
+        session["pending_score"] = play_logic.stash_guest_points(
+            session.get("pending_score", 0), points
+        )
+    session["word"] = play_logic.getRandomWord(session["language"])
+    session["letters"] = []
+    session["score"] = 0
+    session["wrong_guesses"] = 0
+    return word
+
+
+def _apply_pending_score():
+    pending = session.get("pending_score") or 0
+    if not pending or "username" not in session:
+        return
+    if firebaseDB.setScore(session["username"], pending):
+        session.pop("pending_score", None)
+        session.pop("save_offer", None)
 
 
 @app.route("/game/<word>")
@@ -190,6 +228,7 @@ def game_over(word):
     return _result_page(
         "Du hast verloren. Das Wort war " + word.capitalize(),
         "/static/assets/killed.svg",
+        guest="username" not in session,
     )
 
 
@@ -198,6 +237,7 @@ def game_success(word):
     return _result_page(
         "Super, du hast es erraten. Das Wort war " + word.capitalize(),
         "/static/assets/won.svg",
+        guest="username" not in session,
     )
 
 
@@ -218,6 +258,8 @@ def login():
             auth_user = accounts.login(email, password)
             if auth_user:
                 session["username"] = auth_user
+                session.pop("save_offer", None)
+                _apply_pending_score()
                 return redirect(url_for("game"))
             return render_template(
                 "login.html",
@@ -240,6 +282,8 @@ def register():
             user = accounts.register(email, password, username)
             if user:
                 session["username"] = email
+                session.pop("save_offer", None)
+                _apply_pending_score()
                 return redirect(url_for("game"))
         except:
             return render_template("register.html", error="Email already exists")
@@ -269,27 +313,26 @@ def register_split():
     )
 
 
+@app.route("/dismiss_save", methods=["POST"])
+def dismiss_save():
+    session["save_dismissed"] = True
+    session.pop("save_offer", None)
+    return redirect(url_for("game"))
+
+
 @app.route("/logout")
 def logout():
     session.pop("username", None)
-    return redirect(url_for("login"))
-
-
-def _is_public_path(path):
-    return path in allowed_paths or path.startswith("/static/")
+    return redirect(url_for("game"))
 
 
 @app.before_request
 def before_request():
-    # Login and register need the stylesheet before a session exists.
-    if "username" not in session and not _is_public_path(request.path):
-        return redirect(url_for("login"))
-    if "username" in session:
-        uname = session["username"]
-        if uname and "@" in uname:
-            sentry_sdk.set_user({"email": uname})
-        elif uname:
-            sentry_sdk.set_user({"username": uname})
+    uname = session.get("username")
+    if uname and "@" in uname:
+        sentry_sdk.set_user({"email": uname})
+    elif uname:
+        sentry_sdk.set_user({"username": uname})
 
 
 @app.route("/favicon.ico")

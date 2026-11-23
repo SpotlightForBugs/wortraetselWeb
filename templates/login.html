@@ -3,10 +3,10 @@ content %}
 <main class="gate">
   {% include 'gate_story.html' %}
   <section class="auth-card">
-    <h2>Keep your score</h2>
-    <p class="gate-lead">Create an account and your name goes on the board.</p>
+    <h2>Save your score</h2>
+    <p class="gate-lead">The game is open. An account is how a hit stays on the board.</p>
     <a class="signup-cta" href="{{ url_for('register') }}">Create an account</a>
-    <p class="gate-or">Already playing?</p>
+    <p class="gate-or">Already have an account?</p>
     {% if error %}
     <p class="error">{{ error }}</p>
     {% endif %}
@@ -24,6 +24,7 @@ content %}
       <input type="password" id="password" name="password" required />
       <input type="submit" value="Log in" />
     </form>
+    <p class="auth-links"><a href="{{ url_for('game') }}">Back to the game</a></p>
   </section>
 </main>
 {% endblock %}

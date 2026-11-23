@@ -444,6 +444,41 @@ tr.me {
   margin-top: 14px;
 }
 
+.save-offer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 16px;
+  margin-top: 14px;
+}
+
+.save-offer p {
+  margin: 0;
+  max-width: 46rem;
+}
+
+.save-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.save-actions form {
+  margin: 0;
+}
+
+.btn.save-btn {
+  background: #1e7e34;
+}
+
+.btn.later {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
 @media (max-width: 800px) {
   .gate {
     grid-template-columns: 1fr;
