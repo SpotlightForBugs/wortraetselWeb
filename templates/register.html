@@ -18,6 +18,7 @@ endblock %} {% block content %}
       <input type="password" id="password" name="password" required />
       <label for="confirm_password">Confirm password</label>
       <input type="password" id="confirm_password" name="password2" required />
+      {% include 'cap_widget.html' %}
       <input class="signup-submit" type="submit" value="Save my score" />
     </form>
     <p class="auth-links">

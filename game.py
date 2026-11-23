@@ -162,11 +162,11 @@ def calculate_points(
     return points
 
 
-def should_offer_save(logged_in, dismissed, letter_in_word, hits_before):
-    """Ask a guest to save once, on the first correct letter."""
+def should_offer_save(logged_in, dismissed, solved):
+    """Ask a guest to register once, after they solve a word."""
     if logged_in or dismissed:
         return False
-    return bool(letter_in_word) and hits_before == 0
+    return bool(solved)
 
 
 def stash_guest_points(pending, points):

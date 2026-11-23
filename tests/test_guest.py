@@ -4,46 +4,18 @@ import game
 
 
 class GuestSaveTests(unittest.TestCase):
-    def test_the_first_hit_is_the_only_time_a_guest_is_asked(self):
+    def test_a_solved_word_is_the_only_time_a_guest_is_asked(self):
         self.assertTrue(
-            game.should_offer_save(
-                logged_in=False,
-                dismissed=False,
-                letter_in_word=True,
-                hits_before=0,
-            )
+            game.should_offer_save(logged_in=False, dismissed=False, solved=True)
         )
         self.assertFalse(
-            game.should_offer_save(
-                logged_in=True,
-                dismissed=False,
-                letter_in_word=True,
-                hits_before=0,
-            )
+            game.should_offer_save(logged_in=True, dismissed=False, solved=True)
         )
         self.assertFalse(
-            game.should_offer_save(
-                logged_in=False,
-                dismissed=True,
-                letter_in_word=True,
-                hits_before=0,
-            )
+            game.should_offer_save(logged_in=False, dismissed=True, solved=True)
         )
         self.assertFalse(
-            game.should_offer_save(
-                logged_in=False,
-                dismissed=False,
-                letter_in_word=False,
-                hits_before=0,
-            )
-        )
-        self.assertFalse(
-            game.should_offer_save(
-                logged_in=False,
-                dismissed=False,
-                letter_in_word=True,
-                hits_before=1,
-            )
+            game.should_offer_save(logged_in=False, dismissed=False, solved=False)
         )
 
     def test_guest_points_wait_until_there_is_an_account(self):

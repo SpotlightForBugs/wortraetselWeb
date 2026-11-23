@@ -1,0 +1,12 @@
+<div class="cap-slot">
+  <cap-widget required data-cap-api-endpoint="{{ cap_endpoint }}"></cap-widget>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/cap-widget@0.1.63"></script>
+{% if error %}
+<script>
+  var capWidget = document.querySelector("cap-widget");
+  if (capWidget && capWidget.reset) {
+    capWidget.reset();
+  }
+</script>
+{% endif %}

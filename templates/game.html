@@ -75,19 +75,6 @@ block content %}
     </div>
   </header>
 
-  {% if save_offer %}
-  <section class="panel save-offer">
-    <p>That's a hit. Create an account if you want this score on the leaderboard.</p>
-    <div class="save-actions">
-      <a class="btn save-btn" href="{{ url_for('register') }}">Create an account</a>
-      <form method="post" action="{{ url_for('dismiss_save') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn later">Not now</button>
-      </form>
-    </div>
-  </section>
-  {% endif %}
-
   <section class="game-area">
     <div class="panel">
       <div class="stage">

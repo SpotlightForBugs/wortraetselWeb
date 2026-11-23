@@ -4,7 +4,7 @@ content %}
   {% include 'gate_story.html' %}
   <section class="auth-card">
     <h2>Save your score</h2>
-    <p class="gate-lead">The game is open. An account is how a hit stays on the board.</p>
+    <p class="gate-lead">The game is open. An account keeps a solved word on the board.</p>
     <a class="signup-cta" href="{{ url_for('register') }}">Create an account</a>
     <p class="gate-or">Already have an account?</p>
     {% if error %}
@@ -22,6 +22,7 @@ content %}
       />
       <label for="password">Password</label>
       <input type="password" id="password" name="password" required />
+      {% include 'cap_widget.html' %}
       <input type="submit" value="Log in" />
     </form>
     <p class="auth-links"><a href="{{ url_for('game') }}">Back to the game</a></p>
