@@ -7,15 +7,20 @@ import game as play_logic
 import firebaseDB
 
 sentry_sdk.init(
-    dsn="https://7c71cffadff9423a983843ddd3fe96a3@o1363527.ingest.sentry.io/4505154639364096",
+    dsn="https://36685b77d489f469c5f64a85d1839aa3@o4509985277018112.ingest.de.sentry.io/4512480802177104",
     integrations=[
         FlaskIntegration(),
         PureEvalIntegration(),
     ],
     # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # We recommend adjusting this value in production.
+    # of transactions for tracing.
     traces_sample_rate=1.0,
+    # Set profile_session_sample_rate to 1.0 to profile 100%
+    # of profile sessions.
+    profile_session_sample_rate=1.0,
+    # Set profile_lifecycle to "trace" to automatically
+    # run the profiler when there is an active transaction.
+    profile_lifecycle="trace",
     server_name="Hangman@Web",
     environment="web",
 )
