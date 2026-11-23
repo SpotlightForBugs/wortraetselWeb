@@ -209,7 +209,9 @@ def _page_context(auth=None, auth_error=None):
     guest = "username" not in session
     if not guest:
         try:
-            session["display_name"] = accounts.getUsername(session["username"])["username"]
+            session["display_name"] = accounts.getUsername(session["username"])[
+                "username"
+            ]
         except Exception:
             session["display_name"] = session.get("display_name") or session["username"]
     try:
@@ -339,9 +341,7 @@ def _auth_reply(ok, panel, error_key=None):
     message = i18n.text(language, error_key or "try_again")
     if _wants_json():
         return jsonify({"ok": False, "error": message})
-    return render_template(
-        "game.html", **_page_context(auth=panel, auth_error=message)
-    )
+    return render_template("game.html", **_page_context(auth=panel, auth_error=message))
 
 
 @app.route("/game/<word>")

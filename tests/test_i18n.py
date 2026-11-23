@@ -11,7 +11,10 @@ class LanguageTests(unittest.TestCase):
         for language in game.getLanguages():
             self.assertEqual(set(i18n.catalog(language)), keys)
             for key in keys:
-                self.assertTrue(i18n.text(language, key) or key in ("worth", "unsaved_score", "score_line", "win", "loss"))
+                self.assertTrue(
+                    i18n.text(language, key)
+                    or key in ("worth", "unsaved_score", "score_line", "win", "loss")
+                )
 
     def test_browser_header_picks_a_supported_language(self):
         self.assertEqual(i18n.match_accept_language("de-DE,de;q=0.9,en;q=0.8"), "de")
