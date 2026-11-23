@@ -244,14 +244,8 @@ def game_success(word):
     )
 
 
-def _cap_endpoint():
-    return cap.endpoint(
-        os.environ.get("CAP_SERVER_URL"), os.environ.get("CAP_SITE_KEY")
-    )
-
-
 def _render_auth(template, error=None):
-    return render_template(template, error=error, cap_endpoint=_cap_endpoint())
+    return render_template(template, error=error)
 
 
 @app.route("/login", methods=["GET", "POST"])
