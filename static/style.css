@@ -481,6 +481,30 @@ body.scroll-lock {
   z-index: 40;
 }
 
+#result-layer.sheet {
+  align-items: flex-end;
+  background: transparent;
+  pointer-events: none;
+}
+
+#result-layer .auth-card {
+  pointer-events: auto;
+  width: min(480px, 100%);
+  margin: 0 0 12px;
+}
+
+body:has(#result-layer:not([hidden])) .header,
+body:has(#result-layer:not([hidden])) .letters-panel,
+body:has(#result-layer:not([hidden])) .score-board,
+body:has(#result-layer:not([hidden])) .leaderboard {
+  display: none;
+}
+
+body:has(#result-layer:not([hidden])) .game-area {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
 .sheet .auth-card {
   width: min(440px, 100%);
   max-height: calc(100vh - 32px);
