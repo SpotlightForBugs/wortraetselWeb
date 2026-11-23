@@ -29,6 +29,25 @@ class WordListTests(unittest.TestCase):
     def test_word_picker_does_not_call_the_network(self):
         self.assertFalse(hasattr(game, "requests"))
 
+    def test_phrases_and_quoted_strings_are_dropped(self):
+        for sample in (
+            "Das ist ein Traum",
+            '"Das ist ein Traum"',
+            "In den Warenkorb",
+            "Ich weiß nicht.",
+            "Luft- und Raumfahrt",
+        ):
+            self.assertIsNone(game.normalize_word(sample))
+
+    def test_german_list_is_the_local_duden_copy(self):
+        words = game._local_words("de")
+        self.assertIn("aachen", words)
+        self.assertIn("aalraeucherei", words)
+        self.assertNotIn("dasisteintraum", words)
+        joined = "\n".join(words)
+        self.assertNotIn(" ", joined)
+        self.assertNotIn('"', joined)
+
 
 if __name__ == "__main__":
     unittest.main()

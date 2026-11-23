@@ -1,4 +1,5 @@
 import random
+import unicodedata
 from pathlib import Path
 
 # Latin-script languages from random-word-api. Chinese is omitted because
@@ -25,15 +26,58 @@ _LANGUAGE_FLAGS = {
     "tr": "TR",
 }
 _WORD_LISTS = {}
+_LETTER_FOLDS = str.maketrans(
+    {
+        "ä": "ae",
+        "ö": "oe",
+        "ü": "ue",
+        "ß": "ss",
+        "æ": "ae",
+        "ø": "oe",
+        "å": "aa",
+        "œ": "oe",
+        "ı": "i",
+        "ğ": "g",
+        "ş": "s",
+        "ș": "s",
+        "ţ": "t",
+        "ț": "t",
+        "ñ": "n",
+        "ç": "c",
+    }
+)
+
+
+def normalize_word(raw):
+    """Return one A-Z hangman word, or None when the entry is not a word.
+
+    The word dump includes phrases and UI strings such as "Das ist ein Traum".
+    Anything with spaces, quotes, or other non-letters is dropped.
+    """
+    if not isinstance(raw, str) or any(ch.isspace() for ch in raw):
+        return None
+    text = raw.strip().lower().translate(_LETTER_FOLDS)
+    if not text:
+        return None
+    text = "".join(
+        ch
+        for ch in unicodedata.normalize("NFKD", text)
+        if not unicodedata.combining(ch)
+    )
+    if not 3 <= len(text) <= 40 or not text.isascii() or not text.isalpha():
+        return None
+    return text
 
 
 def _local_words(name):
     if name not in _WORD_LISTS:
         path = Path(__file__).resolve().parent / "data" / f"{name}.txt"
         words = []
+        seen = set()
         for line in path.read_text(encoding="utf-8").splitlines():
-            word = line.strip().lower()
-            if len(word) >= 3 and word.isascii() and word.isalpha():
+            word = normalize_word(line)
+            if word and word not in seen:
+                seen.add(word)
                 words.append(word)
         if not words:
             raise ValueError(f"no hangman words for {name}")
