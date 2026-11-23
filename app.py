@@ -7,20 +7,26 @@ import game as play_logic
 import firebaseDB
 
 sentry_sdk.init(
-    dsn="https://7c71cffadff9423a983843ddd3fe96a3@o1363527.ingest.sentry.io/4505154639364096",
+    dsn="https://36685b77d489f469c5f64a85d1839aa3@o4509985277018112.ingest.de.sentry.io/4512480802177104",
     integrations=[
         FlaskIntegration(),
         PureEvalIntegration(),
     ],
     # Set traces_sample_rate to 1.0 to capture 100%
-    # of transactions for performance monitoring.
-    # We recommend adjusting this value in production.
+    # of transactions for tracing.
     traces_sample_rate=1.0,
+    # Set profile_session_sample_rate to 1.0 to profile 100%
+    # of profile sessions.
+    profile_session_sample_rate=1.0,
+    # Set profile_lifecycle to "trace" to automatically
+    # run the profiler when there is an active transaction.
+    profile_lifecycle="trace",
     server_name="Hangman@Web",
     environment="web",
 )
 
 import os
+from html import escape
 
 from flask import (
     Flask,
@@ -48,7 +54,6 @@ allowed_paths = [
     "/session_data",
     "/favicon.ico",
     "/robots.txt",
-    "/demo",
     "/register_split",
 ]
 
@@ -134,11 +139,6 @@ def game():
     return redirect(url_for("login"))
 
 
-@app.route("/demo")
-def demo():
-    return render_template("demo.html")
-
-
 @app.route("/set_language", methods=["POST"])
 def set_language():
     if (
@@ -166,30 +166,33 @@ def dark_mode():
     return redirect(url_for("game"))
 
 
+def _result_page(message, image_src):
+    safe_message = escape(message)
+    safe_src = escape(image_src, quote=True)
+    return (
+        "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>"
+        "<title>Hangman</title><link rel='stylesheet' href='/static/style.css'>"
+        "</head><body><main class='auth-wrap'><section class='auth-card result-card'>"
+        f"<p>{safe_message}</p><img alt='' src='{safe_src}'>"
+        "</section></main><script>setTimeout(function(){window.location.href='/';},5000);</script>"
+        "</body></html>"
+    )
+
+
 @app.route("/game/<word>")
 def game_over(word):
-    with open("static/assets/killed.svg", "r") as killed_image:
-        killed_image = killed_image.read()
-
-        return (
-            "<p style='font-size: 50px; color: red;'>Du hast verloren. Das Wort war "
-            + word.capitalize()
-            + "</p>"
-            + killed_image
-            + "<script>setTimeout(function(){window.location.href = '/';}, "
-            "5000);</script>"
-        )
+    return _result_page(
+        "Du hast verloren. Das Wort war " + word.capitalize(),
+        "/static/assets/killed.svg",
+    )
 
 
 @app.route("/game/<word>/success")
 def game_success(word):
-    return (
-        "<h1> Super, du hast es erraten. Das Wort war "
-        + word.capitalize()
-        + " </h1><script>setTimeout(function(){window.location.href = '/';}, "
-        "5000);</script><style>body{background-color: beige; color: "
-        "white;}</style>"
-        + "<img src='/static/assets/won.svg' width='1000' height='1000'>"
+    return _result_page(
+        "Super, du hast es erraten. Das Wort war " + word.capitalize(),
+        "/static/assets/won.svg",
     )
 
 
@@ -216,8 +219,7 @@ def login():
                 error="Your Session has expired. Did you change your password?",
             )
 
-    else:
-        return render_template("login.html", error="Invalid email or password")
+    return render_template("login.html")
 
 
 @app.route("/register", methods=["GET", "POST"])
