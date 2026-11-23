@@ -168,7 +168,9 @@ def _result_page(message, image_src, guest=False):
         follow = ""
     else:
         extra = ""
-        follow = "<script>setTimeout(function(){window.location.href='/';},5000);</script>"
+        follow = (
+            "<script>setTimeout(function(){window.location.href='/';},5000);</script>"
+        )
     return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
