@@ -66,10 +66,13 @@ db = firestore.client()
 
 @app.route("/", methods=["GET", "POST"])
 def game():
+    language = play_logic.coerce_language(session.get("language", "de"))
+    if session.get("language") != language:
+        session["language"] = language
+        session.pop("word", None)
     if "word" not in session:
-        if "language" not in session:
-            session["language"] = "de"
-        session["word"] = play_logic.getRandomWord(session["language"])
+        session["language"] = language
+        session["word"] = play_logic.getRandomWord(language)
         session["letters"] = []
         session["score"] = 0
         session["wrong_guesses"] = 0
@@ -123,6 +126,8 @@ def game():
             ),
             user_language=session["language"],
             all_languages=play_logic.getLanguages(),
+            language_names=play_logic.language_names(),
+            language_flag=play_logic.language_flag(session["language"]),
             dark_mode=session.get("dark_mode", False),
         )
     if request.method == "POST":

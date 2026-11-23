@@ -1,11 +1,29 @@
 import random
 from pathlib import Path
 
-import requests as requests
-import zufallsworte as german_words
-
-globals()["LANGUAGES"] = ["en", "de", "fi", "fr"]
-
+# Latin-script languages from random-word-api. Chinese is omitted because
+# the board only has A-Z.
+_LANGUAGES = ("en", "es", "it", "de", "fr", "pt-br", "ro", "tr")
+_LANGUAGE_NAMES = {
+    "en": "English",
+    "es": "Spanish",
+    "it": "Italian",
+    "de": "German",
+    "fr": "French",
+    "pt-br": "Portuguese",
+    "ro": "Romanian",
+    "tr": "Turkish",
+}
+_LANGUAGE_FLAGS = {
+    "en": "GB",
+    "es": "ES",
+    "it": "IT",
+    "de": "DE",
+    "fr": "FR",
+    "pt-br": "BR",
+    "ro": "RO",
+    "tr": "TR",
+}
 _WORD_LISTS = {}
 
 
@@ -15,34 +33,12 @@ def _local_words(name):
         words = []
         for line in path.read_text(encoding="utf-8").splitlines():
             word = line.strip().lower()
-            if len(word) >= 3 and word.isalpha():
+            if len(word) >= 3 and word.isascii() and word.isalpha():
                 words.append(word)
+        if not words:
+            raise ValueError(f"no hangman words for {name}")
         _WORD_LISTS[name] = words
     return _WORD_LISTS[name]
-
-
-def _ascii_word(word):
-    return (
-        word.lower()
-        .replace("ä", "ae")
-        .replace("ö", "oe")
-        .replace("ü", "ue")
-        .replace("ß", "ss")
-    )
-
-
-def _remote_lines(url):
-    if url in _WORD_LISTS:
-        return _WORD_LISTS[url]
-    try:
-        response = requests.get(url, timeout=8)
-        response.raise_for_status()
-    except requests.RequestException:
-        return []
-    lines = [line.strip() for line in response.text.splitlines() if line.strip()]
-    if lines:
-        _WORD_LISTS[url] = lines
-    return lines
 
 
 def isValidLanguage(language):
@@ -50,30 +46,25 @@ def isValidLanguage(language):
 
 
 def getLanguages() -> list:
-    return globals()["LANGUAGES"]
+    return list(_LANGUAGES)
+
+
+def language_names():
+    return dict(_LANGUAGE_NAMES)
+
+
+def language_flag(language):
+    return _LANGUAGE_FLAGS.get(coerce_language(language), "GB")
+
+
+def coerce_language(language):
+    if language in _LANGUAGES:
+        return language
+    return "en"
 
 
 def getRandomWord(language):
-    if isValidLanguage(language):
-        if language == "de":
-            return _ascii_word(german_words.zufallswoerter(1)[0])
-        if language == "en":
-            return random.choice(_local_words("en"))
-        if language == "fi":
-            finnish_words = _remote_lines(
-                "https://raw.githubusercontent.com/hugovk/everyfinnishword/master/kaikkisanat.txt"
-            )
-            if not finnish_words:
-                return random.choice(("kissa", "talo", "omena", "metsa", "koulu"))
-            return _ascii_word(random.choice(finnish_words))
-        if language == "fr":
-            french_words = _remote_lines(
-                "https://raw.githubusercontent.com/lorenbrichter/Words/master/Words/fr.txt"
-            )
-            if not french_words:
-                return random.choice(("maison", "jardin", "livre", "soleil", "ecole"))
-            translation_table = str.maketrans("éàèùâêîôûç", "eaeuaeiouc")
-            return random.choice(french_words).lower().translate(translation_table)
+    return random.choice(_local_words(coerce_language(language)))
 
 
 def generate_hangman(tries, n, m):

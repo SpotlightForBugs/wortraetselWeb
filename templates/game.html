@@ -14,9 +14,9 @@ block content %}
           <select name="language" onchange="verify_selection()">
             {% for language in all_languages %}
             {% if language == user_language %}
-            <option value="{{ language }}" selected>{{ language }}</option>
+            <option value="{{ language }}" selected>{{ language_names[language] }}</option>
             {% else %}
-            <option value="{{ language }}">{{ language }}</option>
+            <option value="{{ language }}">{{ language_names[language] }}</option>
             {% endif %}
             {% endfor %}
           </select>
@@ -25,10 +25,10 @@ block content %}
       </div>
       <div class="flags">
         <img
-          src="https://flagsapi.com/{{ user_language|replace('en','GB')|upper }}/shiny/64.png"
+          src="https://flagsapi.com/{{ language_flag }}/shiny/64.png"
           width="32"
           height="32"
-          alt="{{ user_language }}"
+          alt="{{ language_names[user_language] }}"
         />
         {% if user_language == 'en' %}
         <img

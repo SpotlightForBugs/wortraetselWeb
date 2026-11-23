@@ -1,42 +1,33 @@
 import unittest
-from unittest.mock import patch
-
-import requests
 
 import game
 
 
 class WordListTests(unittest.TestCase):
-    def test_english_word_comes_from_the_local_list(self):
-        with patch("game.requests.get") as get:
-            word = game.getRandomWord("en")
-        get.assert_not_called()
-        self.assertIn(word, game._local_words("en"))
-        self.assertTrue(word.isalpha())
-        self.assertGreaterEqual(len(word), 3)
-
-    def test_finnish_falls_back_when_the_list_cannot_be_fetched(self):
-        game._WORD_LISTS.pop(
-            "https://raw.githubusercontent.com/hugovk/everyfinnishword/master/kaikkisanat.txt",
-            None,
+    def test_supported_languages_fit_an_alphabet_board(self):
+        self.assertEqual(
+            game.getLanguages(),
+            ["en", "es", "it", "de", "fr", "pt-br", "ro", "tr"],
         )
-        with patch("game.requests.get", side_effect=requests.RequestException("down")):
-            word = game.getRandomWord("fi")
-        self.assertIn(word, {"kissa", "talo", "omena", "metsa", "koulu"})
+        self.assertNotIn("zh", game.getLanguages())
+        self.assertNotIn("fi", game.getLanguages())
 
-    def test_non_json_english_payload_cannot_crash_a_new_game(self):
-        class BrokenResponse:
-            def json(self):
-                raise requests.exceptions.JSONDecodeError("Expecting value", "", 0)
+    def test_every_language_comes_from_its_local_list(self):
+        for language in game.getLanguages():
+            word = game.getRandomWord(language)
+            self.assertIn(word, game._local_words(language))
+            self.assertGreaterEqual(len(word), 3)
+            self.assertTrue(word.isascii())
+            self.assertTrue(word.isalpha())
 
-            def raise_for_status(self):
-                return None
+    def test_unsupported_language_uses_english(self):
+        self.assertEqual(game.coerce_language("zh"), "en")
+        self.assertEqual(game.coerce_language("fi"), "en")
+        word = game.getRandomWord("zh")
+        self.assertIn(word, game._local_words("en"))
 
-            text = "Payment required"
-
-        with patch("game.requests.get", return_value=BrokenResponse()):
-            word = game.getRandomWord("en")
-        self.assertTrue(word.isalpha())
+    def test_word_picker_does_not_call_the_network(self):
+        self.assertFalse(hasattr(game, "requests"))
 
 
 if __name__ == "__main__":
