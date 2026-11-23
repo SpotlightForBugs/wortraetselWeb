@@ -15,7 +15,10 @@ body.dark {
   --card: #1e242c;
   --text: #f2f5f7;
   --muted: #b4bec7;
-  --line: #313842;
+  --line: #6b7684;
+  --primary: #0062cc;
+  --success: #1e7e34;
+  --danger: #c82333;
   --shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
 }
 
@@ -200,6 +203,10 @@ select {
   cursor: default;
   filter: none;
   opacity: 0.72;
+}
+
+body.dark #game-form-Big button:disabled {
+  opacity: 1;
 }
 
 .btn-light {
