@@ -16,7 +16,6 @@ sentry_sdk.init(
     # of transactions for performance monitoring.
     # We recommend adjusting this value in production.
     traces_sample_rate=1.0,
-    send_default_pii=True,
     server_name="Hangman@Web",
     environment="web",
 )
