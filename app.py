@@ -3,6 +3,7 @@ from sentry_sdk import last_event_id
 from sentry_sdk.integrations.flask import FlaskIntegration
 from sentry_sdk.integrations.pure_eval import PureEvalIntegration
 import accounts
+import cap
 import game as play_logic
 import firebaseDB
 
@@ -37,7 +38,7 @@ from flask import (
     session,
     send_from_directory,
 )
-from flask_wtf.csrf import CSRFProtect
+from flask_wtf.csrf import CSRFProtect, generate_csrf
 
 import firebase_admin
 from firebase_admin import credentials, auth
@@ -46,16 +47,6 @@ from firebase_admin import firestore
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRETKEY")
 csrf = CSRFProtect(app)
-allowed_paths = [
-    "/login",
-    "/register",
-    "/users",
-    "/draw",
-    "/session_data",
-    "/favicon.ico",
-    "/robots.txt",
-    "/register_split",
-]
 
 if not firebase_admin._apps:
     cred = credentials.Certificate("serviceAccountKey.json")
@@ -66,10 +57,13 @@ db = firestore.client()
 
 @app.route("/", methods=["GET", "POST"])
 def game():
+    language = play_logic.coerce_language(session.get("language", "de"))
+    if session.get("language") != language:
+        session["language"] = language
+        session.pop("word", None)
     if "word" not in session:
-        if "language" not in session:
-            session["language"] = "de"
-        session["word"] = play_logic.getRandomWord(session["language"])
+        session["language"] = language
+        session["word"] = play_logic.getRandomWord(language)
         session["letters"] = []
         session["score"] = 0
         session["wrong_guesses"] = 0
@@ -78,40 +72,24 @@ def game():
             all(letter in session["letters"] for letter in session["word"])
             and not session["wrong_guesses"] >= 9
         ):
-            play_logic.finish_game(
-                session["username"],
-                word=session["word"],
-                wrong_guesses=session["wrong_guesses"],
-                success=True,
-                all_guesses=session["letters"],
-            )
-            word = session["word"]
-            session["word"] = play_logic.getRandomWord(session["language"])
-            session["letters"] = []
-            session["score"] = 0
-            session["wrong_guesses"] = 0
+            word = _close_round(success=True)
             return redirect("/game/" + word + "/success")
 
         elif session["wrong_guesses"] >= 9:
-            play_logic.finish_game(
-                session["username"],
-                word=session["word"],
-                wrong_guesses=session["wrong_guesses"],
-                success=False,
-                all_guesses=session["letters"],
-                legacy_account=accounts.is_legacy(session["username"]),
-            )
-            word = session["word"]
-            session["word"] = play_logic.getRandomWord(session["language"])
-            session["letters"] = []
-            session["score"] = 0
-            session["wrong_guesses"] = 0
+            word = _close_round(success=False)
             return redirect("/game/" + word)
 
+        guest = "username" not in session
+        if guest:
+            display_name = "Guest"
+        else:
+            display_name = accounts.getUsername(session["username"])["username"]
         return render_template(
             "game.html",
             leaderboard=firebaseDB.get_leaderboard(),
-            username=accounts.getUsername(session["username"])["username"],
+            username=display_name,
+            guest=guest,
+            pending_score=session.get("pending_score", 0),
             drawing=play_logic.generate_hangman(session["wrong_guesses"], 1000, 1000),
             letters=[chr(i) for i in range(65, 91)],
             word=session["word"],
@@ -123,6 +101,8 @@ def game():
             ),
             user_language=session["language"],
             all_languages=play_logic.getLanguages(),
+            language_names=play_logic.language_names(),
+            language_flag=play_logic.language_flag(session["language"]),
             dark_mode=session.get("dark_mode", False),
         )
     if request.method == "POST":
@@ -166,18 +146,85 @@ def dark_mode():
     return redirect(url_for("game"))
 
 
-def _result_page(message, image_src):
+def _result_page(message, image_src, offer=False):
     safe_message = escape(message)
     safe_src = escape(image_src, quote=True)
+    if offer:
+        pending = session.get("pending_score", 0)
+        token = escape(generate_csrf(), quote=True)
+        extra = (
+            f"<p class='gate-lead'>This round is worth {pending}. "
+            "Create an account if you want it on the leaderboard.</p>"
+            "<a class='signup-cta' href='/register'>Create an account</a>"
+            "<form method='post' action='/dismiss_save'>"
+            f"<input type='hidden' name='csrf_token' value='{token}'>"
+            "<button type='submit' class='btn later'>Not now</button>"
+            "</form>"
+        )
+        follow = ""
+    else:
+        extra = ""
+        follow = (
+            "<script>setTimeout(function(){window.location.href='/';},5000);</script>"
+        )
     return (
         "<!DOCTYPE html><html><head><meta charset='utf-8'>"
         "<meta name='viewport' content='width=device-width, initial-scale=1'>"
         "<title>Hangman</title><link rel='stylesheet' href='/static/style.css'>"
         "</head><body><main class='auth-wrap'><section class='auth-card result-card'>"
-        f"<p>{safe_message}</p><img alt='' src='{safe_src}'>"
-        "</section></main><script>setTimeout(function(){window.location.href='/';},5000);</script>"
+        f"<p>{safe_message}</p><img alt='' src='{safe_src}' width='640' height='480'>{extra}"
+        f"</section></main>{follow}"
         "</body></html>"
     )
+
+
+def _close_round(success):
+    word = session["word"]
+    if "username" in session:
+        if success:
+            play_logic.finish_game(
+                session["username"],
+                word=word,
+                wrong_guesses=session["wrong_guesses"],
+                success=True,
+                all_guesses=session["letters"],
+            )
+        else:
+            play_logic.finish_game(
+                session["username"],
+                word=word,
+                wrong_guesses=session["wrong_guesses"],
+                success=False,
+                all_guesses=session["letters"],
+                legacy_account=accounts.is_legacy(session["username"]),
+            )
+    else:
+        points = play_logic.calculate_points(
+            session["wrong_guesses"], word, session["letters"], success
+        )
+        session["pending_score"] = play_logic.stash_guest_points(
+            session.get("pending_score", 0), points
+        )
+        if play_logic.should_offer_save(
+            logged_in=False,
+            dismissed=session.get("register_dismissed", False),
+            solved=success,
+        ):
+            session["register_offer"] = True
+    session["word"] = play_logic.getRandomWord(session["language"])
+    session["letters"] = []
+    session["score"] = 0
+    session["wrong_guesses"] = 0
+    return word
+
+
+def _apply_pending_score():
+    pending = session.get("pending_score") or 0
+    if not pending or "username" not in session:
+        return
+    if firebaseDB.setScore(session["username"], pending):
+        session.pop("pending_score", None)
+        session.pop("register_offer", None)
 
 
 @app.route("/game/<word>")
@@ -193,7 +240,12 @@ def game_success(word):
     return _result_page(
         "Super, du hast es erraten. Das Wort war " + word.capitalize(),
         "/static/assets/won.svg",
+        offer="username" not in session and session.get("register_offer", False),
     )
+
+
+def _render_auth(template, error=None):
+    return render_template(template, error=error)
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -202,24 +254,30 @@ def login():
         return redirect(url_for("game"))
 
     if request.method == "POST":
+        if not cap.token_ok(request.form.get("cap-token", "")):
+            return _render_auth(
+                "login.html", error="Confirm you are a person, then try again."
+            )
         email = request.form["email"]
         password = request.form["password"]
         try:
             user = auth.get_user_by_email(email)
             print(f"User is {user} with email {email}")
         except:
-            return render_template("login.html", error="Invalid email or password")
+            return _render_auth("login.html", error="Invalid email or password")
         if user:
             auth_user = accounts.login(email, password)
             if auth_user:
                 session["username"] = auth_user
+                session.pop("register_offer", None)
+                _apply_pending_score()
                 return redirect(url_for("game"))
-            return render_template(
+            return _render_auth(
                 "login.html",
                 error="Your Session has expired. Did you change your password?",
             )
 
-    return render_template("login.html")
+    return _render_auth("login.html")
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -228,6 +286,10 @@ def register():
         return redirect(url_for("game"))
 
     if request.method == "POST":
+        if not cap.token_ok(request.form.get("cap-token", "")):
+            return _render_auth(
+                "register.html", error="Confirm you are a person, then try again."
+            )
         email = request.form["email"]
         password = request.form["password"]
         username = request.form["username"]
@@ -235,11 +297,13 @@ def register():
             user = accounts.register(email, password, username)
             if user:
                 session["username"] = email
+                session.pop("register_offer", None)
+                _apply_pending_score()
                 return redirect(url_for("game"))
         except:
-            return render_template("register.html", error="Email already exists")
+            return _render_auth("register.html", error="Email already exists")
     else:
-        return render_template("register.html")
+        return _render_auth("register.html")
 
 
 @app.route("/register_split", methods=["GET", "POST"])
@@ -264,23 +328,26 @@ def register_split():
     )
 
 
+@app.route("/dismiss_save", methods=["POST"])
+def dismiss_save():
+    session["register_dismissed"] = True
+    session.pop("register_offer", None)
+    return redirect(url_for("game"))
+
+
 @app.route("/logout")
 def logout():
     session.pop("username", None)
-    return redirect(url_for("login"))
+    return redirect(url_for("game"))
 
 
 @app.before_request
 def before_request():
-    # Check if the user is not logged in and the requested path is not the login page
-    if "username" not in session and request.path not in allowed_paths:
-        return redirect(url_for("login"))
-    if "username" in session:
-        uname = session["username"]
-        if uname and "@" in uname:
-            sentry_sdk.set_user({"email": uname})
-        elif uname:
-            sentry_sdk.set_user({"username": uname})
+    uname = session.get("username")
+    if uname and "@" in uname:
+        sentry_sdk.set_user({"email": uname})
+    elif uname:
+        sentry_sdk.set_user({"username": uname})
 
 
 @app.route("/favicon.ico")

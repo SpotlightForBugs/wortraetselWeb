@@ -1,8 +1,12 @@
-{% extends 'scripts.html' %} {% block title %}Login{% endblock %} {% block
+{% extends 'scripts.html' %} {% block title %}Play Hangman{% endblock %} {% block
 content %}
-<main class="auth-wrap">
+<main class="gate">
+  {% include 'gate_story.html' %}
   <section class="auth-card">
-    <h2>Login</h2>
+    <h2>Save your score</h2>
+    <p class="gate-lead">The game is open. An account keeps a solved word on the board.</p>
+    <a class="signup-cta" href="{{ url_for('register') }}">Create an account</a>
+    <p class="gate-or">Already have an account?</p>
     {% if error %}
     <p class="error">{{ error }}</p>
     {% endif %}
@@ -11,19 +15,17 @@ content %}
       <label for="email">Email</label>
       <input
         type="email"
-        placeholder="Email-Adresse"
+        placeholder="you@example.com"
         id="email"
         name="email"
         required
       />
       <label for="password">Password</label>
       <input type="password" id="password" name="password" required />
-      <input type="submit" value="Login" />
+      <input type="submit" value="Log in" data-cap-floating="#cap" />
+      {% include 'cap_widget.html' %}
     </form>
-    <p class="auth-links">
-      Don't have an account?
-      <a href="{{ url_for('register') }}">Register instead</a>
-    </p>
+    <p class="auth-links"><a href="{{ url_for('game') }}">Back to the game</a></p>
   </section>
 </main>
 {% endblock %}

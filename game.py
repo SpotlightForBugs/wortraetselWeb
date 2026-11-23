@@ -1,11 +1,88 @@
 import random
+import unicodedata
+from pathlib import Path
 
-import requests as requests
-import zufallsworte as german_words
+# Latin-script languages from random-word-api. Chinese is omitted because
+# the board only has A-Z.
+_LANGUAGES = ("en", "es", "it", "de", "fr", "pt-br", "ro", "tr")
+_LANGUAGE_NAMES = {
+    "en": "English",
+    "es": "Spanish",
+    "it": "Italian",
+    "de": "German",
+    "fr": "French",
+    "pt-br": "Portuguese",
+    "ro": "Romanian",
+    "tr": "Turkish",
+}
+_LANGUAGE_FLAGS = {
+    "en": "GB",
+    "es": "ES",
+    "it": "IT",
+    "de": "DE",
+    "fr": "FR",
+    "pt-br": "BR",
+    "ro": "RO",
+    "tr": "TR",
+}
+_WORD_LISTS = {}
+_LETTER_FOLDS = str.maketrans(
+    {
+        "ä": "ae",
+        "ö": "oe",
+        "ü": "ue",
+        "ß": "ss",
+        "æ": "ae",
+        "ø": "oe",
+        "å": "aa",
+        "œ": "oe",
+        "ı": "i",
+        "ğ": "g",
+        "ş": "s",
+        "ș": "s",
+        "ţ": "t",
+        "ț": "t",
+        "ñ": "n",
+        "ç": "c",
+    }
+)
 
-import firebaseDB
 
-globals()["LANGUAGES"] = ["en", "de", "fi", "fr"]
+def normalize_word(raw):
+    """Return one A-Z hangman word, or None when the entry is not a word.
+
+    The word dump includes phrases and UI strings such as "Das ist ein Traum".
+    Anything with spaces, quotes, or other non-letters is dropped.
+    """
+    if not isinstance(raw, str) or any(ch.isspace() for ch in raw):
+        return None
+    text = raw.strip().lower().translate(_LETTER_FOLDS)
+    if not text:
+        return None
+    text = "".join(
+        ch
+        for ch in unicodedata.normalize("NFKD", text)
+        if not unicodedata.combining(ch)
+    )
+    if not 3 <= len(text) <= 40 or not text.isascii() or not text.isalpha():
+        return None
+    return text
+
+
+def _local_words(name):
+    if name not in _WORD_LISTS:
+        path = Path(__file__).resolve().parent / "data" / f"{name}.txt"
+        words = []
+        seen = set()
+        for line in path.read_text(encoding="utf-8").splitlines():
+            word = normalize_word(line)
+            if word and word not in seen:
+                seen.add(word)
+                words.append(word)
+        if not words:
+            raise ValueError(f"no hangman words for {name}")
+        _WORD_LISTS[name] = words
+    return _WORD_LISTS[name]
 
 
 def isValidLanguage(language):
@@ -13,43 +90,25 @@ def isValidLanguage(language):
 
 
 def getLanguages() -> list:
-    return globals()["LANGUAGES"]
+    return list(_LANGUAGES)
+
+
+def language_names():
+    return dict(_LANGUAGE_NAMES)
+
+
+def language_flag(language):
+    return _LANGUAGE_FLAGS.get(coerce_language(language), "GB")
+
+
+def coerce_language(language):
+    if language in _LANGUAGES:
+        return language
+    return "en"
 
 
 def getRandomWord(language):
-    if isValidLanguage(language):
-        if language == "de":
-            return (
-                german_words.zufallswoerter(1)[0]
-                .lower()
-                .replace("ä", "ae")
-                .replace("ö", "oe")
-                .replace("ü", "ue")
-                .replace("ß", "ss")
-                .lower()
-            )
-        if language == "en":
-            english_api = "https://random-word-api.vercel.app/api?words=1"
-            return requests.get(english_api).json()[0].lower()
-        if language == "fi":
-            finnish_word_list = requests.get(
-                "https://raw.githubusercontent.com/hugovk/everyfinnishword/master/kaikkisanat.txt"
-            ).text.split("\n")
-            return (
-                random.choice(finnish_word_list)
-                .lower()
-                .replace("ä", "ae")
-                .replace("ö", "oe")
-                .replace("ü", "ue")
-                .replace("ß", "ss")
-                .lower()
-            )
-        if language == "fr":
-            french_api = "https://raw.githubusercontent.com/lorenbrichter/Words/master/Words/fr.txt"
-            translationTable = str.maketrans("éàèùâêîôûç", "eaeuaeiouc")
-            french_api_words = requests.get(french_api).text.lower()
-            french_api_words = french_api_words.translate(translationTable).split("\n")
-            return random.choice(french_api_words)
+    return random.choice(_local_words(coerce_language(language)))
 
 
 def generate_hangman(tries, n, m):
@@ -103,6 +162,17 @@ def calculate_points(
     return points
 
 
+def should_offer_save(logged_in, dismissed, solved):
+    """Ask a guest to register once, after they solve a word."""
+    if logged_in or dismissed:
+        return False
+    return bool(solved)
+
+
+def stash_guest_points(pending, points):
+    return (pending or 0) + points
+
+
 def finish_game(
     username: str,
     word: str,
@@ -112,4 +182,6 @@ def finish_game(
     legacy_account=False,
 ):
     points = calculate_points(wrong_guesses, word, all_guesses, success)
+    import firebaseDB
+
     firebaseDB.setScore(username, points)
