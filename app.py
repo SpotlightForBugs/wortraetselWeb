@@ -245,7 +245,9 @@ def game_success(word):
 
 
 def _cap_endpoint():
-    return cap.endpoint(os.environ.get("CAP_SERVER_URL"), os.environ.get("CAP_SITE_KEY"))
+    return cap.endpoint(
+        os.environ.get("CAP_SERVER_URL"), os.environ.get("CAP_SITE_KEY")
+    )
 
 
 def _render_auth(template, error=None):
@@ -259,7 +261,9 @@ def login():
 
     if request.method == "POST":
         if not cap.token_ok(request.form.get("cap-token", "")):
-            return _render_auth("login.html", error="Confirm you are a person, then try again.")
+            return _render_auth(
+                "login.html", error="Confirm you are a person, then try again."
+            )
         email = request.form["email"]
         password = request.form["password"]
         try:

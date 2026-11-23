@@ -17,13 +17,26 @@ class CapTests(unittest.TestCase):
             cap.endpoint("https://cap.example.com/", "abc123"),
             "https://cap.example.com/abc123/",
         )
-        self.assertEqual(cap.verify_url("https://cap.example.com", "abc123"), "https://cap.example.com/abc123/siteverify")
+        self.assertEqual(
+            cap.verify_url("https://cap.example.com", "abc123"),
+            "https://cap.example.com/abc123/siteverify",
+        )
         self.assertEqual(cap.endpoint("", "abc123"), "")
 
     def test_missing_config_or_token_is_rejected(self):
-        self.assertFalse(cap.token_ok("", server="https://cap.example.com", site_key="abc", secret="sk-test"))
-        self.assertFalse(cap.token_ok("token", server="", site_key="abc", secret="sk-test"))
-        self.assertFalse(cap.token_ok("token", server="https://cap.example.com", site_key="abc", secret=""))
+        self.assertFalse(
+            cap.token_ok(
+                "", server="https://cap.example.com", site_key="abc", secret="sk-test"
+            )
+        )
+        self.assertFalse(
+            cap.token_ok("token", server="", site_key="abc", secret="sk-test")
+        )
+        self.assertFalse(
+            cap.token_ok(
+                "token", server="https://cap.example.com", site_key="abc", secret=""
+            )
+        )
 
     def test_only_a_successful_verification_is_accepted(self):
         calls = {}
