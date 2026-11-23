@@ -13,18 +13,11 @@ block content %}
         >
           <select name="language" onchange="verify_selection()">
             {% for language in all_languages %}
-            <option
-              value="{{ language }}"
-              {%
-              if
-              language=""
-              ="user_language"
-              %}selected{%
-              endif
-              %}
-            >
-              {{ language }}
-            </option>
+            {% if language == user_language %}
+            <option value="{{ language }}" selected>{{ language }}</option>
+            {% else %}
+            <option value="{{ language }}">{{ language }}</option>
+            {% endif %}
             {% endfor %}
           </select>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -136,8 +129,7 @@ block content %}
 
   <section class="panel score-board">
     <h3>
-      Score: {% for name in leaderboard %}{% if name.username == username %}{{
-      name.score }}{% endif %}{% endfor %}
+      Score: {% for name in leaderboard %}{% if name.username == username %}{{ name.score }}{% endif %}{% endfor %}
     </h3>
   </section>
 
