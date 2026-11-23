@@ -123,6 +123,7 @@ select {
 .stage {
   background: #fff;
   border-radius: 12px;
+  aspect-ratio: 1728 / 1296;
 }
 
 .hangman-image {
@@ -376,8 +377,35 @@ tr.me {
 }
 
 .auth-card {
+  position: relative;
   width: min(440px, 100%);
-  padding: 24px 22px 20px;
+  padding: 28px 22px 20px;
+}
+
+.auth-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  margin: 0;
+  padding: 4px 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.auth-links button {
+  display: inline;
+  width: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
 .result-card {
@@ -446,6 +474,80 @@ tr.me {
 
 .auth-card form {
   position: relative;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+html:has(.sheet:not([hidden])),
+body:has(.sheet:not([hidden])) {
+  overflow: hidden;
+}
+
+body.scroll-lock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(20, 30, 40, 0.45);
+  overscroll-behavior: none;
+}
+
+.sheet.auth-sheet {
+  z-index: 40;
+}
+
+#result-layer.sheet {
+  align-items: flex-end;
+  background: transparent;
+  pointer-events: none;
+}
+
+#result-layer .auth-card {
+  pointer-events: auto;
+  width: min(480px, 100%);
+  margin: 0 0 12px;
+}
+
+body:has(#result-layer:not([hidden])) .header,
+body:has(#result-layer:not([hidden])) .letters-panel,
+body:has(#result-layer:not([hidden])) .score-board,
+body:has(#result-layer:not([hidden])) .leaderboard {
+  display: none;
+}
+
+body:has(#result-layer:not([hidden])) .game-area {
+  grid-template-columns: 1fr;
+  justify-items: center;
+}
+
+.sheet .auth-card {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  margin: 0;
+  overscroll-behavior: contain;
+}
+
+.sheet .btn,
+.sheet input[type="submit"] {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.sheet .auth-links {
+  margin: 12px 0 0;
 }
 
 cap-widget {
