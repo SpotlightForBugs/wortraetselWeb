@@ -453,6 +453,18 @@ tr.me {
   display: none !important;
 }
 
+html:has(.sheet:not([hidden])),
+body:has(.sheet:not([hidden])) {
+  overflow: hidden;
+}
+
+body.scroll-lock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+}
+
 .sheet {
   position: fixed;
   inset: 0;
@@ -462,6 +474,7 @@ tr.me {
   justify-content: center;
   padding: 16px;
   background: rgba(20, 30, 40, 0.45);
+  overscroll-behavior: none;
 }
 
 .sheet.auth-sheet {
@@ -473,6 +486,7 @@ tr.me {
   max-height: calc(100vh - 32px);
   overflow: auto;
   margin: 0;
+  overscroll-behavior: contain;
 }
 
 .sheet .btn,

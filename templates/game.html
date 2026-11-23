@@ -337,10 +337,39 @@ block content %}
     });
   }
 
+  function sheetOpen() {
+    return (
+      !document.getElementById("auth-layer").hidden ||
+      !document.getElementById("result-layer").hidden
+    );
+  }
+
+  function syncScrollLock() {
+    var body = document.body;
+    if (sheetOpen()) {
+      if (body.classList.contains("scroll-lock")) {
+        return;
+      }
+      var y = window.scrollY || document.documentElement.scrollTop || 0;
+      body.dataset.scrollY = String(y);
+      body.style.top = "-" + y + "px";
+      body.classList.add("scroll-lock");
+      return;
+    }
+    if (!body.classList.contains("scroll-lock")) {
+      return;
+    }
+    var y = parseInt(body.dataset.scrollY || "0", 10) || 0;
+    body.classList.remove("scroll-lock");
+    body.style.top = "";
+    window.scrollTo(0, y);
+  }
+
   function paintResult(result) {
     var layer = document.getElementById("result-layer");
     if (!result) {
       layer.hidden = true;
+      syncScrollLock();
       return;
     }
     document.getElementById("result-message").textContent = result.message;
@@ -351,6 +380,7 @@ block content %}
     document.getElementById("result-save").hidden = !result.offer;
     document.getElementById("result-later").hidden = !result.offer;
     layer.hidden = false;
+    syncScrollLock();
   }
 
   function applyState(data) {
@@ -406,10 +436,12 @@ block content %}
     document.getElementById("login-lead").hidden = which === "register";
     document.getElementById("register-lead").hidden = which !== "register";
     document.getElementById("auth-error").hidden = true;
+    syncScrollLock();
   }
 
   function closeAuth() {
     document.getElementById("auth-layer").hidden = true;
+    syncScrollLock();
   }
 
   document.addEventListener("click", function (event) {
@@ -421,6 +453,31 @@ block content %}
     openAuth(trigger.getAttribute("data-auth"));
   });
   document.getElementById("auth-close").addEventListener("click", closeAuth);
+  document.querySelectorAll(".sheet").forEach(function (sheet) {
+    sheet.addEventListener(
+      "wheel",
+      function (event) {
+        var card = sheet.querySelector(".auth-card");
+        if (card && card.contains(event.target)) {
+          return;
+        }
+        event.preventDefault();
+      },
+      { passive: false },
+    );
+    sheet.addEventListener(
+      "touchmove",
+      function (event) {
+        var card = sheet.querySelector(".auth-card");
+        if (card && card.contains(event.target)) {
+          return;
+        }
+        event.preventDefault();
+      },
+      { passive: false },
+    );
+  });
+  syncScrollLock();
 
   function bindAuth(form) {
     form.addEventListener("submit", function (event) {
