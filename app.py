@@ -349,7 +349,9 @@ def _apply_pending_score():
         return
     session.pop("pending_score", None)
     session.pop("register_offer", None)
-    session["shown_score"] = play_logic.score_after_round(before, pending, _board_score())
+    session["shown_score"] = play_logic.score_after_round(
+        before, pending, _board_score()
+    )
 
 
 def _auth_reply(ok, panel, error_key=None):
