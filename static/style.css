@@ -123,6 +123,7 @@ select {
 .stage {
   background: #fff;
   border-radius: 12px;
+  aspect-ratio: 1728 / 1296;
 }
 
 .hangman-image {
@@ -446,6 +447,42 @@ tr.me {
 
 .auth-card form {
   position: relative;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(20, 30, 40, 0.45);
+}
+
+.sheet.auth-sheet {
+  z-index: 40;
+}
+
+.sheet .auth-card {
+  width: min(440px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  margin: 0;
+}
+
+.sheet .btn,
+.sheet input[type="submit"] {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.sheet .auth-links {
+  margin: 12px 0 0;
 }
 
 cap-widget {

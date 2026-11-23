@@ -1,11 +1,11 @@
-{% extends 'scripts.html' %} {% block title %}Something went wrong{% endblock %}
+{% extends 'scripts.html' %} {% block title %}{{ copy.error_title }}{% endblock %}
 {% block content %}
 <main class="auth-wrap">
   <section class="auth-card">
-    <h2>Something went wrong</h2>
-    <p>The error was reported. You can head back and try again.</p>
+    <h2>{{ copy.error_title }}</h2>
+    <p>{{ copy.error_body }}</p>
     <p class="auth-links">
-      <a href="{{ url_for('game') }}">Back to the game</a>
+      <a href="{{ url_for('game') }}">{{ copy.back_to_game }}</a>
     </p>
   </section>
 </main>

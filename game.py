@@ -7,13 +7,13 @@ from pathlib import Path
 _LANGUAGES = ("en", "es", "it", "de", "fr", "pt-br", "ro", "tr")
 _LANGUAGE_NAMES = {
     "en": "English",
-    "es": "Spanish",
-    "it": "Italian",
-    "de": "German",
-    "fr": "French",
-    "pt-br": "Portuguese",
-    "ro": "Romanian",
-    "tr": "Turkish",
+    "es": "Español",
+    "it": "Italiano",
+    "de": "Deutsch",
+    "fr": "Français",
+    "pt-br": "Português",
+    "ro": "Română",
+    "tr": "Türkçe",
 }
 _LANGUAGE_FLAGS = {
     "en": "GB",
@@ -109,6 +109,54 @@ def coerce_language(language):
 
 def getRandomWord(language):
     return random.choice(_local_words(coerce_language(language)))
+
+
+def apply_guess(word, letters, wrong_guesses, letter):
+    """Return the board after one guess. A repeated or empty guess changes nothing."""
+    letters = [ch.lower() for ch in letters or []]
+    wrong_guesses = int(wrong_guesses or 0)
+    guess = (letter or "").lower()
+    if len(guess) == 1 and guess.isalpha() and guess not in letters:
+        letters.append(guess)
+        if guess not in (word or ""):
+            wrong_guesses += 1
+    return letters, wrong_guesses, round_status(word, letters, wrong_guesses)
+
+
+def round_status(word, letters, wrong_guesses):
+    if int(wrong_guesses or 0) >= 9:
+        return "lost"
+    if word and all(ch in letters for ch in word):
+        return "won"
+    return "playing"
+
+
+def reveal(word, letters, status):
+    show = set(letters or [])
+    if status == "lost":
+        show.update(word or "")
+    return [ch if ch in show else "" for ch in (word or "")]
+
+
+def letter_states(letters, word):
+    guessed = set(letters or [])
+    word = word or ""
+    states = {}
+    for code in range(65, 91):
+        lower = chr(code).lower()
+        if lower not in guessed:
+            states[chr(code)] = "open"
+        elif lower in word:
+            states[chr(code)] = "hit"
+        else:
+            states[chr(code)] = "miss"
+    return states
+
+
+def drawing_for(wrong, status):
+    if status == "won":
+        return "/static/assets/won.svg"
+    return generate_hangman(min(int(wrong or 0), 9), 1000, 1000)
 
 
 def generate_hangman(tries, n, m):
