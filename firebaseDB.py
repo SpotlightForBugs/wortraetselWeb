@@ -26,9 +26,11 @@ def get_leaderboard():
         else:
             display_name = user.to_dict()["email"].split("@")[0]
 
-        leaderboard.append({"username": display_name, "score": user.to_dict()["score"]})
+        leaderboard.append({"username": display_name, "score": user.to_dict().get("score")})
 
-    return leaderboard
+    import game
+
+    return game.place_player(leaderboard, None, None)
 
 
 def getDocumentFor(username_or_email):
