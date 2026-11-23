@@ -1,15 +1,6 @@
-<div class="cap-slot">
-  <cap-widget
-    required
-    data-cap-api-endpoint="https://c.sfbhosting.eu/0e620a75a4/"
-  ></cap-widget>
-</div>
+<cap-widget
+  id="cap"
+  data-cap-api-endpoint="https://c.sfbhosting.eu/0e620a75a4/"
+></cap-widget>
 <script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.63"></script>
-{% if error %}
-<script>
-  var capWidget = document.querySelector("cap-widget");
-  if (capWidget && capWidget.reset) {
-    capWidget.reset();
-  }
-</script>
-{% endif %}
+<script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.63/cap-floating.min.js"></script>

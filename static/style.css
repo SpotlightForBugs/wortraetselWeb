@@ -444,13 +444,12 @@ tr.me {
   margin-top: 14px;
 }
 
-.cap-slot {
-  min-height: 64px;
-  margin-top: 16px;
+.auth-card form {
+  position: relative;
 }
 
 cap-widget {
-  display: block;
+  display: none;
 }
 
 .btn.save-btn {

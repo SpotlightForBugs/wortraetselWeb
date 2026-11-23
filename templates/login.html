@@ -22,8 +22,8 @@ content %}
       />
       <label for="password">Password</label>
       <input type="password" id="password" name="password" required />
+      <input type="submit" value="Log in" data-cap-floating="#cap" />
       {% include 'cap_widget.html' %}
-      <input type="submit" value="Log in" />
     </form>
     <p class="auth-links"><a href="{{ url_for('game') }}">Back to the game</a></p>
   </section>
