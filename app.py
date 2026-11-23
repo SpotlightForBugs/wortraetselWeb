@@ -275,10 +275,14 @@ def logout():
     return redirect(url_for("login"))
 
 
+def _is_public_path(path):
+    return path in allowed_paths or path.startswith("/static/")
+
+
 @app.before_request
 def before_request():
-    # Check if the user is not logged in and the requested path is not the login page
-    if "username" not in session and request.path not in allowed_paths:
+    # Login and register need the stylesheet before a session exists.
+    if "username" not in session and not _is_public_path(request.path):
         return redirect(url_for("login"))
     if "username" in session:
         uname = session["username"]
