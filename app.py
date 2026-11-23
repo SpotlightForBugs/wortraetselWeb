@@ -101,20 +101,20 @@ def _ensure_round():
 
 
 def _lookup_score(username, leaderboard):
+    if not username:
+        return None
     for row in leaderboard or []:
         if row.get("username") == username:
             return row.get("score", 0)
-    return 0
+    return None
 
 
-def _refresh_shown_score():
-    if "username" not in session:
-        return
+def _board_score():
     try:
         board = firebaseDB.get_leaderboard() or []
     except Exception:
-        return
-    session["shown_score"] = _lookup_score(session.get("display_name"), board)
+        return None
+    return _lookup_score(session.get("display_name"), board)
 
 
 def _settle_round():
@@ -151,7 +151,10 @@ def _settle_round():
                 all_guesses=session["letters"],
                 legacy_account=accounts.is_legacy(session["username"]),
             )
-        _refresh_shown_score()
+        before = session.get("shown_score") or 0
+        session["shown_score"] = play_logic.score_after_round(
+            before, points, _board_score()
+        )
     else:
         session["pending_score"] = play_logic.stash_guest_points(
             session.get("pending_score", 0), points
@@ -171,19 +174,30 @@ def _settle_round():
     }
 
 
+def _visible_score():
+    logged_in = "username" in session
+    if logged_in and "shown_score" not in session:
+        found = _board_score()
+        if found is not None:
+            session["shown_score"] = found
+    return play_logic.displayed_score(
+        session.get("shown_score"),
+        session.get("pending_score"),
+        logged_in,
+    )
+
+
 def _score_line(language):
-    if "username" not in session:
-        pending = session.get("pending_score") or 0
-        if pending:
-            return i18n.text(language, "unsaved_score", n=pending)
-        return i18n.text(language, "no_score")
-    return i18n.text(language, "score_line", n=session.get("shown_score") or 0)
+    return i18n.text(language, "score_line", n=_visible_score())
 
 
 def _payload(leaderboard=None):
     language = session.get("language") or "en"
-    if "username" in session and leaderboard is not None:
-        session["shown_score"] = _lookup_score(session.get("display_name"), leaderboard)
+    logged_in = "username" in session
+    if logged_in and "shown_score" not in session and leaderboard is not None:
+        found = _lookup_score(session.get("display_name"), leaderboard)
+        if found is not None:
+            session["shown_score"] = found
     state = i18n.client_state(
         language,
         session.get("word") or "",
@@ -194,7 +208,7 @@ def _payload(leaderboard=None):
     )
     guest = "username" not in session
     state["score_line"] = _score_line(language)
-    state["shown_score"] = session.get("shown_score") or 0
+    state["shown_score"] = _visible_score()
     state["dark"] = bool(session.get("dark_mode", False))
     state["guest"] = guest
     state["username"] = (
@@ -219,6 +233,10 @@ def _page_context(auth=None, auth_error=None):
     except Exception:
         leaderboard = []
     state = _payload(leaderboard=leaderboard)
+    if not guest:
+        leaderboard = play_logic.place_player(
+            leaderboard, session.get("display_name"), state["shown_score"]
+        )
     if auth not in ("login", "register") or not guest:
         auth = None
     return dict(
@@ -322,10 +340,16 @@ def _apply_pending_score():
     pending = session.get("pending_score") or 0
     if not pending or "username" not in session:
         return
-    if firebaseDB.setScore(session["username"], pending):
-        session.pop("pending_score", None)
-        session.pop("register_offer", None)
-        _refresh_shown_score()
+    before = session.get("shown_score") or 0
+    try:
+        wrote = firebaseDB.setScore(session["username"], pending)
+    except Exception:
+        wrote = False
+    if not wrote:
+        return
+    session.pop("pending_score", None)
+    session.pop("register_offer", None)
+    session["shown_score"] = play_logic.score_after_round(before, pending, _board_score())
 
 
 def _auth_reply(ok, panel, error_key=None):

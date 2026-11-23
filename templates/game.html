@@ -50,20 +50,11 @@ block content %}
       <a
         class="btn save-btn"
         id="save-score"
-        href="{{ url_for('register') }}"
-        data-auth="register"
+        href="{{ url_for('login') }}"
+        data-auth="login"
         data-i18n="save_score"
         {% if not guest %}hidden{% endif %}
         >{{ copy.save_score }}</a
-      >
-      <a
-        class="btn"
-        id="log-in"
-        href="{{ url_for('login') }}"
-        data-auth="login"
-        data-i18n="log_in"
-        {% if not guest %}hidden{% endif %}
-        >{{ copy.log_in }}</a
       >
       <button
         type="button"
@@ -178,16 +169,10 @@ block content %}
 
 <div id="auth-layer" class="sheet auth-sheet" {% if not auth %}hidden{% endif %}>
   <section class="auth-card" role="dialog" aria-modal="true">
-    <button type="button" id="auth-close" class="btn later" data-i18n="close">
+    <button type="button" id="auth-close" class="auth-close" data-i18n="close">
       {{ copy.close }}
     </button>
     <h2 data-i18n="save_score">{{ copy.save_score }}</h2>
-    <p id="login-lead" class="gate-lead" data-i18n="login_lead" {% if auth == 'register' %}hidden{% endif %}>
-      {{ copy.login_lead }}
-    </p>
-    <p id="register-lead" class="gate-lead" data-i18n="register_lead" {% if auth != 'register' %}hidden{% endif %}>
-      {{ copy.register_lead }}
-    </p>
     <p id="auth-error" class="error" {% if not auth_error %}hidden{% endif %}>{{ auth_error or '' }}</p>
 
     <form
@@ -204,7 +189,7 @@ block content %}
       <input type="submit" data-i18n="log_in" value="{{ copy.log_in }}" data-cap-floating="#cap-login" />
       {% with cap_id='cap-login' %}{% include 'cap_widget.html' %}{% endwith %}
       <p class="auth-links">
-        <button type="button" class="btn save-btn" data-auth="register" data-i18n="create_account">
+        <button type="button" data-auth="register" data-i18n="create_account">
           {{ copy.create_account }}
         </button>
       </p>
@@ -234,7 +219,7 @@ block content %}
       />
       {% with cap_id='cap-register' %}{% include 'cap_widget.html' %}{% endwith %}
       <p class="auth-links">
-        <button type="button" class="btn" data-auth="login" data-i18n="have_account">
+        <button type="button" data-auth="login" data-i18n="have_account">
           {{ copy.have_account }}
         </button>
       </p>
@@ -293,8 +278,36 @@ block content %}
 
   function paintGuest(guest) {
     document.getElementById("save-score").hidden = !guest;
-    document.getElementById("log-in").hidden = !guest;
     document.getElementById("log-out").hidden = !!guest;
+  }
+
+  function paintScore(data) {
+    if (data.score_line) {
+      document.getElementById("score-line").textContent = data.score_line;
+    }
+    var table = document.querySelector(".leaderboard tbody");
+    if (!table || data.shown_score == null) {
+      return;
+    }
+    var row = table.querySelector("tr.me");
+    if (data.guest) {
+      if (row && row.getAttribute("data-local") === "1") {
+        row.remove();
+      } else if (row) {
+        row.classList.remove("me");
+      }
+      return;
+    }
+    if (!row) {
+      row = document.createElement("tr");
+      row.className = "me";
+      row.setAttribute("data-local", "1");
+      row.appendChild(document.createElement("td"));
+      row.appendChild(document.createElement("td"));
+      table.prepend(row);
+    }
+    row.children[0].textContent = data.username || "";
+    row.children[1].textContent = data.shown_score;
   }
 
   function paintBoard(data) {
@@ -462,20 +475,14 @@ block content %}
     if (data.tiles && data.letter_states) {
       paintBoard(data);
     }
-    if (data.score_line) {
-      document.getElementById("score-line").textContent = data.score_line;
-    }
     if (data.username) {
       document.getElementById("player-name").textContent = data.username;
     }
     if (typeof data.guest === "boolean") {
       paintGuest(data.guest);
     }
-    if (data.shown_score != null) {
-      var cell = document.querySelector("tr.me td + td");
-      if (cell) {
-        cell.textContent = data.shown_score;
-      }
+    if (data.score_line || data.shown_score != null) {
+      paintScore(data);
     }
     if ("result" in data) {
       paintResult(data.result);
@@ -499,8 +506,6 @@ block content %}
     document.getElementById("auth-layer").hidden = false;
     document.getElementById("login-form").hidden = which === "register";
     document.getElementById("register-form").hidden = which !== "register";
-    document.getElementById("login-lead").hidden = which === "register";
-    document.getElementById("register-lead").hidden = which !== "register";
     document.getElementById("auth-error").hidden = true;
     syncScrollLock();
   }

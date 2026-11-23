@@ -221,6 +221,39 @@ def stash_guest_points(pending, points):
     return (pending or 0) + points
 
 
+def displayed_score(saved, pending, logged_in):
+    """One score: a guest's finished rounds, or the saved total plus anything not written yet."""
+    saved = int(saved or 0)
+    pending = int(pending or 0)
+    if logged_in:
+        return saved + pending
+    return pending
+
+
+def place_player(rows, name, score):
+    """Put this player's current score on the board."""
+    placed = [dict(row) for row in rows or []]
+    if not name:
+        return placed
+    for row in placed:
+        if row.get("username") == name:
+            row["score"] = score
+            break
+    else:
+        placed.append({"username": name, "score": score})
+    placed.sort(key=lambda row: row.get("score") or 0, reverse=True)
+    return placed
+
+
+def score_after_round(saved, points, board_score):
+    """Keep the local total when the board has not caught up to this round."""
+    saved = int(saved or 0)
+    points = int(points or 0)
+    if board_score is None or int(board_score) == saved:
+        return saved + points
+    return int(board_score)
+
+
 def finish_game(
     username: str,
     word: str,
