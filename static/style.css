@@ -524,6 +524,7 @@ body.scroll-lock {
 body:has(#result-layer:not([hidden])) .header,
 body:has(#result-layer:not([hidden])) .letters-panel,
 body:has(#result-layer:not([hidden])) .score-board,
+body:has(#result-layer:not([hidden])) .mp-entry,
 body:has(#result-layer:not([hidden])) .leaderboard {
   display: none;
 }
@@ -916,8 +917,21 @@ body.dark .mp-letters.locked .btn-primary:disabled {
 }
 
 .mp-entry .mp-entry-guest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
   margin: -6px 0 12px;
   font-size: 0.9rem;
+}
+
+.mp-entry .mp-entry-guest p {
+  margin: 0;
+  flex: 1 1 12rem;
+}
+
+.mp-entry .mp-entry-guest .btn {
+  flex: none;
 }
 
 .mp-entry select {

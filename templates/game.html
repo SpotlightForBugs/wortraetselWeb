@@ -48,13 +48,13 @@ block content %}
         </button>
       </form>
       <a
-        class="btn save-btn"
+        class="btn btn-primary"
         id="save-score"
         href="{{ url_for('login') }}"
         data-auth="login"
-        data-i18n="save_score"
+        data-i18n="log_in"
         {% if not guest %}hidden{% endif %}
-        >{{ copy.save_score }}</a
+        >{{ copy.log_in }}</a
       >
       <button
         type="button"
@@ -113,9 +113,17 @@ block content %}
   <section class="panel mp-entry">
     <h2 data-i18n="mp_title">{{ copy.mp_title }}</h2>
     <p data-i18n="mp_pitch">{{ copy.mp_pitch }}</p>
-    <p class="mp-entry-guest" id="mp-guest-hint" data-i18n="mp_host_login" {% if not guest %}hidden{% endif %}>
-      {{ copy.mp_host_login }}
-    </p>
+    <div class="mp-entry-guest" id="mp-guest-hint" {% if not guest %}hidden{% endif %}>
+      <p data-i18n="mp_host_login">{{ copy.mp_host_login }}</p>
+      <a
+        class="btn btn-primary"
+        id="mp-login"
+        href="{{ url_for('login') }}"
+        data-auth="login"
+        data-i18n="log_in"
+        >{{ copy.log_in }}</a
+      >
+    </div>
     <div class="mp-entry-actions">
       <form method="post" action="{{ url_for('multiplayer_create') }}" id="mp-create-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -511,8 +519,32 @@ block content %}
     }
   }
 
+  var resultAdvanceTimer = null;
+  var RESULT_ADVANCE_MS = 2500;
+
+  function clearResultAdvance() {
+    if (resultAdvanceTimer) {
+      clearTimeout(resultAdvanceTimer);
+      resultAdvanceTimer = null;
+    }
+  }
+
+  function advanceResult() {
+    clearResultAdvance();
+    var next = document.getElementById("result-next");
+    var later = document.getElementById("result-later");
+    if (!document.getElementById("result-layer").hidden && next && !next.hidden) {
+      postForm("/continue", tokenBody()).then(applyState);
+      return;
+    }
+    if (!document.getElementById("result-layer").hidden && later && !later.hidden) {
+      postForm("/dismiss_save", tokenBody()).then(applyState);
+    }
+  }
+
   function paintResult(result) {
     var layer = document.getElementById("result-layer");
+    clearResultAdvance();
     if (!result) {
       layer.hidden = true;
       clearDrawingFit();
@@ -529,6 +561,8 @@ block content %}
     layer.hidden = false;
     fitDrawing();
     syncScrollLock();
+    // Win and lose both move on after a short beat so play stays continuous.
+    resultAdvanceTimer = setTimeout(advanceResult, RESULT_ADVANCE_MS);
   }
 
   function applyState(data) {
@@ -687,10 +721,15 @@ block content %}
     return body;
   }
   document.getElementById("result-next").addEventListener("click", function () {
+    clearResultAdvance();
     postForm("/continue", tokenBody()).then(applyState);
   });
   document.getElementById("result-later").addEventListener("click", function () {
+    clearResultAdvance();
     postForm("/dismiss_save", tokenBody()).then(applyState);
+  });
+  document.getElementById("result-save").addEventListener("click", function () {
+    clearResultAdvance();
   });
 
   (function () {
