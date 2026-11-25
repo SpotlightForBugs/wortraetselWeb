@@ -202,58 +202,94 @@ block content %}
 </main>
 
 <div id="result-layer" class="sheet" {% if not result %}hidden{% endif %}>
-  <section class="auth-card result-card" role="dialog" aria-modal="true">
-    <p id="result-message">{{ result.message if result else '' }}</p>
-    <div id="result-gloss" class="result-gloss" hidden>
-      <p id="result-definition" class="result-definition"></p>
-      <p id="result-source" class="result-source" hidden>
-        <span class="result-source-label" data-i18n="gloss_source"
-          >{{ copy.gloss_source }}</span
-        >
-        <img
-          id="result-source-icon"
-          class="result-source-icon"
-          src=""
-          alt=""
-          width="22"
-          height="22"
-          hidden
-        />
-        <span id="result-source-name" class="result-source-name"></span>
+  <div class="result-stack">
+    <aside
+      id="info-panel"
+      class="info-panel"
+      aria-labelledby="info-panel-title"
+      {% if not result %}hidden{% endif %}
+    >
+      <h3 id="info-panel-title" class="info-panel-title" data-i18n="info_panel">
+        {{ copy.info_panel }}
+      </h3>
+      <div id="result-gloss" class="result-gloss" hidden>
+        <p id="result-definition" class="result-definition"></p>
+        <p id="result-source" class="result-source" hidden>
+          <span class="result-source-label" data-i18n="gloss_source"
+            >{{ copy.gloss_source }}</span
+          >
+          <img
+            id="result-source-icon"
+            class="result-source-icon"
+            src=""
+            alt=""
+            width="22"
+            height="22"
+            hidden
+          />
+          <span id="result-source-name" class="result-source-name"></span>
+        </p>
+      </div>
+      <div class="info-panel-prefs">
+        <label class="info-autoskip" for="result-autoskip">
+          <input
+            type="checkbox"
+            id="result-autoskip"
+            {% if state_json.result_prefs.autoskip %}checked{% endif %}
+          />
+          <span data-i18n="result_autoskip">{{ copy.result_autoskip }}</span>
+        </label>
+        <label class="info-autoskip-delay" for="result-autoskip-sec">
+          <span data-i18n="result_autoskip_delay">{{ copy.result_autoskip_delay }}</span>
+          <select id="result-autoskip-sec">
+            {% set delay = state_json.result_prefs.seconds %}
+            <option value="0" {% if delay == 0 %}selected{% endif %} data-i18n="result_autoskip_instant">
+              {{ copy.result_autoskip_instant }}
+            </option>
+            {% for sec in [5, 10, 15, 20, 25, 30] %}
+            <option value="{{ sec }}" {% if delay == sec %}selected{% endif %}>
+              {{ sec }} s
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+    </aside>
+    <section class="auth-card result-card" role="dialog" aria-modal="true">
+      <p id="result-message">{{ result.message if result else '' }}</p>
+      <p id="result-worth" {% if not result or not result.offer %}hidden{% endif %}>
+        {{ result.worth if result else '' }}
       </p>
-    </div>
-    <p id="result-worth" {% if not result or not result.offer %}hidden{% endif %}>
-      {{ result.worth if result else '' }}
-    </p>
-    <button
-      type="button"
-      id="result-next"
-      class="btn result-next"
-      data-i18n="next_word"
-      {% if result and result.offer %}hidden{% endif %}
-    >
-      <span class="result-next-label">{{ copy.next_word }}</span>
-    </button>
-    <button
-      type="button"
-      id="result-save"
-      class="btn save-btn"
-      data-auth="register"
-      data-i18n="create_account"
-      {% if not result or not result.offer %}hidden{% endif %}
-    >
-      {{ copy.create_account }}
-    </button>
-    <button
-      type="button"
-      id="result-later"
-      class="btn later"
-      data-i18n="not_now"
-      {% if not result or not result.offer %}hidden{% endif %}
-    >
-      {{ copy.not_now }}
-    </button>
-  </section>
+      <button
+        type="button"
+        id="result-next"
+        class="btn result-next"
+        data-i18n="next_word"
+        {% if result and result.offer %}hidden{% endif %}
+      >
+        <span class="result-next-label">{{ copy.next_word }}</span>
+      </button>
+      <button
+        type="button"
+        id="result-save"
+        class="btn save-btn"
+        data-auth="register"
+        data-i18n="create_account"
+        {% if not result or not result.offer %}hidden{% endif %}
+      >
+        {{ copy.create_account }}
+      </button>
+      <button
+        type="button"
+        id="result-later"
+        class="btn later"
+        data-i18n="not_now"
+        {% if not result or not result.offer %}hidden{% endif %}
+      >
+        {{ copy.not_now }}
+      </button>
+    </section>
+  </div>
 </div>
 
 <div id="account-layer" class="sheet auth-sheet" hidden>
@@ -800,7 +836,69 @@ block content %}
   var resultAdvanceStarted = 0;
   var resultAdvanceRemaining = 0;
   var resultAdvancePaused = false;
-  var RESULT_ADVANCE_MS = 10000;
+  var RESULT_PREF_KEY = "hangman-result-prefs";
+  var RESULT_PREF_SECS = [0, 5, 10, 15, 20, 25, 30];
+  var resultPrefs = { autoskip: true, seconds: 10 };
+
+  function normalizeResultPrefs(raw) {
+    var data = raw && typeof raw === "object" ? raw : {};
+    var autoskip = data.autoskip;
+    if (typeof autoskip === "string") {
+      autoskip = ["1", "true", "yes", "on"].indexOf(autoskip.toLowerCase()) !== -1;
+    } else if (typeof autoskip !== "boolean") {
+      autoskip = true;
+    }
+    var seconds = parseInt(data.seconds, 10);
+    if (RESULT_PREF_SECS.indexOf(seconds) === -1) {
+      seconds = 10;
+    }
+    return { autoskip: !!autoskip, seconds: seconds };
+  }
+
+  function readStoredResultPrefs() {
+    try {
+      var raw = localStorage.getItem(RESULT_PREF_KEY);
+      if (!raw) return null;
+      return normalizeResultPrefs(JSON.parse(raw));
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function writeStoredResultPrefs(prefs) {
+    try {
+      localStorage.setItem(RESULT_PREF_KEY, JSON.stringify(prefs));
+    } catch (err) {}
+  }
+
+  function syncResultPrefControls() {
+    var toggle = document.getElementById("result-autoskip");
+    var delay = document.getElementById("result-autoskip-sec");
+    if (toggle) toggle.checked = !!resultPrefs.autoskip;
+    if (delay) {
+      delay.value = String(resultPrefs.seconds);
+      delay.disabled = !resultPrefs.autoskip;
+    }
+  }
+
+  function applyResultPrefs(raw, persist) {
+    resultPrefs = normalizeResultPrefs(raw);
+    syncResultPrefControls();
+    if (persist) {
+      writeStoredResultPrefs(resultPrefs);
+      var body = tokenBody();
+      body.append("autoskip", resultPrefs.autoskip ? "true" : "false");
+      body.append("seconds", String(resultPrefs.seconds));
+      postForm("/account/result_prefs", body)
+        .then(function (data) {
+          if (data && data.result_prefs) {
+            resultPrefs = normalizeResultPrefs(data.result_prefs);
+            syncResultPrefControls();
+          }
+        })
+        .catch(function () {});
+    }
+  }
 
   function resultNextButton() {
     return document.getElementById("result-next");
@@ -853,15 +951,15 @@ block content %}
     var next = resultNextButton();
     var later = document.getElementById("result-later");
     var layer = document.getElementById("result-layer");
-    if (layer.hidden) {
+    if (layer.hidden || !resultPrefs.autoskip) {
       return;
     }
-    resultAdvanceRemaining = RESULT_ADVANCE_MS;
+    var advanceMs = Math.max(0, resultPrefs.seconds * 1000);
+    resultAdvanceRemaining = advanceMs;
     resultAdvancePaused = false;
-    if (next && !next.hidden) {
+    if (next && !next.hidden && advanceMs > 0) {
       next.classList.add("is-counting");
-      // Restart the fill animation from the left.
-      next.style.setProperty("--result-advance-ms", RESULT_ADVANCE_MS + "ms");
+      next.style.setProperty("--result-advance-ms", advanceMs + "ms");
       void next.offsetWidth;
     }
     if ((next && !next.hidden) || (later && !later.hidden)) {
@@ -974,9 +1072,11 @@ block content %}
 
   function paintResult(result) {
     var layer = document.getElementById("result-layer");
+    var info = document.getElementById("info-panel");
     clearResultAdvance();
     if (!result) {
       layer.hidden = true;
+      if (info) info.hidden = true;
       clearDrawingFit();
       syncScrollLock();
       paintDefinition("");
@@ -990,6 +1090,7 @@ block content %}
     document.getElementById("result-save").hidden = !result.offer;
     document.getElementById("result-later").hidden = !result.offer;
     layer.hidden = false;
+    if (info) info.hidden = false;
     fitDrawing();
     syncScrollLock();
     armResultAdvance();
@@ -1017,6 +1118,10 @@ block content %}
     }
     if (data.score_line || data.shown_score != null) {
       paintScore(data);
+    }
+    if (data.result_prefs) {
+      applyResultPrefs(data.result_prefs, false);
+      writeStoredResultPrefs(resultPrefs);
     }
     if ("result" in data) {
       paintResult(data.result);
@@ -1415,7 +1520,11 @@ block content %}
       "wheel",
       function (event) {
         var card = sheet.querySelector(".auth-card");
-        if (card && card.contains(event.target)) {
+        var info = sheet.querySelector(".info-panel");
+        if (
+          (card && card.contains(event.target)) ||
+          (info && info.contains(event.target))
+        ) {
           return;
         }
         event.preventDefault();
@@ -1426,7 +1535,11 @@ block content %}
       "touchmove",
       function (event) {
         var card = sheet.querySelector(".auth-card");
-        if (card && card.contains(event.target)) {
+        var info = sheet.querySelector(".info-panel");
+        if (
+          (card && card.contains(event.target)) ||
+          (info && info.contains(event.target))
+        ) {
           return;
         }
         event.preventDefault();
@@ -1434,6 +1547,43 @@ block content %}
       { passive: false },
     );
   });
+
+  (function bootResultPrefs() {
+    var bootState = JSON.parse(document.getElementById("boot").textContent);
+    var stored = readStoredResultPrefs();
+    if (bootState.guest && stored) {
+      applyResultPrefs(stored, false);
+    } else if (bootState.result_prefs) {
+      applyResultPrefs(bootState.result_prefs, false);
+      writeStoredResultPrefs(resultPrefs);
+    } else if (stored) {
+      applyResultPrefs(stored, false);
+    } else {
+      syncResultPrefControls();
+    }
+  })();
+
+  var autoskipToggle = document.getElementById("result-autoskip");
+  var autoskipDelay = document.getElementById("result-autoskip-sec");
+  function onResultPrefsChanged() {
+    applyResultPrefs(
+      {
+        autoskip: autoskipToggle ? autoskipToggle.checked : true,
+        seconds: autoskipDelay ? autoskipDelay.value : 10,
+      },
+      true,
+    );
+    if (!document.getElementById("result-layer").hidden) {
+      armResultAdvance();
+    }
+  }
+  if (autoskipToggle) {
+    autoskipToggle.addEventListener("change", onResultPrefsChanged);
+  }
+  if (autoskipDelay) {
+    autoskipDelay.addEventListener("change", onResultPrefsChanged);
+  }
+
   if (!document.getElementById("result-layer").hidden) {
     syncScrollLock();
     fitDrawing();
@@ -1441,6 +1591,7 @@ block content %}
     if (bootState.result && bootState.result.word) {
       paintDefinition(bootState.result.word);
     }
+    armResultAdvance();
   } else {
     syncScrollLock();
   }

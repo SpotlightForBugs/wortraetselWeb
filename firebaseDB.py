@@ -184,6 +184,58 @@ def set_banned(email, banned):
     return True
 
 
+# Reveal-panel auto-advance preferences (seconds; 0 = instant).
+_RESULT_AUTOSKIP_SECS = frozenset({0, 5, 10, 15, 20, 25, 30})
+_RESULT_AUTOSKIP_DEFAULT = {"autoskip": True, "seconds": 10}
+
+
+def normalize_result_prefs(raw=None):
+    """Clamp autoskip prefs to the supported UI values."""
+    data = raw if isinstance(raw, dict) else {}
+    autoskip = data.get("autoskip", data.get("result_autoskip", True))
+    seconds = data.get("seconds", data.get("result_autoskip_sec", 10))
+    try:
+        seconds = int(seconds)
+    except (TypeError, ValueError):
+        seconds = 10
+    if seconds not in _RESULT_AUTOSKIP_SECS:
+        seconds = 10
+    return {"autoskip": bool(autoskip), "seconds": seconds}
+
+
+def get_result_prefs(email):
+    """Return result auto-advance prefs for a user, or defaults."""
+    flags = _user_flags(email)
+    if not flags:
+        return dict(_RESULT_AUTOSKIP_DEFAULT)
+    return normalize_result_prefs(
+        {
+            "autoskip": flags.get("result_autoskip", True),
+            "seconds": flags.get("result_autoskip_sec", 10),
+        }
+    )
+
+
+def set_result_prefs(email, autoskip=None, seconds=None):
+    """Persist result auto-advance prefs on the users document."""
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    current = get_result_prefs(email)
+    if autoskip is None:
+        autoskip = current["autoskip"]
+    if seconds is None:
+        seconds = current["seconds"]
+    prefs = normalize_result_prefs({"autoskip": autoskip, "seconds": seconds})
+    document.update(
+        {
+            "result_autoskip": prefs["autoskip"],
+            "result_autoskip_sec": prefs["seconds"],
+        }
+    )
+    return True
+
+
 def get_site_config():
     snapshot = getDB().collection("config").document("site").get()
     return snapshot.to_dict() if snapshot.exists else {}
