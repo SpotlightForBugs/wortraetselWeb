@@ -985,7 +985,10 @@ cap-widget {
   text-decoration: none;
   font-weight: 700;
   line-height: 1.2;
-  transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease,
+    background 0.15s ease;
 }
 
 .result-source-link:hover,
@@ -1131,7 +1134,6 @@ cap-widget {
   #result-layer .info-panel {
     max-height: min(20vh, 140px);
   }
-
 
   .score-board table,
   .leaderboard table {
@@ -1600,7 +1602,9 @@ body.dark .mp-letters.locked .btn-primary:disabled {
   text-decoration: none;
   border-bottom: 1px solid color-mix(in srgb, var(--muted) 45%, transparent);
   padding-bottom: 1px;
-  transition: color 0.15s ease, border-color 0.15s ease;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .account-soft a:hover,

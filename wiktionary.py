@@ -750,9 +750,7 @@ def define_entry(word, language):
     source = source or (_SOURCE_WIKTIONARY if gloss else None)
     url = _source_url(source, language, page or shown) if gloss else None
     try:
-        firebaseDB.set_word_gloss(
-            language, shown, gloss, source=source, source_url=url
-        )
+        firebaseDB.set_word_gloss(language, shown, gloss, source=source, source_url=url)
     except Exception:
         pass
     if not gloss:

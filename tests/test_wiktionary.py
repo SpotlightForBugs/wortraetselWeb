@@ -96,7 +96,7 @@ class WiktionaryTests(unittest.TestCase):
 
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fetch_en", side_effect=fake_fetch        ), mock.patch(
+        ), mock.patch("wiktionary._fetch_en", side_effect=fake_fetch), mock.patch(
             "wiktionary._native_lookup", return_value=(None, None, None)
         ), mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
