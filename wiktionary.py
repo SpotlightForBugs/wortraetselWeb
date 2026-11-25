@@ -1,12 +1,12 @@
 """Short glosses for the reveal screen. Missing entries stay silent.
 
-English uses en.wiktionary REST first. Other hangman languages prefer that
-language's own Wiktionary (MediaWiki wikitext), then en.wiktionary REST, and
-German also tries a DWDS page scrape. Weak surname/given-name glosses are
-skipped.
+English uses en.wiktionary REST, then en.wiktionary wikitext. Every other
+hangman language uses only that language's own Wiktionary (MediaWiki
+wikitext), with a DWDS scrape as a final German fallback. en.wiktionary is
+never used for non-English rounds so glosses stay in-language.
 
-The wiktionaryparser PyPI package is not used: it scrapes printable en.wiki
-HTML and currently returns empty definitions.
+Accent-folded word lists are bridged via MediaWiki search (casa → casă).
+Weak surname/given-name glosses and REDIRECT stubs are skipped.
 
 Lookups are cached in Firestore (including negative misses). The first
 guess of a round can warm the cache server-side via warm() without sending
@@ -16,6 +16,7 @@ the gloss to the client.
 import html
 import json
 import re
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -29,6 +30,14 @@ _PARSE = (
     "https://{host}.wiktionary.org/w/api.php"
     "?action=parse&page={term}&prop=wikitext&format=json"
 )
+_SEARCH = (
+    "https://{host}.wiktionary.org/w/api.php"
+    "?action=query&list=search&srsearch={term}&srnamespace=0&srlimit=8&format=json"
+)
+_OPENSEARCH = (
+    "https://{host}.wiktionary.org/w/api.php"
+    "?action=opensearch&search={term}&limit=8&redirects=resolve&format=json"
+)
 _DWDS = "https://www.dwds.de/wb/{term}"
 
 _TAG = re.compile(r"<[^>]+>")
@@ -38,9 +47,13 @@ _BOLD = re.compile(r"'{2,}")
 _WIKI_LINK = re.compile(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]")
 _WIKI_TEMPLATE = re.compile(r"\{\{[^{}]*\}\}")
 _DE_SENSE = re.compile(r"^:\[(\d+)\]\s*(.+)$")
-_DE_BEDEUTUNGEN = re.compile(r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S)
+_DE_BEDEUTUNGEN = re.compile(
+    r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S
+)
 _ES_SENSE = re.compile(r"^;(\d+)\s*(?:\{\{[^{}]*\}\})?\s*:\s*(.+)$")
-_DWDS_DEF = re.compile(r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I)
+_DWDS_DEF = re.compile(
+    r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I
+)
 _WEAK_GLOSS = re.compile(
     r"^(?:a |an |eine? )?"
     r"(?:surname|given name|family name|male given name|female given name|"
@@ -49,6 +62,7 @@ _WEAK_GLOSS = re.compile(
     r"(?:[,.].*)?$",
     re.I,
 )
+_REDIRECT = re.compile(r"^REDIRECT\b", re.I)
 
 # Hangman language -> en.wiktionary REST language key / native wiki host.
 _LANG_KEY = {
@@ -72,6 +86,19 @@ _NATIVE_HOST = {
     "tr": "tr",
 }
 
+# Non-ASCII letters allowed on search hits for each hangman language.
+# Blocks cross-wiki false friends (casa → caŝa, ev → év).
+_DIACRITICS = {
+    "de": set("äöüßÄÖÜ"),
+    "es": set("áéíóúüñÁÉÍÓÚÜÑ"),
+    "fr": set("àâäæçéèêëïîôœùûüÿÀÂÄÆÇÉÈÊËÏÎÔŒÙÛÜŸ"),
+    "it": set("àèéìíîòóùúÀÈÉÌÍÎÒÓÙÚ"),
+    "pt-br": set("áàâãéêíóôõúüçÁÀÂÃÉÊÍÓÔÕÚÜÇ"),
+    "ro": set("ăâîșşțţĂÂÎȘŞȚŢ"),
+    "tr": set("âçğıİîöşüûÂÇĞÎÖŞÜÛ"),
+    "en": set("'"),
+}
+
 
 def _plain(text):
     text = html.unescape(_TAG.sub("", text or ""))
@@ -91,7 +118,6 @@ def _wiki_plain(text):
     text = _BOLD.sub("", text)
     text = _WIKI_LINK.sub(r"\1", text)
     text = _KEEP_TEMPLATE_ARG.sub(r"\1", text)
-    # Nested templates are rare in short sense lines; peel a few times.
     for _ in range(4):
         cleaned = _WIKI_TEMPLATE.sub("", text)
         if cleaned == text:
@@ -105,11 +131,33 @@ def _usable(text, word=None):
         return False
     if word and text.casefold() == (word or "").casefold():
         return False
-    # Morphology crumbs left after template stripping (Italian gender lines).
     if re.fullmatch(r"[fm]\s*(?:sing|pl)?", text, re.I):
         return False
     if _WEAK_GLOSS.match(text.strip().rstrip(".")):
         return False
+    if _REDIRECT.match(text.strip()):
+        return False
+    return True
+
+
+def _ascii_fold(text):
+    text = unicodedata.normalize("NFD", text or "")
+    text = "".join(ch for ch in text if not unicodedata.combining(ch))
+    return text.casefold()
+
+
+def _title_fits_language(title, language, key):
+    """True when title folds to the hangman word and only uses that language's letters."""
+    if not title or " " in title.strip():
+        return False
+    if _ascii_fold(title) != key:
+        return False
+    allowed = _DIACRITICS.get(language) or set()
+    for ch in title:
+        if ord(ch) < 128:
+            continue
+        if ch not in allowed:
+            return False
     return True
 
 
@@ -134,6 +182,32 @@ def _titles(word, language):
         if candidate and candidate not in seen:
             seen.append(candidate)
     return seen
+
+
+def _search_seeds(word, language):
+    """Extra search queries for accent-folded hangman spellings."""
+    raw = (word or "").strip()
+    if not raw:
+        return []
+    seeds = [raw]
+    if language == "tr":
+        # Hangman folds ö/ü to oe/ue; try the umlaut forms for search.
+        unfolded = raw.replace("oe", "ö").replace("ue", "ü").replace("ae", "ä")
+        if unfolded != raw:
+            seeds.append(unfolded)
+        stripped = raw.replace("oe", "o").replace("ue", "u").replace("ae", "a")
+        if stripped != raw:
+            seeds.append(stripped)
+    elif language == "de":
+        unfolded = (
+            raw.replace("ae", "ä")
+            .replace("oe", "ö")
+            .replace("ue", "ü")
+            .replace("ss", "ß")
+        )
+        if unfolded != raw:
+            seeds.append(unfolded)
+    return seeds
 
 
 def _pick(payload, lang_key, word=None):
@@ -184,6 +258,59 @@ def _fetch_wikitext(host, term):
     return body or None
 
 
+def _search_titles(host, term):
+    """Titles from fulltext search plus opensearch prefix suggestions."""
+    seen = []
+    quoted = urllib.parse.quote(term)
+    payload = _request_json(_SEARCH.format(host=host, term=quoted))
+    hits = ((payload or {}).get("query") or {}).get("search") or []
+    for hit in hits:
+        title = hit.get("title") or ""
+        if title and title not in seen:
+            seen.append(title)
+    suggestions = _request_json(_OPENSEARCH.format(host=host, term=quoted))
+    if isinstance(suggestions, list) and len(suggestions) > 1:
+        for title in suggestions[1] or []:
+            if title and title not in seen:
+                seen.append(title)
+    return seen
+
+
+def _native_candidates(word, language):
+    """Page titles to try: accented search hits first, then casing variants.
+
+    Accent-folded lists (ro casa, fr formalisee) often collide with a
+    different ASCII lemma. Prefer fold-matched titles that restore marks
+    (casă, formalisée) before the bare hangman spelling.
+    """
+    shown = game.display_word(language, word) or word
+    host = _NATIVE_HOST.get(language)
+    base = []
+    for candidate in _titles(shown, language):
+        if candidate not in base:
+            base.append(candidate)
+    if not host:
+        return base
+    key = _ascii_fold(shown)
+    found = []
+    for seed in _search_seeds(shown, language):
+        for title in _search_titles(host, seed):
+            if not _title_fits_language(title, language, key):
+                continue
+            if title not in found:
+                found.append(title)
+    preferred = [
+        title
+        for title in found
+        if title.casefold() != shown.casefold()
+    ]
+    ordered = []
+    for title in preferred + found + base:
+        if title not in ordered:
+            ordered.append(title)
+    return ordered
+
+
 def _extract_de(body, word=None):
     match = _DE_BEDEUTUNGEN.search(body or "")
     if not match:
@@ -221,7 +348,6 @@ def _extract_hash(body, word=None):
         text = _wiki_plain(stripped[1:])
         if _usable(text, word):
             return text
-    # Italian often puts the gloss on `#*` after a morphology `#` line.
     for line in lines:
         stripped = line.strip()
         if not stripped.startswith("#*") or stripped.startswith("#**"):
@@ -262,30 +388,28 @@ def _dwds_gloss(term):
     return None
 
 
-def _fallback(word, language):
+def _native_lookup(word, language):
     shown = game.display_word(language, word) or word
-    for term in _titles(shown, language):
+    for term in _native_candidates(word, language):
         gloss = _native_wiktionary_gloss(language, term)
-        if gloss:
+        # Reject circular stubs even when the page title differs (maîson → Maison).
+        if gloss and _usable(gloss, shown) and _usable(gloss, term):
             return gloss
     if language == "de":
         for term in _titles(shown, "de"):
             gloss = _dwds_gloss(term)
-            if gloss:
+            if gloss and _usable(gloss, shown):
                 return gloss
     return None
 
 
-def _en_rest_gloss(word, language):
-    lang_key = _LANG_KEY.get(language)
-    if not lang_key:
-        return None
-    shown = game.display_word(language, word) or word
-    for term in _titles(shown, language):
+def _en_rest_gloss(word):
+    shown = game.display_word("en", word) or word
+    for term in _titles(shown, "en"):
         payload = _fetch_en(term)
         if not payload:
             continue
-        gloss = _pick(payload, lang_key, word=term)
+        gloss = _pick(payload, "en", word=term)
         if gloss:
             return gloss
     return None
@@ -294,11 +418,10 @@ def _en_rest_gloss(word, language):
 def _lookup(word, language):
     if language not in _LANG_KEY:
         return None
-    # Native wiki first for non-English so players get in-language senses
-    # (en.wiktionary often only has English one-word glosses like "house").
     if language == "en":
-        return _en_rest_gloss(word, language) or _fallback(word, language)
-    return _fallback(word, language) or _en_rest_gloss(word, language)
+        return _en_rest_gloss(word) or _native_lookup(word, "en")
+    # Never fall back to English Wiktionary for other languages.
+    return _native_lookup(word, language)
 
 
 def define(word, language):

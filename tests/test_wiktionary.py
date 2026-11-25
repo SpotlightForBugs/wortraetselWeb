@@ -17,11 +17,9 @@ class WiktionaryTests(unittest.TestCase):
     def test_define_caches_api_result(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fallback", return_value=None), mock.patch(
-            "wiktionary._en_rest_gloss", return_value="house, building"
         ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+            "wiktionary._native_lookup", return_value="house, building"
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertEqual(wiktionary.define("Haus", "de"), "house, building")
         set_cache.assert_called_once()
         args = set_cache.call_args[0]
@@ -32,11 +30,9 @@ class WiktionaryTests(unittest.TestCase):
     def test_define_caches_misses(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fetch_en", return_value=None), mock.patch(
-            "wiktionary._fallback", return_value=None
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+        ), mock.patch("wiktionary._en_rest_gloss", return_value=None), mock.patch(
+            "wiktionary._native_lookup", return_value=None
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertIsNone(wiktionary.define("xyzzyqq", "en"))
         set_cache.assert_called_once()
         self.assertIsNone(set_cache.call_args[0][2])
@@ -89,49 +85,50 @@ class WiktionaryTests(unittest.TestCase):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch("wiktionary._fetch_en", side_effect=fake_fetch), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ):
+            "wiktionary._native_lookup", return_value=None
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss"):
             self.assertEqual(
                 wiktionary.define("labrum", "en"),
                 "The uppermost of the mouthparts.",
             )
 
-    def test_non_english_prefers_native_wiktionary(self):
+    def test_non_english_never_calls_english_rest(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch(
-            "wiktionary._native_wiktionary_gloss",
-            side_effect=lambda language, term: (
-                "Grammatik: Synonym zu Akkusativ, 4. Fall"
-                if language == "de" and term == "Wenfall"
-                else None
-            ),
-        ) as native, mock.patch(
-            "wiktionary._en_rest_gloss"
-        ) as en_rest, mock.patch(
-            "wiktionary._dwds_gloss", return_value=None
-        ), mock.patch(
+            "wiktionary._native_lookup",
+            return_value="Grammatik: Synonym zu Akkusativ, 4. Fall",
+        ), mock.patch("wiktionary._en_rest_gloss") as en_rest, mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
-            gloss = "Grammatik: Synonym zu Akkusativ, 4. Fall"
-            self.assertEqual(wiktionary.define("wenfall", "de"), gloss)
-        native.assert_called()
+        ):
+            self.assertEqual(
+                wiktionary.define("wenfall", "de"),
+                "Grammatik: Synonym zu Akkusativ, 4. Fall",
+            )
         en_rest.assert_not_called()
-        self.assertEqual(set_cache.call_args[0][2], gloss)
+
+    def test_romanian_prefers_accented_search_hit(self):
+        with mock.patch(
+            "wiktionary._search_titles", return_value=["casa", "casă"]
+        ), mock.patch("wiktionary._titles", return_value=["Casa", "casa"]):
+            self.assertEqual(
+                wiktionary._native_candidates("casa", "ro")[:2],
+                ["casă", "casa"],
+            )
 
     def test_german_falls_back_to_dwds_after_wiktionary_miss(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fetch_en", return_value=None), mock.patch(
+        ), mock.patch(
+            "wiktionary._native_candidates", return_value=["Hocksitz"]
+        ), mock.patch(
             "wiktionary._native_wiktionary_gloss", return_value=None
         ), mock.patch(
             "wiktionary._dwds_gloss",
             side_effect=lambda term: (
                 "Sitz in geschlossener Kniebeuge" if term == "Hocksitz" else None
             ),
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertEqual(
                 wiktionary.define("hocksitz", "de"),
                 "Sitz in geschlossener Kniebeuge",
@@ -184,9 +181,9 @@ class WiktionaryTests(unittest.TestCase):
             "edificio costruito per abitazione",
         )
 
-    def test_skips_weak_surname_gloss(self):
+    def test_skips_weak_and_redirect_gloss(self):
         self.assertFalse(wiktionary._usable("A surname."))
-        self.assertFalse(wiktionary._usable("a given name"))
+        self.assertFalse(wiktionary._usable("REDIRECT gri"))
         self.assertTrue(wiktionary._usable("The uppermost of the mouthparts."))
 
     def test_dwds_parses_definition_span(self):
