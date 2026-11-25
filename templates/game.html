@@ -1,13 +1,27 @@
 {% extends 'scripts.html' %} {% block title %}{{ copy.title }}{% endblock %} {%
 block content %}
 <main class="page">
+  <div
+    id="site-announcement"
+    class="site-announcement"
+    {% if not announcement %}hidden{% endif %}
+    role="status"
+  >
+    <p id="site-announcement-text">{{ announcement }}</p>
+  </div>
   <header class="header">
-    <div class="username" id="player-name">{{ username }}</div>
+    <div class="header-brand">
+      <div class="username" id="player-name">{{ username }}</div>
+    </div>
     <div class="header-actions">
-      <div class="language-switcher">
-        <p data-i18n="change_language">{{ copy.change_language }}</p>
+      <div class="header-lang" role="group" aria-label="{{ copy.change_language }}">
         <form method="post" id="language-form" action="{{ url_for('set_language') }}">
-          <select name="language">
+          <select
+            name="language"
+            id="language-select"
+            data-i18n-aria="change_language"
+            aria-label="{{ copy.change_language }}"
+          >
             {% for language in all_languages %}
             <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>
               {{ language_names[language] }}
@@ -16,55 +30,75 @@ block content %}
           </select>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         </form>
+        <div class="flags">
+          <img
+            id="language-flag"
+            src="https://flagsapi.com/{{ language_flag }}/shiny/64.png"
+            width="28"
+            height="28"
+            alt="{{ language_names[user_language] }}"
+          />
+          <img
+            id="us-flag"
+            src="https://flagsapi.com/US/shiny/64.png"
+            width="28"
+            height="28"
+            alt="US"
+            {% if user_language != 'en' %}hidden{% endif %}
+          />
+        </div>
       </div>
-      <div class="flags">
-        <img
-          id="language-flag"
-          src="https://flagsapi.com/{{ language_flag }}/shiny/64.png"
-          width="32"
-          height="32"
-          alt="{{ language_names[user_language] }}"
-        />
-        <img
-          id="us-flag"
-          src="https://flagsapi.com/US/shiny/64.png"
-          width="32"
-          height="32"
-          alt="US"
-          {% if user_language != 'en' %}hidden{% endif %}
-        />
-      </div>
-      <form id="theme-form" action="{{ url_for('dark_mode') }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button
-          type="submit"
-          id="theme"
-          name="dark_mode"
-          value="dark_mode"
-          class="btn {% if dark_mode %}btn-light{% else %}btn-dark{% endif %}"
-          data-i18n="{% if dark_mode %}light_mode{% else %}dark_mode{% endif %}"
+      <div class="header-tools">
+        <form id="theme-form" action="{{ url_for('dark_mode') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button
+            type="submit"
+            id="theme"
+            name="dark_mode"
+            value="dark_mode"
+            class="btn btn-header {% if dark_mode %}btn-light{% else %}btn-dark{% endif %}"
+            data-i18n="{% if dark_mode %}light_mode{% else %}dark_mode{% endif %}"
+          >
+            {% if dark_mode %}{{ copy.light_mode }}{% else %}{{ copy.dark_mode }}{% endif %}
+          </button>
+        </form>
+        <a
+          class="btn btn-primary btn-header"
+          id="save-score"
+          href="{{ url_for('login') }}"
+          data-auth="login"
+          data-i18n="log_in"
+          {% if not guest %}hidden{% endif %}
+          >{{ copy.log_in }}</a
         >
-          {% if dark_mode %}{{ copy.light_mode }}{% else %}{{ copy.dark_mode }}{% endif %}
+        <button
+          type="button"
+          class="btn btn-light btn-header"
+          id="account-open"
+          data-i18n="account"
+          {% if guest %}hidden{% endif %}
+        >
+          {{ copy.account }}
         </button>
-      </form>
-      <a
-        class="btn save-btn"
-        id="save-score"
-        href="{{ url_for('login') }}"
-        data-auth="login"
-        data-i18n="save_score"
-        {% if not guest %}hidden{% endif %}
-        >{{ copy.save_score }}</a
-      >
-      <button
-        type="button"
-        class="btn btn-primary"
-        id="log-out"
-        data-i18n="log_out"
-        {% if guest %}hidden{% endif %}
-      >
-        {{ copy.log_out }}
-      </button>
+        <button
+          type="button"
+          class="btn btn-light btn-header"
+          id="admin-open"
+          data-i18n="admin_open"
+          {% if not is_admin %}hidden{% endif %}
+        >
+          {{ copy.admin_open }}
+        </button>
+        <button
+          type="button"
+          class="btn later btn-header"
+          id="log-out"
+          data-i18n="log_out"
+          {% if guest %}hidden{% endif %}
+        >
+          {{ copy.log_out }}
+        </button>
+      </div>
     </div>
   </header>
 
@@ -108,6 +142,50 @@ block content %}
 
   <section class="panel score-board">
     <h3 id="score-line">{{ score_line }}</h3>
+    <p class="account-soft" id="guest-save-hint" {% if not guest %}hidden{% endif %}>
+      <a href="{{ url_for('login') }}" data-auth="register" data-i18n="guest_save_hint">{{ copy.guest_save_hint }}</a>
+    </p>
+  </section>
+
+  <section class="panel mp-entry">
+    <h2 data-i18n="mp_title">{{ copy.mp_title }}</h2>
+    <p data-i18n="mp_pitch">{{ copy.mp_pitch }}</p>
+    <p class="mp-entry-guest" id="mp-guest-hint" data-i18n="mp_host_login" {% if not guest %}hidden{% endif %}>
+      {{ copy.mp_host_login }}
+    </p>
+    <div class="mp-entry-actions">
+      <form method="post" action="{{ url_for('multiplayer_create') }}" id="mp-create-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-success" id="mp-create-btn" data-i18n="mp_create" {% if guest %}disabled{% endif %}>{{ copy.mp_create }}</button>
+      </form>
+      <span class="mp-entry-or" data-i18n="mp_or">{{ copy.mp_or }}</span>
+      <form method="post" action="{{ url_for('multiplayer_join') }}" class="mp-join-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input
+          name="guest_name"
+          maxlength="20"
+          autocomplete="nickname"
+          placeholder="{{ copy.mp_your_name }}"
+          aria-label="{{ copy.mp_your_name }}"
+          value="{{ session.get('guest_name', '') }}"
+          {% if not guest %}hidden{% endif %}
+          id="mp-guest-name"
+        />
+        <input
+          name="code"
+          maxlength="5"
+          minlength="5"
+          required
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          pattern="[A-Za-z2-9]{5}"
+          placeholder="ABCDE"
+          aria-label="{{ copy.mp_code }}"
+        />
+        <button type="submit" class="btn" data-i18n="mp_join">{{ copy.mp_join }}</button>
+      </form>
+    </div>
   </section>
 
   <section class="panel leaderboard">
@@ -132,49 +210,223 @@ block content %}
 </main>
 
 <div id="result-layer" class="sheet" {% if not result %}hidden{% endif %}>
-  <section class="auth-card result-card" role="dialog" aria-modal="true">
-    <p id="result-message">{{ result.message if result else '' }}</p>
-    <p id="result-worth" {% if not result or not result.offer %}hidden{% endif %}>
-      {{ result.worth if result else '' }}
-    </p>
+  <div class="result-stack">
+    <aside
+      id="info-panel"
+      class="info-panel"
+      aria-labelledby="info-panel-title"
+      hidden
+    >
+      <h3 id="info-panel-title" class="info-panel-title" data-i18n="info_panel">
+        {{ copy.info_panel }}
+      </h3>
+      <div id="result-gloss" class="result-gloss" hidden>
+        <p id="result-definition" class="result-definition"></p>
+        <p id="result-source" class="result-source" hidden>
+          <span class="result-source-label" data-i18n="gloss_source"
+            >{{ copy.gloss_source }}</span
+          >
+          <img
+            id="result-source-icon"
+            class="result-source-icon"
+            src=""
+            alt=""
+            width="22"
+            height="22"
+            hidden
+          />
+          <span id="result-source-name" class="result-source-name"></span>
+        </p>
+      </div>
+    </aside>
+    <section class="auth-card result-card" role="dialog" aria-modal="true">
+      <p id="result-message">{{ result.message if result else '' }}</p>
+      <p id="result-worth" {% if not result or not result.offer %}hidden{% endif %}>
+        {{ result.worth if result else '' }}
+      </p>
+      <button
+        type="button"
+        id="result-next"
+        class="btn result-next"
+        data-i18n="next_word"
+        {% if result and result.offer %}hidden{% endif %}
+      >
+        <span class="result-next-label">{{ copy.next_word }}</span>
+      </button>
+      <button
+        type="button"
+        id="result-save"
+        class="btn save-btn"
+        data-auth="register"
+        data-i18n="create_account"
+        {% if not result or not result.offer %}hidden{% endif %}
+      >
+        {{ copy.create_account }}
+      </button>
+      <button
+        type="button"
+        id="result-later"
+        class="btn later"
+        data-i18n="not_now"
+        {% if not result or not result.offer %}hidden{% endif %}
+      >
+        {{ copy.not_now }}
+      </button>
+    </section>
+  </div>
+</div>
+
+<div id="account-layer" class="sheet auth-sheet" hidden>
+  <section class="auth-card auth-card--settings" role="dialog" aria-modal="true" aria-labelledby="account-title">
     <button
       type="button"
-      id="result-next"
-      class="btn"
-      data-i18n="next_word"
-      {% if result and result.offer %}hidden{% endif %}
+      id="account-close"
+      class="auth-close"
+      data-i18n-aria="close"
+      aria-label="{{ copy.close }}"
     >
-      {{ copy.next_word }}
+      <span aria-hidden="true">&times;</span>
     </button>
-    <button
-      type="button"
-      id="result-save"
-      class="btn save-btn"
-      data-auth="register"
-      data-i18n="create_account"
-      {% if not result or not result.offer %}hidden{% endif %}
-    >
-      {{ copy.create_account }}
-    </button>
-    <button
-      type="button"
-      id="result-later"
-      class="btn later"
-      data-i18n="not_now"
-      {% if not result or not result.offer %}hidden{% endif %}
-    >
-      {{ copy.not_now }}
-    </button>
+    <header class="auth-card-head">
+      <p class="auth-kicker">Hangman</p>
+      <h2 id="account-title" data-i18n="account">{{ copy.account }}</h2>
+    </header>
+    <p id="account-error" class="error" hidden></p>
+    <p id="account-ok" class="account-ok" hidden></p>
+
+    <section class="auth-section">
+      <h3 data-i18n="account_profile">{{ copy.account_profile }}</h3>
+      <form id="account-name-form" method="POST" action="{{ url_for('account_name') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="auth-field">
+          <label for="account-name" data-i18n="name_label">{{ copy.name_label }}</label>
+          <input
+            type="text"
+            id="account-name"
+            name="username"
+            maxlength="20"
+            minlength="2"
+            required
+            autocomplete="nickname"
+            value="{{ session.get('display_name', '') }}"
+          />
+        </div>
+        <input type="submit" data-i18n="save_name" value="{{ copy.save_name }}" />
+      </form>
+    </section>
+
+    <section class="auth-section">
+      <h3 data-i18n="account_gameplay">{{ copy.account_gameplay }}</h3>
+      <div class="account-prefs">
+        <label class="info-autoskip" for="result-autoskip">
+          <input
+            type="checkbox"
+            id="result-autoskip"
+            {% if state_json.result_prefs.autoskip %}checked{% endif %}
+          />
+          <span data-i18n="result_autoskip">{{ copy.result_autoskip }}</span>
+        </label>
+        <label class="info-autoskip-delay" for="result-autoskip-sec">
+          <span data-i18n="result_autoskip_delay">{{ copy.result_autoskip_delay }}</span>
+          <select id="result-autoskip-sec">
+            {% set delay = state_json.result_prefs.seconds %}
+            <option value="0" {% if delay == 0 %}selected{% endif %} data-i18n="result_autoskip_instant">
+              {{ copy.result_autoskip_instant }}
+            </option>
+            {% for sec in [5, 10, 15, 20, 25, 30] %}
+            <option value="{{ sec }}" {% if delay == sec %}selected{% endif %}>
+              {{ sec }} s
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+    </section>
+
+    <section class="auth-section">
+      <h3 data-i18n="account_security">{{ copy.account_security }}</h3>
+      <form id="account-password-form" method="POST" action="{{ url_for('account_password') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="auth-field">
+          <label for="account-current" data-i18n="current_password">{{ copy.current_password }}</label>
+          <input type="password" id="account-current" name="current_password" autocomplete="current-password" required />
+        </div>
+        <div class="auth-field">
+          <label for="account-new" data-i18n="new_password">{{ copy.new_password }}</label>
+          <input type="password" id="account-new" name="new_password" autocomplete="new-password" required minlength="6" />
+        </div>
+        <input type="submit" data-i18n="change_password" value="{{ copy.change_password }}" />
+      </form>
+    </section>
+
+    <section class="auth-section auth-section--danger">
+      <h3 data-i18n="account_danger">{{ copy.account_danger }}</h3>
+      <form id="account-delete-form" method="POST" action="{{ url_for('account_delete') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <p class="auth-help" data-i18n="delete_account_help">{{ copy.delete_account_help }}</p>
+        <div class="auth-field">
+          <label for="account-delete-password" data-i18n="password">{{ copy.password }}</label>
+          <input type="password" id="account-delete-password" name="password" autocomplete="current-password" required />
+        </div>
+        <input type="submit" class="danger-submit" data-i18n="delete_account" value="{{ copy.delete_account }}" />
+      </form>
+    </section>
   </section>
 </div>
 
 <div id="auth-layer" class="sheet auth-sheet" {% if not auth %}hidden{% endif %}>
-  <section class="auth-card" role="dialog" aria-modal="true">
-    <button type="button" id="auth-close" class="auth-close" data-i18n="close">
-      {{ copy.close }}
+  <section class="auth-card auth-card--panel" role="dialog" aria-modal="true">
+    <button
+      type="button"
+      id="auth-close"
+      class="auth-close"
+      data-i18n-aria="close"
+      aria-label="{{ copy.close }}"
+    >
+      <span aria-hidden="true">&times;</span>
     </button>
-    <h2 data-i18n="save_score">{{ copy.save_score }}</h2>
+    <header class="auth-card-head">
+      <p class="auth-kicker">Hangman</p>
+      <h2 data-i18n="save_score">{{ copy.save_score }}</h2>
+      <p
+        id="auth-lead-login"
+        class="auth-lead"
+        data-i18n="auth_login_lead"
+        {% if auth == 'register' %}hidden{% endif %}
+      >
+        {{ copy.auth_login_lead }}
+      </p>
+      <p
+        id="auth-lead-register"
+        class="auth-lead"
+        data-i18n="auth_register_lead"
+        {% if auth != 'register' %}hidden{% endif %}
+      >
+        {{ copy.auth_register_lead }}
+      </p>
+    </header>
     <p id="auth-error" class="error" {% if not auth_error %}hidden{% endif %}>{{ auth_error or '' }}</p>
+
+    <div class="auth-tabs" role="tablist">
+      <button
+        type="button"
+        class="auth-tab{% if auth != 'register' %} is-active{% endif %}"
+        data-auth="login"
+        data-i18n="log_in"
+        {% if auth != 'register' %}aria-current="page"{% endif %}
+      >
+        {{ copy.log_in }}
+      </button>
+      <button
+        type="button"
+        class="auth-tab{% if auth == 'register' %} is-active{% endif %}"
+        data-auth="register"
+        data-i18n="create_account"
+        {% if auth == 'register' %}aria-current="page"{% endif %}
+      >
+        {{ copy.create_account }}
+      </button>
+    </div>
 
     <form
       id="login-form"
@@ -183,17 +435,16 @@ block content %}
       {% if auth == 'register' %}hidden{% endif %}
     >
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <label for="login-email" data-i18n="email">{{ copy.email }}</label>
-      <input type="email" id="login-email" name="email" autocomplete="username" required />
-      <label for="login-password" data-i18n="password">{{ copy.password }}</label>
-      <input type="password" id="login-password" name="password" autocomplete="current-password" required />
+      <div class="auth-field">
+        <label for="login-email" data-i18n="email">{{ copy.email }}</label>
+        <input type="email" id="login-email" name="email" autocomplete="username" required />
+      </div>
+      <div class="auth-field">
+        <label for="login-password" data-i18n="password">{{ copy.password }}</label>
+        <input type="password" id="login-password" name="password" autocomplete="current-password" required />
+      </div>
       <input type="submit" data-i18n="log_in" value="{{ copy.log_in }}" data-cap-floating="#cap-login" />
       {% with cap_id='cap-login' %}{% include 'cap_widget.html' %}{% endwith %}
-      <p class="auth-links">
-        <button type="button" data-auth="register" data-i18n="create_account">
-          {{ copy.create_account }}
-        </button>
-      </p>
     </form>
 
     <form
@@ -203,14 +454,22 @@ block content %}
       {% if auth != 'register' %}hidden{% endif %}
     >
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <label for="register-name" data-i18n="name_label">{{ copy.name_label }}</label>
-      <input type="text" id="register-name" name="username" autocomplete="nickname" required />
-      <label for="register-email" data-i18n="email">{{ copy.email }}</label>
-      <input type="email" id="register-email" name="email" autocomplete="email" required />
-      <label for="register-password" data-i18n="password">{{ copy.password }}</label>
-      <input type="password" id="register-password" name="password" autocomplete="new-password" required />
-      <label for="register-confirm" data-i18n="confirm_password">{{ copy.confirm_password }}</label>
-      <input type="password" id="register-confirm" name="password2" autocomplete="new-password" required />
+      <div class="auth-field">
+        <label for="register-name" data-i18n="name_label">{{ copy.name_label }}</label>
+        <input type="text" id="register-name" name="username" autocomplete="nickname" required />
+      </div>
+      <div class="auth-field">
+        <label for="register-email" data-i18n="email">{{ copy.email }}</label>
+        <input type="email" id="register-email" name="email" autocomplete="email" required />
+      </div>
+      <div class="auth-field">
+        <label for="register-password" data-i18n="password">{{ copy.password }}</label>
+        <input type="password" id="register-password" name="password" autocomplete="new-password" required />
+      </div>
+      <div class="auth-field">
+        <label for="register-confirm" data-i18n="confirm_password">{{ copy.confirm_password }}</label>
+        <input type="password" id="register-confirm" name="password2" autocomplete="new-password" required />
+      </div>
       <input
         class="signup-submit"
         type="submit"
@@ -219,16 +478,67 @@ block content %}
         data-cap-floating="#cap-register"
       />
       {% with cap_id='cap-register' %}{% include 'cap_widget.html' %}{% endwith %}
-      <p class="auth-links">
-        <button type="button" data-auth="login" data-i18n="have_account">
-          {{ copy.have_account }}
-        </button>
-      </p>
     </form>
   </section>
 </div>
 
-<input type="hidden" id="csrf-token" value="{{ csrf_token() }}" />
+<div id="admin-layer" class="sheet auth-sheet admin-sheet" hidden>
+  <section class="auth-card auth-card--admin" role="dialog" aria-modal="true" aria-labelledby="admin-title">
+    <button
+      type="button"
+      id="admin-close"
+      class="auth-close"
+      data-i18n-aria="close"
+      aria-label="{{ copy.close }}"
+    >
+      <span aria-hidden="true">&times;</span>
+    </button>
+    <header class="auth-card-head admin-head">
+      <p class="auth-kicker">Hangman</p>
+      <h2 id="admin-title" data-i18n="admin">{{ copy.admin }}</h2>
+    </header>
+    <p id="admin-error" class="error" hidden></p>
+    <p id="admin-ok" class="account-ok" hidden></p>
+
+    <section class="auth-section admin-section">
+      <h3 id="admin-announcement-heading" data-i18n="admin_announcement">{{ copy.admin_announcement }}</h3>
+      <form id="admin-announcement-form" class="admin-announce">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <label class="admin-field">
+          <textarea
+            id="admin-announcement-input"
+            name="message"
+            maxlength="280"
+            rows="3"
+            aria-labelledby="admin-announcement-heading"
+          >{{ announcement }}</textarea>
+        </label>
+        <div class="admin-actions">
+          <button type="submit" class="btn btn-primary" data-i18n="admin_save_announcement">{{ copy.admin_save_announcement }}</button>
+          <button type="button" class="btn later" id="admin-announcement-clear" data-i18n="admin_clear_announcement">{{ copy.admin_clear_announcement }}</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="auth-section admin-section">
+      <h3 data-i18n="admin_users">{{ copy.admin_users }}</h3>
+      <form id="admin-search-form" class="admin-search">
+        <label class="admin-field admin-field--grow">
+          <span class="admin-field-label" data-i18n="admin_search">{{ copy.admin_search }}</span>
+          <input type="search" id="admin-search" name="q" placeholder="{{ copy.admin_search }}" aria-label="{{ copy.admin_search }}" />
+        </label>
+        <button type="submit" class="btn btn-primary admin-search-btn" data-i18n="admin_refresh">{{ copy.admin_refresh }}</button>
+      </form>
+      <div id="admin-users" class="admin-list"></div>
+    </section>
+
+    <section class="auth-section admin-section">
+      <h3 data-i18n="admin_rooms">{{ copy.admin_rooms }}</h3>
+      <div id="admin-rooms" class="admin-list"></div>
+    </section>
+  </section>
+</div>
+
 <script type="application/json" id="boot">{{ state_json|tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.63"></script>
 <script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.63/cap-floating.min.js"></script>
@@ -239,14 +549,23 @@ block content %}
     return document.getElementById("csrf-token").value;
   }
 
+  function readJson(response) {
+    var type = (response.headers.get("content-type") || "").toLowerCase();
+    if (!response.ok || type.indexOf("application/json") === -1) {
+      return response.text().then(function () {
+        throw new Error("bad-response:" + response.status);
+      });
+    }
+    return response.json();
+  }
+
   function postForm(url, body) {
     return fetch(url, {
       method: "POST",
       body: body,
       headers: { Accept: "application/json" },
-    }).then(function (response) {
-      return response.json();
-    });
+      credentials: "same-origin",
+    }).then(readJson);
   }
 
   function applyCopy(next) {
@@ -258,13 +577,35 @@ block content %}
       }
       if (node.tagName === "INPUT") {
         node.value = copy[key];
-      } else {
-        node.textContent = copy[key];
+        return;
+      }
+      var label = node.querySelector(".result-next-label");
+      if (label) {
+        label.textContent = copy[key];
+        return;
+      }
+      node.textContent = copy[key];
+    });
+    document.querySelectorAll("[data-i18n-aria]").forEach(function (node) {
+      var key = node.getAttribute("data-i18n-aria");
+      if (copy[key]) {
+        node.setAttribute("aria-label", copy[key]);
       }
     });
     var drawing = document.getElementById("drawing");
     drawing.alt = copy.hangman_alt;
     document.title = copy.title;
+  }
+
+  function themedDrawingSrc(src) {
+    if (!src) return src;
+    var dark = document.body.classList.contains("dark");
+    var base = String(src).replace(/\?.*$/, "");
+    if (base.indexOf("/static/assets/") !== -1) {
+      base = "/drawing/" + base.split("/").pop();
+    }
+    if (base.indexOf("/drawing/") === -1) return src;
+    return dark ? base + "?theme=dark" : base;
   }
 
   function paintTheme(dark) {
@@ -275,11 +616,40 @@ block content %}
     button.textContent = copy[key];
     button.classList.toggle("btn-light", !!dark);
     button.classList.toggle("btn-dark", !dark);
+    var img = document.getElementById("drawing");
+    if (img && img.getAttribute("src")) {
+      img.setAttribute("src", themedDrawingSrc(img.getAttribute("src")));
+    }
   }
 
   function paintGuest(guest) {
     document.getElementById("save-score").hidden = !guest;
     document.getElementById("log-out").hidden = !!guest;
+    document.getElementById("account-open").hidden = !!guest;
+    document.getElementById("mp-guest-hint").hidden = !guest;
+    document.getElementById("guest-save-hint").hidden = !guest;
+    var guestName = document.getElementById("mp-guest-name");
+    if (guestName) guestName.hidden = !guest;
+    var createBtn = document.getElementById("mp-create-btn");
+    if (createBtn) createBtn.disabled = !!guest;
+    if (guest) {
+      document.getElementById("admin-open").hidden = true;
+    }
+  }
+
+  function paintAnnouncement(text) {
+    var banner = document.getElementById("site-announcement");
+    var node = document.getElementById("site-announcement-text");
+    var value = (text || "").trim();
+    node.textContent = value;
+    banner.hidden = !value;
+  }
+
+  function paintAdmin(isAdmin) {
+    document.getElementById("admin-open").hidden = !isAdmin;
+    if (!isAdmin) {
+      document.getElementById("admin-layer").hidden = true;
+    }
   }
 
   function paintScore(data) {
@@ -357,8 +727,9 @@ block content %}
       });
     }
     var img = document.getElementById("drawing");
-    if (img.getAttribute("src") !== data.drawing) {
-      img.setAttribute("src", data.drawing);
+    var nextDrawing = themedDrawingSrc(data.drawing);
+    if (img.getAttribute("src") !== nextDrawing) {
+      img.setAttribute("src", nextDrawing);
     }
     Object.keys(data.letter_states).forEach(function (letter) {
       var button = document.querySelector('#game-form-Big button[value="' + letter + '"]');
@@ -381,6 +752,8 @@ block content %}
   function sheetOpen() {
     return (
       !document.getElementById("auth-layer").hidden ||
+      !document.getElementById("account-layer").hidden ||
+      !document.getElementById("admin-layer").hidden ||
       !document.getElementById("result-layer").hidden
     );
   }
@@ -408,35 +781,51 @@ block content %}
 
   function fitDrawing() {
     var stage = document.querySelector(".stage");
-    var card = document.querySelector("#result-layer .auth-card");
+    var layer = document.getElementById("result-layer");
+    var stack = document.querySelector("#result-layer .result-stack");
+    var card = document.querySelector("#result-layer .result-card");
     var image = document.getElementById("drawing");
-    if (!stage || !card || document.body.classList.contains("scroll-lock")) {
+    var page = document.querySelector(".page");
+    var overlay = stack || card;
+    if (!stage || !overlay || !layer || layer.hidden) {
+      return;
+    }
+    if (
+      !document.getElementById("auth-layer").hidden ||
+      !document.getElementById("account-layer").hidden ||
+      !document.getElementById("admin-layer").hidden
+    ) {
       return;
     }
     stage.style.maxHeight = "";
     stage.style.aspectRatio = "";
     stage.style.width = "";
+    if (page) page.style.paddingBottom = "";
     if (image) {
       image.style.maxHeight = "";
       image.style.height = "";
       image.style.width = "";
       image.style.maxWidth = "";
       image.style.marginInline = "";
+      image.style.objectFit = "";
     }
-    window.scrollTo(0, 0);
-    var cardTop = card.getBoundingClientRect().top;
+    // Reserve the full bottom stack (gloss + result), so the word stays clear.
+    var overlayBox = overlay.getBoundingClientRect();
+    var gap = 16;
+    var reserve = Math.ceil(overlayBox.height) + gap + 12;
+    if (page) {
+      page.style.paddingBottom = reserve + "px";
+    }
     var stageTop = stage.getBoundingClientRect().top;
     var word = document.getElementById("word");
-    var wordH = word ? word.getBoundingClientRect().height + 16 : 56;
-    var roomForBoth = cardTop - stageTop - wordH - 12;
-    var roomForImage = cardTop - stageTop - 12;
-    var room = roomForBoth > 120 ? roomForBoth : roomForImage;
-    if (room < 80) {
-      room = Math.max(80, roomForImage);
+    var wordH = word && !word.hidden ? word.getBoundingClientRect().height + 12 : 48;
+    var available = window.innerHeight - stageTop - reserve - wordH;
+    if (available < 96) {
+      available = Math.max(72, window.innerHeight - stageTop - reserve - 8);
     }
     var ratio = 1728 / 1296;
-    var maxW = Math.min(window.innerWidth - 32, 920);
-    var height = room;
+    var maxW = Math.min(window.innerWidth - 32, 640);
+    var height = Math.min(available, maxW / ratio);
     var width = height * ratio;
     if (width > maxW) {
       width = maxW;
@@ -444,18 +833,21 @@ block content %}
     }
     stage.style.aspectRatio = "auto";
     stage.style.width = width + "px";
-    stage.style.maxHeight = "none";
+    stage.style.maxHeight = height + "px";
     if (image) {
       image.style.width = width + "px";
       image.style.height = height + "px";
       image.style.maxWidth = "100%";
-      image.style.maxHeight = "none";
+      image.style.maxHeight = height + "px";
+      image.style.objectFit = "contain";
     }
   }
 
   function clearDrawingFit() {
     var stage = document.querySelector(".stage");
     var image = document.getElementById("drawing");
+    var page = document.querySelector(".page");
+    if (page) page.style.paddingBottom = "";
     if (stage) {
       stage.style.maxHeight = "";
       stage.style.aspectRatio = "";
@@ -467,15 +859,263 @@ block content %}
       image.style.width = "";
       image.style.maxWidth = "";
       image.style.marginInline = "";
+      image.style.objectFit = "";
     }
+  }
+
+  var resultAdvanceTimer = null;
+  var resultAdvanceStarted = 0;
+  var resultAdvanceRemaining = 0;
+  var resultAdvancePaused = false;
+  var RESULT_PREF_KEY = "hangman-result-prefs";
+  var RESULT_PREF_SECS = [0, 5, 10, 15, 20, 25, 30];
+  var resultPrefs = { autoskip: true, seconds: 10 };
+
+  function normalizeResultPrefs(raw) {
+    var data = raw && typeof raw === "object" ? raw : {};
+    var autoskip = data.autoskip;
+    if (typeof autoskip === "string") {
+      autoskip = ["1", "true", "yes", "on"].indexOf(autoskip.toLowerCase()) !== -1;
+    } else if (typeof autoskip !== "boolean") {
+      autoskip = true;
+    }
+    var seconds = parseInt(data.seconds, 10);
+    if (RESULT_PREF_SECS.indexOf(seconds) === -1) {
+      seconds = 10;
+    }
+    return { autoskip: !!autoskip, seconds: seconds };
+  }
+
+  function readStoredResultPrefs() {
+    try {
+      var raw = localStorage.getItem(RESULT_PREF_KEY);
+      if (!raw) return null;
+      return normalizeResultPrefs(JSON.parse(raw));
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function writeStoredResultPrefs(prefs) {
+    try {
+      localStorage.setItem(RESULT_PREF_KEY, JSON.stringify(prefs));
+    } catch (err) {}
+  }
+
+  function syncResultPrefControls() {
+    var toggle = document.getElementById("result-autoskip");
+    var delay = document.getElementById("result-autoskip-sec");
+    if (toggle) toggle.checked = !!resultPrefs.autoskip;
+    if (delay) {
+      delay.value = String(resultPrefs.seconds);
+      delay.disabled = !resultPrefs.autoskip;
+    }
+  }
+
+  function applyResultPrefs(raw, persist) {
+    resultPrefs = normalizeResultPrefs(raw);
+    syncResultPrefControls();
+    if (persist) {
+      writeStoredResultPrefs(resultPrefs);
+      var body = tokenBody();
+      body.append("autoskip", resultPrefs.autoskip ? "true" : "false");
+      body.append("seconds", String(resultPrefs.seconds));
+      postForm("/account/result_prefs", body)
+        .then(function (data) {
+          if (data && data.result_prefs) {
+            resultPrefs = normalizeResultPrefs(data.result_prefs);
+            syncResultPrefControls();
+          }
+        })
+        .catch(function () {});
+    }
+  }
+
+  function resultNextButton() {
+    return document.getElementById("result-next");
+  }
+
+  function clearResultAdvance() {
+    if (resultAdvanceTimer) {
+      clearTimeout(resultAdvanceTimer);
+      resultAdvanceTimer = null;
+    }
+    resultAdvancePaused = false;
+    resultAdvanceRemaining = 0;
+    var next = resultNextButton();
+    if (next) {
+      next.classList.remove("is-counting", "is-paused");
+    }
+  }
+
+  function pauseResultAdvance() {
+    var next = resultNextButton();
+    if (resultAdvancePaused || !resultAdvanceTimer) {
+      return;
+    }
+    clearTimeout(resultAdvanceTimer);
+    resultAdvanceTimer = null;
+    resultAdvanceRemaining = Math.max(
+      0,
+      resultAdvanceRemaining - (performance.now() - resultAdvanceStarted),
+    );
+    resultAdvancePaused = true;
+    if (next) next.classList.add("is-paused");
+  }
+
+  function resumeResultAdvance() {
+    var next = resultNextButton();
+    if (!resultAdvancePaused || resultAdvanceRemaining <= 0) {
+      if (resultAdvancePaused && resultAdvanceRemaining <= 0) {
+        advanceResult();
+      }
+      return;
+    }
+    resultAdvancePaused = false;
+    if (next) next.classList.remove("is-paused");
+    resultAdvanceStarted = performance.now();
+    resultAdvanceTimer = setTimeout(advanceResult, resultAdvanceRemaining);
+  }
+
+  function armResultAdvance() {
+    clearResultAdvance();
+    var next = resultNextButton();
+    var later = document.getElementById("result-later");
+    var layer = document.getElementById("result-layer");
+    if (layer.hidden || !resultPrefs.autoskip) {
+      return;
+    }
+    var advanceMs = Math.max(0, resultPrefs.seconds * 1000);
+    resultAdvanceRemaining = advanceMs;
+    resultAdvancePaused = false;
+    if (next && !next.hidden && advanceMs > 0) {
+      next.classList.add("is-counting");
+      next.style.setProperty("--result-advance-ms", advanceMs + "ms");
+      void next.offsetWidth;
+    }
+    if ((next && !next.hidden) || (later && !later.hidden)) {
+      resultAdvanceStarted = performance.now();
+      resultAdvanceTimer = setTimeout(advanceResult, resultAdvanceRemaining);
+    }
+  }
+
+  function advanceResult() {
+    clearResultAdvance();
+    var next = resultNextButton();
+    var later = document.getElementById("result-later");
+    if (!document.getElementById("result-layer").hidden && next && !next.hidden) {
+      postForm("/continue", tokenBody()).then(applyState).catch(function () {});
+      return;
+    }
+    if (!document.getElementById("result-layer").hidden && later && !later.hidden) {
+      postForm("/dismiss_save", tokenBody()).then(applyState).catch(function () {});
+    }
+  }
+
+  var GLOSS_SOURCE_ICONS = {
+    Wiktionary: "{{ url_for('static', filename='assets/gloss/wiktionary.png') }}",
+    Dexonline: "{{ url_for('static', filename='assets/gloss/dexonline.png') }}",
+    DWDS: "{{ url_for('static', filename='assets/gloss/dwds.png') }}",
+    RAE: "{{ url_for('static', filename='assets/gloss/rae.png') }}",
+    Priberam: "{{ url_for('static', filename='assets/gloss/priberam.png') }}",
+    TDK: "{{ url_for('static', filename='assets/gloss/tdk.png') }}",
+  };
+
+  function paintSourceAttribution(source, sourceName, sourceIcon, name) {
+    if (!source || !sourceName) return;
+    if (!name) {
+      source.hidden = true;
+      sourceName.textContent = "";
+      if (sourceIcon) {
+        sourceIcon.hidden = true;
+        sourceIcon.removeAttribute("src");
+        sourceIcon.alt = "";
+      }
+      return;
+    }
+    sourceName.textContent = name;
+    if (sourceIcon) {
+      var icon = GLOSS_SOURCE_ICONS[name] || "";
+      if (icon) {
+        sourceIcon.src = icon;
+        sourceIcon.alt = name;
+        sourceIcon.hidden = false;
+      } else {
+        sourceIcon.hidden = true;
+        sourceIcon.removeAttribute("src");
+        sourceIcon.alt = "";
+      }
+    }
+    source.hidden = false;
+  }
+
+  function paintDefinition(word) {
+    var info = document.getElementById("info-panel");
+    var wrap = document.getElementById("result-gloss");
+    var node = document.getElementById("result-definition");
+    var source = document.getElementById("result-source");
+    var sourceName = document.getElementById("result-source-name");
+    var sourceIcon = document.getElementById("result-source-icon");
+    if (!wrap || !node) return;
+    wrap.hidden = true;
+    if (info) info.hidden = true;
+    node.textContent = "";
+    paintSourceAttribution(source, sourceName, sourceIcon, "");
+    if (!word) {
+      fitDrawing();
+      return;
+    }
+    var lang = document.documentElement.getAttribute("data-lang") || "en";
+    fetch(
+      "/define?lang=" +
+        encodeURIComponent(lang) +
+        "&word=" +
+        encodeURIComponent(word),
+      { headers: { Accept: "application/json" }, credentials: "same-origin" },
+    )
+      .then(function (response) {
+        return response.ok ? response.json() : null;
+      })
+      .then(function (data) {
+        var text = data && data.definition ? String(data.definition).trim() : "";
+        if (!text) {
+          wrap.hidden = true;
+          if (info) info.hidden = true;
+          node.textContent = "";
+          paintSourceAttribution(source, sourceName, sourceIcon, "");
+          fitDrawing();
+          return;
+        }
+        node.textContent = text;
+        paintSourceAttribution(
+          source,
+          sourceName,
+          sourceIcon,
+          data && data.source ? String(data.source).trim() : "",
+        );
+        wrap.hidden = false;
+        if (info) info.hidden = false;
+        fitDrawing();
+      })
+      .catch(function () {
+        wrap.hidden = true;
+        if (info) info.hidden = true;
+        node.textContent = "";
+        paintSourceAttribution(source, sourceName, sourceIcon, "");
+        fitDrawing();
+      });
   }
 
   function paintResult(result) {
     var layer = document.getElementById("result-layer");
+    var info = document.getElementById("info-panel");
+    clearResultAdvance();
     if (!result) {
       layer.hidden = true;
+      if (info) info.hidden = true;
       clearDrawingFit();
       syncScrollLock();
+      paintDefinition("");
       return;
     }
     document.getElementById("result-message").textContent = result.message;
@@ -486,8 +1126,11 @@ block content %}
     document.getElementById("result-save").hidden = !result.offer;
     document.getElementById("result-later").hidden = !result.offer;
     layer.hidden = false;
+    if (info) info.hidden = true;
     fitDrawing();
     syncScrollLock();
+    armResultAdvance();
+    paintDefinition(result.word || "");
   }
 
   function applyState(data) {
@@ -512,6 +1155,10 @@ block content %}
     if (data.score_line || data.shown_score != null) {
       paintScore(data);
     }
+    if (data.result_prefs) {
+      applyResultPrefs(data.result_prefs, false);
+      writeStoredResultPrefs(resultPrefs);
+    }
     if ("result" in data) {
       paintResult(data.result);
     }
@@ -528,18 +1175,316 @@ block content %}
     if (select && data.language) {
       select.value = data.language;
     }
+    if (data.kramli && typeof window.__paintKramli === "function") {
+      window.__paintKramli(data.kramli, data.copy || copy);
+    }
+    if ("announcement" in data) {
+      paintAnnouncement(data.announcement);
+    }
+    if (typeof data.is_admin === "boolean") {
+      paintAdmin(data.is_admin);
+    }
   }
 
   function openAuth(which) {
+    document.getElementById("account-layer").hidden = true;
+    document.getElementById("admin-layer").hidden = true;
     document.getElementById("auth-layer").hidden = false;
     document.getElementById("login-form").hidden = which === "register";
     document.getElementById("register-form").hidden = which !== "register";
+    document.getElementById("auth-lead-login").hidden = which === "register";
+    document.getElementById("auth-lead-register").hidden = which !== "register";
     document.getElementById("auth-error").hidden = true;
+    document.querySelectorAll(".auth-tab").forEach(function (tab) {
+      var active = tab.getAttribute("data-auth") === which;
+      tab.classList.toggle("is-active", active);
+      if (active) tab.setAttribute("aria-current", "page");
+      else tab.removeAttribute("aria-current");
+    });
     syncScrollLock();
   }
 
   function closeAuth() {
     document.getElementById("auth-layer").hidden = true;
+    syncScrollLock();
+  }
+
+  function openAccount() {
+    document.getElementById("auth-layer").hidden = true;
+    document.getElementById("admin-layer").hidden = true;
+    document.getElementById("account-layer").hidden = false;
+    document.getElementById("account-error").hidden = true;
+    document.getElementById("account-ok").hidden = true;
+    var name = document.getElementById("player-name").textContent.trim();
+    if (name) document.getElementById("account-name").value = name;
+    syncScrollLock();
+  }
+
+  function closeAccount() {
+    document.getElementById("account-layer").hidden = true;
+    syncScrollLock();
+  }
+
+  function adminMessage(ok, text) {
+    var error = document.getElementById("admin-error");
+    var good = document.getElementById("admin-ok");
+    if (ok) {
+      error.hidden = true;
+      good.hidden = false;
+      good.textContent = text || copy.admin_saved;
+      return;
+    }
+    good.hidden = true;
+    error.hidden = false;
+    error.textContent = text || copy.try_again;
+  }
+
+  function adminEl(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function adminChip(text, kind) {
+    return adminEl("span", "admin-chip" + (kind ? " admin-chip--" + kind : ""), text);
+  }
+
+  function adminHidden(name, value) {
+    var input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    return input;
+  }
+
+  function adminField(labelText, input) {
+    var label = adminEl("label", "admin-field");
+    label.appendChild(adminEl("span", "admin-field-label", labelText));
+    label.appendChild(input);
+    return label;
+  }
+
+  function adminAction(label, className, handler) {
+    var button = adminEl("button", className || "btn later", label);
+    button.type = "button";
+    button.addEventListener("click", handler);
+    return button;
+  }
+
+  function renderAdminUsers(users) {
+    var box = document.getElementById("admin-users");
+    box.replaceChildren();
+    if (!users || !users.length) {
+      box.appendChild(adminEl("p", "admin-empty", copy.admin_no_users));
+      return;
+    }
+    users.forEach(function (user) {
+      var card = adminEl("article", "admin-card");
+      var head = adminEl("div", "admin-card-head");
+      var avatar = adminEl(
+        "div",
+        "admin-avatar",
+        (user.username || "?").slice(0, 1).toUpperCase(),
+      );
+      var identity = adminEl("div", "admin-identity");
+      identity.appendChild(adminEl("div", "admin-card-title", user.username || user.email));
+      identity.appendChild(adminEl("div", "admin-card-email", user.email));
+      var chips = adminEl("div", "admin-chips");
+      chips.appendChild(adminChip(copy.score_col + " " + user.score, "score"));
+      if (user.admin) chips.appendChild(adminChip(copy.admin, "admin"));
+      if (user.banned) chips.appendChild(adminChip(copy.admin_ban, "danger"));
+      head.appendChild(avatar);
+      head.appendChild(identity);
+      head.appendChild(chips);
+
+      var scoreInput = document.createElement("input");
+      scoreInput.type = "number";
+      scoreInput.name = "score";
+      scoreInput.min = "0";
+      scoreInput.value = String(user.score);
+      scoreInput.setAttribute("aria-label", copy.admin_score);
+      var scoreForm = adminEl("form", "admin-form-row");
+      scoreForm.appendChild(adminHidden("email", user.email));
+      scoreForm.appendChild(adminField(copy.admin_score, scoreInput));
+      var scoreBtn = adminEl("button", "btn btn-primary", copy.admin_score);
+      scoreBtn.type = "submit";
+      scoreForm.appendChild(scoreBtn);
+      scoreForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        adminPost("/admin/users/score", new FormData(scoreForm));
+      });
+
+      var nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.name = "username";
+      nameInput.maxLength = 20;
+      nameInput.minLength = 2;
+      nameInput.value = user.username || "";
+      nameInput.setAttribute("aria-label", copy.admin_rename);
+      var renameForm = adminEl("form", "admin-form-row");
+      renameForm.appendChild(adminHidden("email", user.email));
+      renameForm.appendChild(adminField(copy.admin_rename, nameInput));
+      var renameBtn = adminEl("button", "btn btn-primary", copy.admin_rename);
+      renameBtn.type = "submit";
+      renameForm.appendChild(renameBtn);
+      renameForm.addEventListener("submit", function (event) {
+        event.preventDefault();
+        adminPost("/admin/users/rename", new FormData(renameForm));
+      });
+
+      var actions = adminEl("div", "admin-actions");
+      actions.appendChild(
+        adminAction(user.banned ? copy.admin_unban : copy.admin_ban, "btn later", function () {
+          if (!user.banned && !window.confirm(copy.admin_confirm_ban)) return;
+          var body = new FormData();
+          body.append("email", user.email);
+          body.append("banned", user.banned ? "0" : "1");
+          adminPost("/admin/users/ban", body);
+        }),
+      );
+      actions.appendChild(
+        adminAction(
+          user.admin ? copy.admin_revoke_admin : copy.admin_make_admin,
+          "btn later",
+          function () {
+            var body = new FormData();
+            body.append("email", user.email);
+            body.append("admin", user.admin ? "0" : "1");
+            adminPost("/admin/users/admin", body);
+          },
+        ),
+      );
+      actions.appendChild(
+        adminAction(copy.admin_delete, "btn admin-btn-danger", function () {
+          if (!window.confirm(copy.admin_confirm_delete)) return;
+          var body = new FormData();
+          body.append("email", user.email);
+          adminPost("/admin/users/delete", body);
+        }),
+      );
+
+      card.appendChild(head);
+      card.appendChild(scoreForm);
+      card.appendChild(renameForm);
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+  }
+
+  function renderAdminRooms(rooms) {
+    var box = document.getElementById("admin-rooms");
+    box.replaceChildren();
+    if (!rooms || !rooms.length) {
+      box.appendChild(adminEl("p", "admin-empty", copy.admin_no_rooms));
+      return;
+    }
+    rooms.forEach(function (room) {
+      var card = adminEl("article", "admin-card admin-card--room");
+      var head = adminEl("div", "admin-card-head");
+      var identity = adminEl("div", "admin-identity");
+      identity.appendChild(adminEl("div", "admin-card-title admin-code", room.code));
+      var chips = adminEl("div", "admin-chips");
+      if (room.state) chips.appendChild(adminChip(room.state, "state"));
+      if (room.language) chips.appendChild(adminChip(room.language));
+      chips.appendChild(
+        adminChip(((room.players || []).length || 0) + " " + copy.admin_users.toLowerCase()),
+      );
+      head.appendChild(identity);
+      head.appendChild(chips);
+      card.appendChild(head);
+
+      var names = (room.players || [])
+        .map(function (player) {
+          return player.name;
+        })
+        .filter(Boolean)
+        .join(", ");
+      if (names) {
+        card.appendChild(adminEl("p", "admin-card-meta", names));
+      }
+      if (room.word) {
+        var word = adminEl("p", "admin-word");
+        word.appendChild(adminEl("span", "admin-field-label", copy.admin_word));
+        word.appendChild(document.createTextNode(" "));
+        word.appendChild(adminEl("code", "", room.word));
+        card.appendChild(word);
+      }
+
+      var actions = adminEl("div", "admin-actions");
+      actions.appendChild(
+        adminAction(copy.admin_close_room, "btn admin-btn-danger", function () {
+          if (!window.confirm(copy.admin_confirm_close)) return;
+          var body = new FormData();
+          body.append("code", room.code);
+          adminPost("/admin/rooms/close", body);
+        }),
+      );
+      card.appendChild(actions);
+      box.appendChild(card);
+    });
+  }
+
+  function adminPost(url, body) {
+    if (!body.has("csrf_token")) body.append("csrf_token", csrf());
+    var q = document.getElementById("admin-search").value;
+    if (q && !body.has("q")) body.append("q", q);
+    return postForm(url, body)
+      .then(function (data) {
+        if (!data.ok) {
+          adminMessage(false, data.error);
+          return;
+        }
+        adminMessage(true);
+        if (data.users) renderAdminUsers(data.users);
+        if (data.rooms) renderAdminRooms(data.rooms);
+        if ("announcement" in data) {
+          paintAnnouncement(data.announcement);
+          document.getElementById("admin-announcement-input").value = data.announcement || "";
+        }
+      })
+      .catch(function () {
+        adminMessage(false, copy.try_again);
+      });
+  }
+
+  function loadAdmin() {
+    var q = document.getElementById("admin-search").value || "";
+    fetch("/admin/overview?q=" + encodeURIComponent(q), {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    })
+      .then(readJson)
+      .then(function (data) {
+        if (!data.ok) {
+          adminMessage(false, data.error);
+          return;
+        }
+        document.getElementById("admin-error").hidden = true;
+        renderAdminUsers(data.users || []);
+        renderAdminRooms(data.rooms || []);
+        if ("announcement" in data) {
+          document.getElementById("admin-announcement-input").value = data.announcement || "";
+          paintAnnouncement(data.announcement);
+        }
+      })
+      .catch(function () {
+        adminMessage(false, copy.try_again);
+      });
+  }
+
+  function openAdmin() {
+    document.getElementById("auth-layer").hidden = true;
+    document.getElementById("account-layer").hidden = true;
+    document.getElementById("admin-layer").hidden = false;
+    document.getElementById("admin-error").hidden = true;
+    document.getElementById("admin-ok").hidden = true;
+    syncScrollLock();
+    loadAdmin();
+  }
+
+  function closeAdmin() {
+    document.getElementById("admin-layer").hidden = true;
     syncScrollLock();
   }
 
@@ -552,12 +1497,70 @@ block content %}
     openAuth(trigger.getAttribute("data-auth"));
   });
   document.getElementById("auth-close").addEventListener("click", closeAuth);
+  document.getElementById("account-open").addEventListener("click", openAccount);
+  document.getElementById("account-close").addEventListener("click", closeAccount);
+  document.getElementById("admin-open").addEventListener("click", openAdmin);
+  document.getElementById("admin-close").addEventListener("click", closeAdmin);
+  document.getElementById("admin-search-form").addEventListener("submit", function (event) {
+    event.preventDefault();
+    loadAdmin();
+  });
+  document.getElementById("admin-announcement-form").addEventListener("submit", function (event) {
+    event.preventDefault();
+    adminPost("/admin/announcement", new FormData(event.target));
+  });
+  document.getElementById("admin-announcement-clear").addEventListener("click", function () {
+    var body = new FormData();
+    body.append("message", "");
+    adminPost("/admin/announcement", body);
+  });
+
+  function bindAccount(form, confirmKey) {
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (confirmKey && !window.confirm(copy[confirmKey])) {
+        return;
+      }
+      postForm(form.action, new FormData(form))
+        .then(function (data) {
+          var error = document.getElementById("account-error");
+          var ok = document.getElementById("account-ok");
+          if (!data.ok) {
+            ok.hidden = true;
+            error.hidden = false;
+            error.textContent = data.error || copy.try_again;
+            return;
+          }
+          error.hidden = true;
+          if (form.id === "account-delete-form") {
+            window.location.assign("{{ url_for('game') }}");
+            return;
+          }
+          applyState(data);
+          ok.hidden = false;
+          ok.textContent = copy.account_saved;
+          if (form.id === "account-password-form") form.reset();
+        })
+        .catch(function () {
+          var error = document.getElementById("account-error");
+          error.hidden = false;
+          error.textContent = copy.try_again;
+        });
+    });
+  }
+  bindAccount(document.getElementById("account-name-form"));
+  bindAccount(document.getElementById("account-password-form"));
+  bindAccount(document.getElementById("account-delete-form"), "delete_account_confirm");
   document.querySelectorAll(".sheet").forEach(function (sheet) {
     sheet.addEventListener(
       "wheel",
       function (event) {
         var card = sheet.querySelector(".auth-card");
-        if (card && card.contains(event.target)) {
+        var info = sheet.querySelector(".info-panel");
+        if (
+          (card && card.contains(event.target)) ||
+          (info && info.contains(event.target))
+        ) {
           return;
         }
         event.preventDefault();
@@ -568,7 +1571,11 @@ block content %}
       "touchmove",
       function (event) {
         var card = sheet.querySelector(".auth-card");
-        if (card && card.contains(event.target)) {
+        var info = sheet.querySelector(".info-panel");
+        if (
+          (card && card.contains(event.target)) ||
+          (info && info.contains(event.target))
+        ) {
           return;
         }
         event.preventDefault();
@@ -576,10 +1583,59 @@ block content %}
       { passive: false },
     );
   });
-  if (!document.getElementById("result-layer").hidden) {
-    fitDrawing();
+
+  (function bootResultPrefs() {
+    var bootState = JSON.parse(document.getElementById("boot").textContent);
+    var stored = readStoredResultPrefs();
+    if (bootState.guest && stored) {
+      applyResultPrefs(stored, false);
+    } else if (bootState.result_prefs) {
+      applyResultPrefs(bootState.result_prefs, false);
+      writeStoredResultPrefs(resultPrefs);
+    } else if (stored) {
+      applyResultPrefs(stored, false);
+    } else {
+      syncResultPrefControls();
+    }
+  })();
+
+  var autoskipToggle = document.getElementById("result-autoskip");
+  var autoskipDelay = document.getElementById("result-autoskip-sec");
+  function onResultPrefsChanged() {
+    applyResultPrefs(
+      {
+        autoskip: autoskipToggle ? autoskipToggle.checked : true,
+        seconds: autoskipDelay ? autoskipDelay.value : 10,
+      },
+      true,
+    );
+    if (!document.getElementById("result-layer").hidden) {
+      armResultAdvance();
+    }
   }
-  syncScrollLock();
+  if (autoskipToggle) {
+    autoskipToggle.addEventListener("change", onResultPrefsChanged);
+  }
+  if (autoskipDelay) {
+    autoskipDelay.addEventListener("change", onResultPrefsChanged);
+  }
+
+  if (!document.getElementById("result-layer").hidden) {
+    syncScrollLock();
+    fitDrawing();
+    var bootState = JSON.parse(document.getElementById("boot").textContent);
+    if (bootState.result && bootState.result.word) {
+      paintDefinition(bootState.result.word);
+    }
+    armResultAdvance();
+  } else {
+    syncScrollLock();
+  }
+  window.addEventListener("resize", function () {
+    if (!document.getElementById("result-layer").hidden) {
+      fitDrawing();
+    }
+  });
 
   function bindAuth(form) {
     form.addEventListener("submit", function (event) {
@@ -619,7 +1675,7 @@ block content %}
     var body = new FormData();
     body.append("csrf_token", csrf());
     body.append("language", select.value);
-    postForm("/set_language", body).then(applyState);
+    postForm("/set_language", body).then(applyState).catch(function () {});
   });
 
   document.getElementById("theme-form").addEventListener("submit", function (event) {
@@ -627,17 +1683,17 @@ block content %}
     var body = new FormData();
     body.append("csrf_token", csrf());
     body.append("dark_mode", "1");
-    postForm("/set_dark_mode", body).then(function (data) {
-      paintTheme(data.dark);
-    });
+    postForm("/set_dark_mode", body).then(applyState).catch(function () {});
   });
 
   document.getElementById("log-out").addEventListener("click", function () {
-    fetch("/logout", { headers: { Accept: "application/json" } })
-      .then(function (response) {
-        return response.json();
-      })
-      .then(applyState);
+    fetch("/logout", {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    })
+      .then(readJson)
+      .then(applyState)
+      .catch(function () {});
   });
 
   function tokenBody() {
@@ -646,10 +1702,17 @@ block content %}
     return body;
   }
   document.getElementById("result-next").addEventListener("click", function () {
-    postForm("/continue", tokenBody()).then(applyState);
+    clearResultAdvance();
+    postForm("/continue", tokenBody()).then(applyState).catch(function () {});
   });
+  document.getElementById("result-next").addEventListener("pointerenter", pauseResultAdvance);
+  document.getElementById("result-next").addEventListener("pointerleave", resumeResultAdvance);
   document.getElementById("result-later").addEventListener("click", function () {
-    postForm("/dismiss_save", tokenBody()).then(applyState);
+    clearResultAdvance();
+    postForm("/dismiss_save", tokenBody()).then(applyState).catch(function () {});
+  });
+  document.getElementById("result-save").addEventListener("click", function () {
+    clearResultAdvance();
   });
 
   (function () {
@@ -670,6 +1733,7 @@ block content %}
       body.append("letter", button.value);
       postForm(form.action, body)
         .then(applyState)
+        .catch(function () {})
         .finally(function () {
           sending = false;
         });
@@ -688,7 +1752,9 @@ block content %}
       }
       if (
         !document.getElementById("result-layer").hidden ||
-        !document.getElementById("auth-layer").hidden
+        !document.getElementById("auth-layer").hidden ||
+        !document.getElementById("account-layer").hidden ||
+        !document.getElementById("admin-layer").hidden
       ) {
         return;
       }

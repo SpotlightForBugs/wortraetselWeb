@@ -56,6 +56,68 @@ class FallbackUsernameTests(unittest.TestCase):
             self.assertTrue(accounts.is_legacy("a@example.com"))
 
 
+class AccountSettingsTests(unittest.TestCase):
+    def test_update_display_name_rejects_short_names(self):
+        ok, error = accounts.update_display_name("a@example.com", "x")
+        self.assertFalse(ok)
+        self.assertEqual(error, "bad_name")
+
+    def test_update_display_name_writes_auth_and_firestore(self):
+        user = types.SimpleNamespace(uid="uid1")
+        with patch.object(
+            accounts.auth, "get_user_by_email", return_value=user
+        ), patch.object(accounts.auth, "update_user") as update, patch.object(
+            accounts.firebaseDB, "set_username"
+        ) as set_name:
+            ok, name = accounts.update_display_name("a@example.com", "  Ada  ")
+            self.assertTrue(ok)
+            self.assertEqual(name, "Ada")
+            update.assert_called_once_with("uid1", display_name="Ada")
+            set_name.assert_called_once_with("a@example.com", "Ada")
+
+    def test_change_password_checks_current_then_updates(self):
+        user = types.SimpleNamespace(uid="uid1")
+        with patch.object(
+            accounts, "login", return_value="a@example.com"
+        ), patch.object(
+            accounts.auth, "get_user_by_email", return_value=user
+        ), patch.object(
+            accounts.auth, "update_user"
+        ) as update:
+            ok, error = accounts.change_password("a@example.com", "old", "newpass")
+            self.assertTrue(ok)
+            self.assertIsNone(error)
+            update.assert_called_once_with("uid1", password="newpass")
+
+    def test_change_password_rejects_wrong_current(self):
+        with patch.object(accounts, "login", return_value=False):
+            ok, error = accounts.change_password("a@example.com", "bad", "newpass")
+            self.assertFalse(ok)
+            self.assertEqual(error, "bad_login")
+
+    def test_change_password_rejects_weak_new(self):
+        ok, error = accounts.change_password("a@example.com", "old", "123")
+        self.assertFalse(ok)
+        self.assertEqual(error, "weak_password")
+
+    def test_delete_account_removes_auth_and_doc(self):
+        user = types.SimpleNamespace(uid="uid1")
+        with patch.object(
+            accounts, "login", return_value="a@example.com"
+        ), patch.object(
+            accounts.auth, "get_user_by_email", return_value=user
+        ), patch.object(
+            accounts.auth, "delete_user"
+        ) as delete, patch.object(
+            accounts.firebaseDB, "delete_user_doc"
+        ) as delete_doc:
+            ok, error = accounts.delete_account("a@example.com", "secret")
+            self.assertTrue(ok)
+            self.assertIsNone(error)
+            delete.assert_called_once_with("uid1")
+            delete_doc.assert_called_once_with("a@example.com")
+
+
 class ClientIpTests(unittest.TestCase):
     def setUp(self):
         self.app = Flask(__name__)

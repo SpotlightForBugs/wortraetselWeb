@@ -1,0 +1,496 @@
+{% extends 'scripts.html' %} {% block title %}{{ copy.mp_title }} · {{ room_code
+}}{% endblock %} {% block content %}
+<main class="page mp-page">
+  <header class="header">
+    <div class="mp-heading">
+      <span class="username">{{ copy.mp_title }}</span>
+      {% if state %}
+      <span class="mp-code" translate="no" aria-label="{{ copy.mp_code }}">{{ room_code }}</span>
+      <button type="button" class="btn btn-light mp-copy" id="copy-link">{{ copy.mp_copy_link }}</button>
+      {% endif %}
+    </div>
+    <a class="btn later" id="leave-room" href="{{ url_for('game') }}">{{ copy.mp_back }}</a>
+  </header>
+
+  <p class="mp-connection" id="connection" hidden>{{ copy.mp_reconnecting }}</p>
+
+  {% if not state %}
+  <section class="panel mp-missing">
+    <h2>{{ copy[error] if error else copy.mp_room_missing }}</h2>
+    <a class="btn" href="{{ url_for('game') }}">{{ copy.mp_back }}</a>
+  </section>
+  {% else %}
+  <section class="game-area">
+    <div class="panel">
+      <div class="mp-turn" id="turn" role="status" aria-live="polite">
+        <span id="turn-text"></span>
+        <span class="mp-timer" id="turn-timer" hidden></span>
+      </div>
+      <div class="result-gloss" id="mp-gloss" hidden>
+        <p class="result-definition" id="mp-definition"></p>
+        <p class="result-source" id="mp-source" hidden>
+          <span class="result-source-label" data-i18n="gloss_source"
+            >{{ copy.gloss_source }}</span
+          >
+          <img
+            id="mp-source-icon"
+            class="result-source-icon"
+            src=""
+            alt=""
+            width="22"
+            height="22"
+            hidden
+          />
+          <span id="mp-source-name" class="result-source-name"></span>
+        </p>
+      </div>
+      <div class="mp-lobby" id="lobby">
+        <p>{{ copy.mp_invite }}</p>
+        <span class="mp-code mp-code-big" translate="no">{{ room_code }}</span>
+        <label class="mp-language" for="room-language">
+          <span>{{ copy.mp_language }}</span>
+          <select id="room-language">
+            {% for code, name in language_names.items() %}
+            <option value="{{ code }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <div id="board">
+        <div class="stage">
+          <img id="drawing" class="hangman-image" alt="{{ copy.hangman_alt }}" width="640" height="480" />
+        </div>
+        <div class="word" id="tiles" translate="no"></div>
+      </div>
+    </div>
+
+    <div class="panel mp-side">
+      <h2 class="mp-subtitle">{{ copy.mp_players }}</h2>
+      <ul class="mp-players" id="players" translate="no"></ul>
+      <div class="mp-actions">
+        <label class="mp-name-field" id="join-name-wrap" hidden>
+          <span>{{ copy.mp_your_name }}</span>
+          <input
+            type="text"
+            id="join-name"
+            maxlength="20"
+            autocomplete="nickname"
+            placeholder="{{ copy.mp_your_name }}"
+          />
+        </label>
+        <button type="button" class="btn btn-success mp-start" id="join-room" hidden>{{ copy.mp_join }}</button>
+        <p class="mp-hint" id="join-hint" hidden></p>
+        <button type="button" class="btn btn-success mp-start" id="start-game" hidden>{{ copy.mp_start }}</button>
+        <p class="mp-hint" id="start-hint" hidden>{{ copy.mp_need_players }}</p>
+      </div>
+      <div class="mp-letters" id="letters" translate="no">
+        {% for letter in letters %}
+        <button type="button" class="btn btn-primary" value="{{ letter }}" disabled title="">{{ letter }}</button>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+</main>
+
+<div class="mp-toast" id="toast" role="alert" hidden></div>
+
+{% if state %}
+<script type="application/json" id="room-boot">
+  {{ {"state": state, "copy": copy, "me": player_id, "code": room_code, "guest_name": session.get("guest_name", "")}|tojson }}
+</script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+<script>
+  (function () {
+    var boot = JSON.parse(document.getElementById("room-boot").textContent);
+    var copy = boot.copy;
+    var current = boot.state;
+    var pending = false;
+    var toastTimer = null;
+    var clockOffset = 0;
+    var lastNotice = null;
+    var lastSkip = 0;
+    // Start on long-polling and upgrade to WebSocket when the network allows it.
+    // A WebSocket-only client never falls back, so one blocked upgrade froze the room.
+    var socket = io({ transports: ["polling", "websocket"] });
+    var $ = function (id) {
+      return document.getElementById(id);
+    };
+
+    function fill(template, values) {
+      return Object.keys(values).reduce(function (text, key) {
+        return text.split("{" + key + "}").join(values[key]);
+      }, template || "");
+    }
+
+    function nameOf(id) {
+      var player = current.players.find(function (p) {
+        return p.id === id;
+      });
+      return player ? player.name : "";
+    }
+
+    function toast(message) {
+      var node = $("toast");
+      node.textContent = message;
+      node.hidden = false;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        node.hidden = true;
+      }, 3500);
+    }
+
+    function initials(name) {
+      return (name || "?")
+        .split(/\s+/)
+        .slice(0, 2)
+        .map(function (part) {
+          return part.charAt(0).toUpperCase();
+        })
+        .join("");
+    }
+
+    function renderPlayers(state) {
+      var list = $("players");
+      list.textContent = "";
+      state.players.forEach(function (p) {
+        var item = document.createElement("li");
+        if (p.id === state.turn) item.classList.add("active");
+        if (p.id === boot.me) item.classList.add("me");
+        if (state.result && p.id === state.result.winner) item.classList.add("winner");
+
+        var avatar = document.createElement("span");
+        avatar.className = "mp-avatar";
+        avatar.textContent = initials(p.name);
+        var name = document.createElement("span");
+        name.className = "mp-name";
+        name.textContent = p.name;
+        item.append(avatar, name);
+
+        [
+          [p.id === state.host, copy.mp_host],
+          [p.id === boot.me, copy.mp_you],
+        ].forEach(function (badge) {
+          if (!badge[0]) return;
+          var tag = document.createElement("span");
+          tag.className = "mp-badge";
+          tag.textContent = badge[1];
+          item.appendChild(tag);
+        });
+
+        var stats = document.createElement("span");
+        stats.className = "mp-hits";
+        var share = state.result && state.result.shares ? state.result.shares[p.id] : null;
+        var line = fill(copy.mp_score, { n: p.score });
+        if (state.state === "playing") line = fill(copy.mp_hits, { n: p.hits }) + " · " + line;
+        if (share) line = (share > 0 ? "+" : "") + share + " · " + line;
+        stats.textContent = line;
+        if (share) stats.classList.add(share > 0 ? "gain" : "loss");
+        item.appendChild(stats);
+        list.appendChild(item);
+      });
+    }
+
+    var GLOSS_SOURCE_ICONS = {
+      Wiktionary: "{{ url_for('static', filename='assets/gloss/wiktionary.png') }}",
+      Dexonline: "{{ url_for('static', filename='assets/gloss/dexonline.png') }}",
+      DWDS: "{{ url_for('static', filename='assets/gloss/dwds.png') }}",
+      RAE: "{{ url_for('static', filename='assets/gloss/rae.png') }}",
+      Priberam: "{{ url_for('static', filename='assets/gloss/priberam.png') }}",
+      TDK: "{{ url_for('static', filename='assets/gloss/tdk.png') }}",
+    };
+
+    function paintSourceAttribution(source, sourceName, sourceIcon, name) {
+      if (!source || !sourceName) return;
+      if (!name) {
+        source.hidden = true;
+        sourceName.textContent = "";
+        if (sourceIcon) {
+          sourceIcon.hidden = true;
+          sourceIcon.removeAttribute("src");
+          sourceIcon.alt = "";
+        }
+        return;
+      }
+      sourceName.textContent = name;
+      if (sourceIcon) {
+        var icon = GLOSS_SOURCE_ICONS[name] || "";
+        if (icon) {
+          sourceIcon.src = icon;
+          sourceIcon.alt = name;
+          sourceIcon.hidden = false;
+        } else {
+          sourceIcon.hidden = true;
+          sourceIcon.removeAttribute("src");
+          sourceIcon.alt = "";
+        }
+      }
+      source.hidden = false;
+    }
+
+    function paintDefinition(word) {
+      var wrap = $("mp-gloss");
+      var node = $("mp-definition");
+      var source = $("mp-source");
+      var sourceName = $("mp-source-name");
+      var sourceIcon = $("mp-source-icon");
+      if (!wrap || !node) return;
+      wrap.hidden = true;
+      node.textContent = "";
+      paintSourceAttribution(source, sourceName, sourceIcon, "");
+      if (!word) return;
+      var lang = current.language || document.documentElement.getAttribute("data-lang") || "en";
+      fetch(
+        "/define?lang=" + encodeURIComponent(lang) + "&word=" + encodeURIComponent(word),
+        { headers: { Accept: "application/json" }, credentials: "same-origin" }
+      )
+        .then(function (response) {
+          return response.ok ? response.json() : null;
+        })
+        .then(function (data) {
+          var text = data && data.definition ? String(data.definition).trim() : "";
+          if (!text) {
+            wrap.hidden = true;
+            node.textContent = "";
+            paintSourceAttribution(source, sourceName, sourceIcon, "");
+            return;
+          }
+          node.textContent = text;
+          paintSourceAttribution(
+            source,
+            sourceName,
+            sourceIcon,
+            data && data.source ? String(data.source).trim() : ""
+          );
+          wrap.hidden = false;
+        })
+        .catch(function () {
+          wrap.hidden = true;
+          node.textContent = "";
+          paintSourceAttribution(source, sourceName, sourceIcon, "");
+        });
+    }
+
+    function renderTurn(state) {
+      var turn = $("turn-text");
+      var mine = state.state === "playing" && state.turn === boot.me;
+      $("turn").className = "mp-turn";
+      if (state.state === "waiting") {
+        turn.textContent = state.host === boot.me ? copy.mp_ready : copy.mp_waiting;
+        paintDefinition("");
+      } else if (state.state === "playing") {
+        turn.textContent = mine ? copy.mp_your_turn : fill(copy.mp_turn_of, { name: nameOf(state.turn) });
+        if (mine) $("turn").classList.add("mine");
+        paintDefinition("");
+      } else if (state.result) {
+        var word = state.result.word;
+        var won = state.result.status === "won";
+        $("turn").classList.add(won ? "won" : "lost");
+        turn.textContent = fill(won ? copy.mp_won : copy.mp_lost, { word: String(word || "") });
+        if (state.result.winner) {
+          turn.textContent += " " + fill(copy.mp_winner, { name: nameOf(state.result.winner) });
+        }
+        if (state.host !== boot.me) turn.textContent += " " + copy.mp_waiting_next;
+        paintDefinition(word || "");
+      }
+    }
+
+    function renderBoard(state) {
+      var waiting = state.state === "waiting";
+      $("lobby").hidden = !waiting;
+      $("board").hidden = waiting;
+      if (waiting) return;
+      var dark = document.body.classList.contains("dark");
+      var drawing = state.drawing || "";
+      var base = drawing.replace(/\?.*$/, "");
+      if (base.indexOf("/static/assets/") !== -1) {
+        base = "/drawing/" + base.split("/").pop();
+      }
+      if (base.indexOf("/drawing/") !== -1) {
+        drawing = dark ? base + "?theme=dark" : base;
+      }
+      if ($("drawing").getAttribute("src") !== drawing) $("drawing").src = drawing;
+      var tiles = $("tiles");
+      tiles.textContent = "";
+      state.tiles.forEach(function (ch) {
+        var tile = document.createElement("span");
+        tile.className = "tile";
+        tile.textContent = ch ? ch.toUpperCase() : "";
+        tiles.appendChild(tile);
+      });
+    }
+
+    function renderLetters(state) {
+      var myTurn = state.state === "playing" && state.turn === boot.me && !pending;
+      $("letters").classList.toggle("locked", !myTurn);
+      $("letters").hidden = state.state === "waiting";
+      var values = state.letter_values || {};
+      document.querySelectorAll("#letters button").forEach(function (button) {
+        var letterState = state.letter_states[button.value];
+        var value = values[button.value];
+        button.title = value != null ? fill(copy.mp_letter_value, { n: value }) : "";
+        button.classList.toggle("btn-success", letterState === "hit");
+        button.classList.toggle("btn-danger", letterState === "miss");
+        button.classList.toggle("btn-primary", letterState === "open");
+        button.disabled = letterState !== "open" || !myTurn;
+      });
+    }
+
+    function isMember(state) {
+      return state.players.some(function (p) {
+        return p.id === boot.me;
+      });
+    }
+
+    function renderLobby(state) {
+      var isHost = state.host === boot.me;
+      var member = isMember(state);
+      var full = state.players.length >= state.max_players;
+      var join = $("join-room");
+      var nameWrap = $("join-name-wrap");
+      join.hidden = member;
+      join.disabled = state.state === "playing" || full;
+      nameWrap.hidden = member;
+      if (!member && boot.guest_name && !$("join-name").value) {
+        $("join-name").value = boot.guest_name;
+      }
+      $("join-hint").hidden = member || !join.disabled;
+      $("join-hint").textContent = full ? copy.mp_room_full : copy.mp_room_started;
+      var select = $("room-language");
+      select.value = state.language;
+      select.disabled = !isHost;
+      var enough = state.players.length >= state.min_players;
+      var start = $("start-game");
+      start.hidden = !isHost || state.state === "playing";
+      start.textContent = state.state === "finished" ? copy.mp_again : copy.mp_start;
+      start.disabled = !enough;
+      $("start-hint").hidden = enough || state.state === "playing";
+    }
+
+    function tick() {
+      var timer = $("turn-timer");
+      if (current.state !== "playing" || !current.turn_deadline) {
+        timer.hidden = true;
+        return;
+      }
+      var left = Math.max(0, Math.ceil(current.turn_deadline - (Date.now() / 1000 + clockOffset)));
+      timer.hidden = false;
+      timer.textContent = fill(copy.mp_seconds, { n: left });
+      timer.classList.toggle("urgent", left <= 5);
+      // Anyone still here may move an idle player along; the server checks the clock.
+      if (left === 0 && isMember(current) && Date.now() - lastSkip > 2000) {
+        lastSkip = Date.now();
+        socket.emit("skip_turn", { code: boot.code });
+      }
+    }
+
+    var lastGuessKey = null;
+    function render(state) {
+      current = state;
+      pending = false;
+      clockOffset = state.server_now - Date.now() / 1000;
+      var notice = state.notice ? JSON.stringify(state.notice) + state.turn_deadline : null;
+      if (state.notice && notice !== lastNotice) {
+        toast(fill(state.notice.type === "removed" ? copy.mp_afk_removed : copy.mp_afk, { name: state.notice.name }));
+      }
+      lastNotice = notice;
+      if (state.last_guess) {
+        var key = JSON.stringify(state.last_guess) + state.turn_deadline;
+        if (key !== lastGuessKey) {
+          var pts = state.last_guess.points;
+          toast(
+            fill(copy.mp_guess_points, {
+              letter: state.last_guess.letter,
+              n: (pts > 0 ? "+" : "") + pts,
+            })
+          );
+        }
+        lastGuessKey = key;
+      }
+      renderLobby(state);
+      renderTurn(state);
+      renderPlayers(state);
+      renderBoard(state);
+      renderLetters(state);
+      tick();
+    }
+
+    function guess(letter) {
+      if (pending || current.state !== "playing" || current.turn !== boot.me) return;
+      if (current.letter_states[letter] !== "open") return;
+      pending = true;
+      renderLetters(current);
+      socket.emit("guess", { code: boot.code, letter: letter });
+    }
+
+    socket.on("connect", function () {
+      $("connection").hidden = true;
+      socket.emit("watch", { code: boot.code });
+    });
+    socket.on("disconnect", function () {
+      $("connection").hidden = false;
+    });
+    socket.on("connect_error", function () {
+      $("connection").hidden = false;
+    });
+    socket.on("room_state", render);
+    socket.on("room_error", function (data) {
+      pending = false;
+      renderLobby(current);
+      renderLetters(current);
+      toast(copy[data.error] || copy.try_again);
+    });
+
+    $("join-room").addEventListener("click", function () {
+      this.disabled = true;
+      var name = ($("join-name").value || "").trim();
+      socket.emit("join", { code: boot.code, name: name });
+    });
+    $("start-game").addEventListener("click", function () {
+      this.disabled = true;
+      socket.emit("start_game", { code: boot.code });
+    });
+    $("letters").addEventListener("click", function (event) {
+      var button = event.target.closest("button");
+      if (button && !button.disabled) guess(button.value);
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.target.tagName === "INPUT") return;
+      var key = event.key.toUpperCase();
+      if (key.length === 1 && key >= "A" && key <= "Z") guess(key);
+    });
+    $("copy-link").addEventListener("click", function () {
+      var link = window.location.origin + "/multiplayer/" + boot.code;
+      var done = function () {
+        toast(copy.mp_copied);
+      };
+      if (navigator.share && window.matchMedia("(pointer: coarse)").matches) {
+        navigator.share({ title: copy.mp_title, url: link }).catch(function () {});
+      } else if (navigator.clipboard) {
+        navigator.clipboard.writeText(link).then(done, function () {
+          toast(link);
+        });
+      } else {
+        toast(link);
+      }
+    });
+
+    $("leave-room").addEventListener("click", function (event) {
+      event.preventDefault();
+      var href = this.href;
+      var go = function () {
+        window.location.href = href;
+      };
+      setTimeout(go, 800);
+      socket.emit("leave", { code: boot.code }, go);
+    });
+
+    $("room-language").addEventListener("change", function () {
+      socket.emit("set_language", { code: boot.code, language: this.value });
+    });
+
+    setInterval(tick, 500);
+    render(current);
+  })();
+</script>
+{% endif %} {% endblock %}

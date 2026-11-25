@@ -97,13 +97,37 @@ def setScore(username_or_email, score, overwrite=False):
     return False
 
 
+def set_username(email, username):
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    document.update({"username": username})
+    return True
+
+
+def delete_user_doc(email):
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    document.delete()
+    return True
+
+
 def add_user_to_db(email, username):
     db = getDB()
     users = getUsers()
     for user in users:
         if user["email"] == email:
             return False
-    db.collection("users").add({"email": email, "score": 0, "username": username})
+    db.collection("users").add(
+        {
+            "email": email,
+            "score": 0,
+            "username": username,
+            "admin": False,
+            "banned": False,
+        }
+    )
     return True
 
 
@@ -117,6 +141,310 @@ def ensure_user_doc(email, username):
         if user.get("email") == email:
             return False
     db.collection("users").add(
-        {"email": email, "score": 0, "username": username, "legacy": False}
+        {
+            "email": email,
+            "score": 0,
+            "username": username,
+            "legacy": False,
+            "admin": False,
+            "banned": False,
+        }
     )
     return True
+
+
+def _user_flags(email):
+    document = getDocumentFor(email)
+    if not document:
+        return {}
+    return document.get().to_dict() or {}
+
+
+def is_admin(email):
+    return bool(_user_flags(email).get("admin"))
+
+
+def is_banned(email):
+    return bool(_user_flags(email).get("banned"))
+
+
+def set_admin(email, admin):
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    document.update({"admin": bool(admin)})
+    return True
+
+
+def set_banned(email, banned):
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    document.update({"banned": bool(banned)})
+    return True
+
+
+# Reveal-panel auto-advance preferences (seconds; 0 = instant).
+_RESULT_AUTOSKIP_SECS = frozenset({0, 5, 10, 15, 20, 25, 30})
+_RESULT_AUTOSKIP_DEFAULT = {"autoskip": True, "seconds": 10}
+
+
+def normalize_result_prefs(raw=None):
+    """Clamp autoskip prefs to the supported UI values."""
+    data = raw if isinstance(raw, dict) else {}
+    autoskip = data.get("autoskip", data.get("result_autoskip", True))
+    seconds = data.get("seconds", data.get("result_autoskip_sec", 10))
+    try:
+        seconds = int(seconds)
+    except (TypeError, ValueError):
+        seconds = 10
+    if seconds not in _RESULT_AUTOSKIP_SECS:
+        seconds = 10
+    return {"autoskip": bool(autoskip), "seconds": seconds}
+
+
+def get_result_prefs(email):
+    """Return result auto-advance prefs for a user, or defaults."""
+    flags = _user_flags(email)
+    if not flags:
+        return dict(_RESULT_AUTOSKIP_DEFAULT)
+    return normalize_result_prefs(
+        {
+            "autoskip": flags.get("result_autoskip", True),
+            "seconds": flags.get("result_autoskip_sec", 10),
+        }
+    )
+
+
+def set_result_prefs(email, autoskip=None, seconds=None):
+    """Persist result auto-advance prefs on the users document."""
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    current = get_result_prefs(email)
+    if autoskip is None:
+        autoskip = current["autoskip"]
+    if seconds is None:
+        seconds = current["seconds"]
+    prefs = normalize_result_prefs({"autoskip": autoskip, "seconds": seconds})
+    document.update(
+        {
+            "result_autoskip": prefs["autoskip"],
+            "result_autoskip_sec": prefs["seconds"],
+        }
+    )
+    return True
+
+
+def get_site_config():
+    snapshot = getDB().collection("config").document("site").get()
+    return snapshot.to_dict() if snapshot.exists else {}
+
+
+def set_site_config(fields):
+    getDB().collection("config").document("site").set(fields or {}, merge=True)
+    return True
+
+
+# Bump when gloss sources change so stale negative misses are refetched.
+_GLOSS_CACHE_VERSION = "7"
+
+
+def _gloss_doc_id(language, word):
+    """Stable Firestore id for a language+word gloss cache entry."""
+    import hashlib
+    import re
+
+    language = (language or "en").strip().lower()
+    word = (word or "").strip().lower()
+    slug = re.sub(
+        r"[^a-z0-9]+", "-", f"{language}-{word}-v{_GLOSS_CACHE_VERSION}"
+    ).strip("-")[:80]
+    digest = hashlib.sha1(
+        f"{_GLOSS_CACHE_VERSION}\0{language}\0{word}".encode("utf-8")
+    ).hexdigest()[:12]
+    return f"{slug}-{digest}" if slug else digest
+
+
+def get_word_gloss(language, word):
+    """Return cached gloss dict or None when this pair was never looked up.
+
+    Cached misses use definition=None so Wiktionary is not hit again.
+    """
+    doc_id = _gloss_doc_id(language, word)
+    snapshot = getDB().collection("word_glosses").document(doc_id).get()
+    if not snapshot.exists:
+        return None
+    return snapshot.to_dict() or {}
+
+
+def set_word_gloss(language, word, definition, source=None):
+    """Store a gloss or a negative cache miss for language+word."""
+    import time
+
+    language = (language or "en").strip().lower()
+    word = (word or "").strip().lower()
+    doc_id = _gloss_doc_id(language, word)
+    payload = {
+        "language": language,
+        "word": word,
+        "definition": definition,
+        "missing": definition is None,
+        "updated_at": time.time(),
+    }
+    if source:
+        payload["source"] = source
+    getDB().collection("word_glosses").document(doc_id).set(payload)
+    return True
+
+
+def get_room(code):
+    snapshot = getDB().collection("rooms").document(code).get()
+    return snapshot.to_dict() if snapshot.exists else None
+
+
+def delete_room(code):
+    getDB().collection("rooms").document(code).delete()
+
+
+def find_player_room(player_id):
+    """Return the room this player is already seated in, if any.
+
+    A player may only occupy one lobby at a time. Rooms are few and short-lived,
+    so a collection scan is fine.
+    """
+    import multiplayer
+
+    if not player_id:
+        return None
+    for snapshot in getDB().collection("rooms").stream():
+        room = snapshot.to_dict() or {}
+        if multiplayer.is_member(room, player_id):
+            return room
+    return None
+
+
+def cleanup_stale_rooms(now=None):
+    """Delete empty rooms and rooms that have been idle past the TTL."""
+    import multiplayer
+
+    removed = 0
+    for snapshot in getDB().collection("rooms").stream():
+        room = snapshot.to_dict() or {}
+        if multiplayer.is_stale(room, now=now):
+            snapshot.reference.delete()
+            removed += 1
+    return removed
+
+
+def leave_other_rooms(player_id, keep_code=None):
+    """Enforce one lobby per player by removing them from every other room."""
+    import multiplayer
+
+    if not player_id:
+        return []
+    left = []
+    for snapshot in getDB().collection("rooms").stream():
+        code = snapshot.id
+        if keep_code and code == keep_code:
+            continue
+        room = snapshot.to_dict() or {}
+        if not multiplayer.is_member(room, player_id):
+            continue
+        room, _ = update_room(
+            code, lambda current: multiplayer.remove_player(current, player_id)
+        )
+        if room is not None and not (room.get("players") or []):
+            delete_room(code)
+            room = None
+        left.append((code, room))
+    return left
+
+
+def create_room(host_id, host_name, language, account=None, attempts=5):
+    """Store a new room under an unused code. create() fails if the code is taken.
+
+    One lobby per player: an existing seat is reused instead of opening a second room.
+    """
+    import multiplayer
+    from google.api_core.exceptions import AlreadyExists
+
+    cleanup_stale_rooms()
+    existing = find_player_room(host_id)
+    if existing:
+        return existing
+
+    rooms = getDB().collection("rooms")
+    for _ in range(attempts):
+        code = multiplayer.make_room_code()
+        room = multiplayer.new_room(code, host_id, host_name, language, account)
+        try:
+            rooms.document(code).create(room)
+        except AlreadyExists:
+            continue
+        return room
+    raise RuntimeError("could not find a free room code")
+
+
+def update_room(code, change):
+    """Run change(room) -> (room, error) in a transaction so concurrent moves cannot clash."""
+    db = getDB()
+    ref = db.collection("rooms").document(code)
+
+    @firestore.transactional
+    def run(transaction):
+        snapshot = ref.get(transaction=transaction)
+        if not snapshot.exists:
+            return None, "mp_room_missing"
+        room, error = change(snapshot.to_dict())
+        if not error:
+            transaction.set(ref, room)
+        return room, error
+
+    return run(db.transaction())
+
+
+def join_room_db(code, player_id, name, account=None):
+    import multiplayer
+
+    return update_room(
+        code, lambda room: multiplayer.add_player(room, player_id, name, account)
+    )
+
+
+def start_room_db(code, player_id):
+    import multiplayer
+
+    return update_room(code, lambda room: multiplayer.start_room(room, player_id))
+
+
+def apply_player_guess(code, player_id, letter):
+    import multiplayer
+
+    return update_room(code, lambda room: multiplayer.guess(room, player_id, letter))
+
+
+def leave_room_db(code, player_id):
+    import multiplayer
+
+    room, error = update_room(
+        code, lambda current: multiplayer.remove_player(current, player_id)
+    )
+    if not error and room is not None and not (room.get("players") or []):
+        delete_room(code)
+        return None, None
+    return room, error
+
+
+def skip_turn_db(code, player_id):
+    import multiplayer
+
+    return update_room(code, lambda room: multiplayer.skip_turn(room, player_id))
+
+
+def set_room_language_db(code, player_id, language):
+    import multiplayer
+
+    return update_room(
+        code, lambda room: multiplayer.set_language(room, player_id, language)
+    )

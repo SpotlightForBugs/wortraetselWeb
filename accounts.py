@@ -48,6 +48,8 @@ def login(email, password):
     :return: The email of the user if they are logged in
     :doc-author: @Spotlightforbugs
     """
+    if firebaseDB.is_banned(email):
+        return False
     sign_in = sign_in_with_email_and_password(email, password)
     if "error" in sign_in:
         return False
@@ -123,3 +125,37 @@ def is_legacy_user(email):  # checks if the user is a legacy user (has no userna
 
 def is_legacy(username_or_email):
     return is_legacy_user(email=username_or_email)
+
+
+def _uid_for_email(email):
+    return auth.get_user_by_email(email).uid
+
+
+def update_display_name(email, username):
+    """Rename the player in Auth and on the leaderboard document."""
+    username = (username or "").strip()
+    if not 2 <= len(username) <= 20:
+        return False, "bad_name"
+    auth.update_user(_uid_for_email(email), display_name=username)
+    firebaseDB.set_username(email, username)
+    return True, username
+
+
+def change_password(email, current_password, new_password):
+    """Verify the current password, then set a new one."""
+    if not new_password or len(new_password) < 6:
+        return False, "weak_password"
+    if not login(email, current_password):
+        return False, "bad_login"
+    auth.update_user(_uid_for_email(email), password=new_password)
+    return True, None
+
+
+def delete_account(email, password):
+    """Remove Auth + Firestore after the password check succeeds."""
+    if not login(email, password):
+        return False, "bad_login"
+    uid = _uid_for_email(email)
+    auth.delete_user(uid)
+    firebaseDB.delete_user_doc(email)
+    return True, None
