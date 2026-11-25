@@ -1287,10 +1287,68 @@ body.dark .kramli-ad {
 
 @media (max-width: 640px) {
   .kramli-ad {
-    grid-template-columns: minmax(0, 1fr) auto;
+    position: relative;
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
   }
 
   .kramli-ad-media {
-    display: none;
+    grid-column: 1;
+    border: 0;
+    border-radius: 0;
+    border-bottom: 1px solid var(--kramli-line);
+  }
+
+  .kramli-ad-media img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 3 / 2;
+    max-height: 168px;
+  }
+
+  .kramli-ad-body {
+    padding: 12px 14px 14px;
+  }
+
+  .kramli-ad-brand {
+    font-size: 1.05rem;
+  }
+
+  .kramli-ad-mark {
+    width: 24px;
+    height: 24px;
+  }
+
+  .kramli-ad-tagline {
+    font-size: 1rem;
+  }
+
+  .kramli-ad-blurb {
+    font-size: 0.9rem;
+  }
+
+  .kramli-ad-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    margin-top: 12px;
+    padding: 11px 14px;
+    font-size: 0.95rem;
+  }
+
+  .kramli-ad-close {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 2;
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--kramli-surface) 88%, transparent);
+    color: var(--kramli-text);
+    backdrop-filter: blur(4px);
   }
 }
