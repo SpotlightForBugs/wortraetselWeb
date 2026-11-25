@@ -1,0 +1,107 @@
+{% if kramli is defined and kramli.show and copy is defined %}
+<aside
+  id="kramli-ad"
+  class="kramli-ad"
+  data-supported="{{ '1' if kramli.show else '0' }}"
+  aria-label="Kramli"
+>
+  <a
+    class="kramli-ad-media"
+    href="{{ kramli.href }}"
+    target="_blank"
+    rel="noopener noreferrer"
+  >
+    <img
+      src="{{ url_for('static', filename='assets/kramli-og.jpg') }}"
+      width="120"
+      height="80"
+      alt="{{ copy.kramli_alt }}"
+      loading="lazy"
+      decoding="async"
+    />
+  </a>
+  <div class="kramli-ad-body">
+    <div class="kramli-ad-brand">
+      <img
+        class="kramli-ad-mark"
+        src="{{ url_for('static', filename='assets/kramli-icon.png') }}"
+        width="22"
+        height="22"
+        alt=""
+        aria-hidden="true"
+      />
+      <strong>Kramli</strong>
+    </div>
+    <p class="kramli-ad-tagline" data-i18n="kramli_tagline">{{ copy.kramli_tagline }}</p>
+    <p class="kramli-ad-blurb" data-i18n="kramli_blurb">{{ copy.kramli_blurb }}</p>
+    <a
+      id="kramli-ad-link"
+      class="kramli-ad-cta"
+      href="{{ kramli.href }}"
+      target="_blank"
+      rel="noopener noreferrer"
+      data-i18n="kramli_cta"
+      >{{ copy.kramli_cta }}</a
+    >
+  </div>
+  <button
+    type="button"
+    id="kramli-ad-close"
+    class="kramli-ad-close"
+    data-i18n-aria="kramli_dismiss"
+    aria-label="{{ copy.kramli_dismiss }}"
+  >
+    &times;
+  </button>
+</aside>
+<script>
+  (function () {
+    var ad = document.getElementById("kramli-ad");
+    if (!ad) return;
+    var close = document.getElementById("kramli-ad-close");
+    var link = document.getElementById("kramli-ad-link");
+    var token = document.getElementById("csrf-token");
+
+    function paintKramli(state, copy) {
+      if (!ad) return;
+      if (!state || !state.show) {
+        ad.hidden = true;
+        return;
+      }
+      ad.hidden = false;
+      if (state.href) {
+        if (link) link.href = state.href;
+        var media = ad.querySelector(".kramli-ad-media");
+        if (media) media.href = state.href;
+      }
+      if (copy) {
+        var tag = ad.querySelector('[data-i18n="kramli_tagline"]');
+        var blurb = ad.querySelector('[data-i18n="kramli_blurb"]');
+        var cta = ad.querySelector('[data-i18n="kramli_cta"]');
+        if (tag && copy.kramli_tagline) tag.textContent = copy.kramli_tagline;
+        if (blurb && copy.kramli_blurb) blurb.textContent = copy.kramli_blurb;
+        if (cta && copy.kramli_cta) cta.textContent = copy.kramli_cta;
+        if (close && copy.kramli_dismiss) {
+          close.setAttribute("aria-label", copy.kramli_dismiss);
+        }
+      }
+    }
+
+    window.__paintKramli = paintKramli;
+
+    if (close) {
+      close.addEventListener("click", function () {
+        ad.hidden = true;
+        var body = new FormData();
+        if (token) body.append("csrf_token", token.value);
+        fetch("{{ url_for('kramli_dismiss') }}", {
+          method: "POST",
+          headers: { Accept: "application/json" },
+          body: body,
+          credentials: "same-origin",
+        }).catch(function () {});
+      });
+    }
+  })();
+</script>
+{% endif %}

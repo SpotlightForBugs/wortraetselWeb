@@ -227,56 +227,116 @@ block content %}
 </div>
 
 <div id="account-layer" class="sheet auth-sheet" hidden>
-  <section class="auth-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
+  <section class="auth-card auth-card--settings" role="dialog" aria-modal="true" aria-labelledby="account-title">
     <button type="button" id="account-close" class="auth-close" data-i18n="close">
       {{ copy.close }}
     </button>
-    <h2 id="account-title" data-i18n="account">{{ copy.account }}</h2>
+    <header class="auth-card-head">
+      <p class="auth-kicker">Hangman</p>
+      <h2 id="account-title" data-i18n="account">{{ copy.account }}</h2>
+    </header>
     <p id="account-error" class="error" hidden></p>
     <p id="account-ok" class="account-ok" hidden></p>
 
-    <form id="account-name-form" method="POST" action="{{ url_for('account_name') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <label for="account-name" data-i18n="name_label">{{ copy.name_label }}</label>
-      <input
-        type="text"
-        id="account-name"
-        name="username"
-        maxlength="20"
-        minlength="2"
-        required
-        autocomplete="nickname"
-        value="{{ session.get('display_name', '') }}"
-      />
-      <input type="submit" data-i18n="save_name" value="{{ copy.save_name }}" />
-    </form>
+    <section class="auth-section">
+      <h3 data-i18n="account_profile">{{ copy.account_profile }}</h3>
+      <form id="account-name-form" method="POST" action="{{ url_for('account_name') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="auth-field">
+          <label for="account-name" data-i18n="name_label">{{ copy.name_label }}</label>
+          <input
+            type="text"
+            id="account-name"
+            name="username"
+            maxlength="20"
+            minlength="2"
+            required
+            autocomplete="nickname"
+            value="{{ session.get('display_name', '') }}"
+          />
+        </div>
+        <input type="submit" data-i18n="save_name" value="{{ copy.save_name }}" />
+      </form>
+    </section>
 
-    <form id="account-password-form" method="POST" action="{{ url_for('account_password') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <label for="account-current" data-i18n="current_password">{{ copy.current_password }}</label>
-      <input type="password" id="account-current" name="current_password" autocomplete="current-password" required />
-      <label for="account-new" data-i18n="new_password">{{ copy.new_password }}</label>
-      <input type="password" id="account-new" name="new_password" autocomplete="new-password" required minlength="6" />
-      <input type="submit" data-i18n="change_password" value="{{ copy.change_password }}" />
-    </form>
+    <section class="auth-section">
+      <h3 data-i18n="account_security">{{ copy.account_security }}</h3>
+      <form id="account-password-form" method="POST" action="{{ url_for('account_password') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="auth-field">
+          <label for="account-current" data-i18n="current_password">{{ copy.current_password }}</label>
+          <input type="password" id="account-current" name="current_password" autocomplete="current-password" required />
+        </div>
+        <div class="auth-field">
+          <label for="account-new" data-i18n="new_password">{{ copy.new_password }}</label>
+          <input type="password" id="account-new" name="new_password" autocomplete="new-password" required minlength="6" />
+        </div>
+        <input type="submit" data-i18n="change_password" value="{{ copy.change_password }}" />
+      </form>
+    </section>
 
-    <form id="account-delete-form" method="POST" action="{{ url_for('account_delete') }}" class="account-danger">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <p data-i18n="delete_account_help">{{ copy.delete_account_help }}</p>
-      <label for="account-delete-password" data-i18n="password">{{ copy.password }}</label>
-      <input type="password" id="account-delete-password" name="password" autocomplete="current-password" required />
-      <input type="submit" class="danger-submit" data-i18n="delete_account" value="{{ copy.delete_account }}" />
-    </form>
+    <section class="auth-section auth-section--danger">
+      <h3 data-i18n="account_danger">{{ copy.account_danger }}</h3>
+      <form id="account-delete-form" method="POST" action="{{ url_for('account_delete') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <p class="auth-help" data-i18n="delete_account_help">{{ copy.delete_account_help }}</p>
+        <div class="auth-field">
+          <label for="account-delete-password" data-i18n="password">{{ copy.password }}</label>
+          <input type="password" id="account-delete-password" name="password" autocomplete="current-password" required />
+        </div>
+        <input type="submit" class="danger-submit" data-i18n="delete_account" value="{{ copy.delete_account }}" />
+      </form>
+    </section>
   </section>
 </div>
 
 <div id="auth-layer" class="sheet auth-sheet" {% if not auth %}hidden{% endif %}>
-  <section class="auth-card" role="dialog" aria-modal="true">
+  <section class="auth-card auth-card--panel" role="dialog" aria-modal="true">
     <button type="button" id="auth-close" class="auth-close" data-i18n="close">
       {{ copy.close }}
     </button>
-    <h2 data-i18n="save_score">{{ copy.save_score }}</h2>
+    <header class="auth-card-head">
+      <p class="auth-kicker">Hangman</p>
+      <h2 data-i18n="save_score">{{ copy.save_score }}</h2>
+      <p
+        id="auth-lead-login"
+        class="auth-lead"
+        data-i18n="auth_login_lead"
+        {% if auth == 'register' %}hidden{% endif %}
+      >
+        {{ copy.auth_login_lead }}
+      </p>
+      <p
+        id="auth-lead-register"
+        class="auth-lead"
+        data-i18n="auth_register_lead"
+        {% if auth != 'register' %}hidden{% endif %}
+      >
+        {{ copy.auth_register_lead }}
+      </p>
+    </header>
     <p id="auth-error" class="error" {% if not auth_error %}hidden{% endif %}>{{ auth_error or '' }}</p>
+
+    <div class="auth-tabs" role="tablist">
+      <button
+        type="button"
+        class="auth-tab{% if auth != 'register' %} is-active{% endif %}"
+        data-auth="login"
+        data-i18n="log_in"
+        {% if auth != 'register' %}aria-current="page"{% endif %}
+      >
+        {{ copy.log_in }}
+      </button>
+      <button
+        type="button"
+        class="auth-tab{% if auth == 'register' %} is-active{% endif %}"
+        data-auth="register"
+        data-i18n="create_account"
+        {% if auth == 'register' %}aria-current="page"{% endif %}
+      >
+        {{ copy.create_account }}
+      </button>
+    </div>
 
     <form
       id="login-form"
@@ -285,17 +345,16 @@ block content %}
       {% if auth == 'register' %}hidden{% endif %}
     >
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <label for="login-email" data-i18n="email">{{ copy.email }}</label>
-      <input type="email" id="login-email" name="email" autocomplete="username" required />
-      <label for="login-password" data-i18n="password">{{ copy.password }}</label>
-      <input type="password" id="login-password" name="password" autocomplete="current-password" required />
+      <div class="auth-field">
+        <label for="login-email" data-i18n="email">{{ copy.email }}</label>
+        <input type="email" id="login-email" name="email" autocomplete="username" required />
+      </div>
+      <div class="auth-field">
+        <label for="login-password" data-i18n="password">{{ copy.password }}</label>
+        <input type="password" id="login-password" name="password" autocomplete="current-password" required />
+      </div>
       <input type="submit" data-i18n="log_in" value="{{ copy.log_in }}" data-cap-floating="#cap-login" />
       {% with cap_id='cap-login' %}{% include 'cap_widget.html' %}{% endwith %}
-      <p class="auth-links">
-        <button type="button" data-auth="register" data-i18n="create_account">
-          {{ copy.create_account }}
-        </button>
-      </p>
     </form>
 
     <form
@@ -305,14 +364,22 @@ block content %}
       {% if auth != 'register' %}hidden{% endif %}
     >
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <label for="register-name" data-i18n="name_label">{{ copy.name_label }}</label>
-      <input type="text" id="register-name" name="username" autocomplete="nickname" required />
-      <label for="register-email" data-i18n="email">{{ copy.email }}</label>
-      <input type="email" id="register-email" name="email" autocomplete="email" required />
-      <label for="register-password" data-i18n="password">{{ copy.password }}</label>
-      <input type="password" id="register-password" name="password" autocomplete="new-password" required />
-      <label for="register-confirm" data-i18n="confirm_password">{{ copy.confirm_password }}</label>
-      <input type="password" id="register-confirm" name="password2" autocomplete="new-password" required />
+      <div class="auth-field">
+        <label for="register-name" data-i18n="name_label">{{ copy.name_label }}</label>
+        <input type="text" id="register-name" name="username" autocomplete="nickname" required />
+      </div>
+      <div class="auth-field">
+        <label for="register-email" data-i18n="email">{{ copy.email }}</label>
+        <input type="email" id="register-email" name="email" autocomplete="email" required />
+      </div>
+      <div class="auth-field">
+        <label for="register-password" data-i18n="password">{{ copy.password }}</label>
+        <input type="password" id="register-password" name="password" autocomplete="new-password" required />
+      </div>
+      <div class="auth-field">
+        <label for="register-confirm" data-i18n="confirm_password">{{ copy.confirm_password }}</label>
+        <input type="password" id="register-confirm" name="password2" autocomplete="new-password" required />
+      </div>
       <input
         class="signup-submit"
         type="submit"
@@ -321,16 +388,10 @@ block content %}
         data-cap-floating="#cap-register"
       />
       {% with cap_id='cap-register' %}{% include 'cap_widget.html' %}{% endwith %}
-      <p class="auth-links">
-        <button type="button" data-auth="login" data-i18n="have_account">
-          {{ copy.have_account }}
-        </button>
-      </p>
     </form>
   </section>
 </div>
 
-<input type="hidden" id="csrf-token" value="{{ csrf_token() }}" />
 <script type="application/json" id="boot">{{ state_json|tojson }}</script>
 <script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.63"></script>
 <script src="https://cdn.jsdelivr.net/npm/@cap.js/widget@0.1.63/cap-floating.min.js"></script>
@@ -666,6 +727,9 @@ block content %}
     if (select && data.language) {
       select.value = data.language;
     }
+    if (data.kramli && typeof window.__paintKramli === "function") {
+      window.__paintKramli(data.kramli, data.copy || copy);
+    }
   }
 
   function openAuth(which) {
@@ -673,7 +737,15 @@ block content %}
     document.getElementById("auth-layer").hidden = false;
     document.getElementById("login-form").hidden = which === "register";
     document.getElementById("register-form").hidden = which !== "register";
+    document.getElementById("auth-lead-login").hidden = which === "register";
+    document.getElementById("auth-lead-register").hidden = which !== "register";
     document.getElementById("auth-error").hidden = true;
+    document.querySelectorAll(".auth-tab").forEach(function (tab) {
+      var active = tab.getAttribute("data-auth") === which;
+      tab.classList.toggle("is-active", active);
+      if (active) tab.setAttribute("aria-current", "page");
+      else tab.removeAttribute("aria-current");
+    });
     syncScrollLock();
   }
 

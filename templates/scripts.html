@@ -22,5 +22,7 @@
   </head>
   <body class="{% if dark_mode %}dark{% endif %}">
     {% block content %}{% endblock %}
+    <input type="hidden" id="csrf-token" value="{{ csrf_token() }}" />
+    {% include 'kramli_ad.html' %}
   </body>
 </html>

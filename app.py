@@ -224,7 +224,17 @@ def _payload(leaderboard=None):
     state["username"] = (
         i18n.text(language, "guest") if guest else (session.get("display_name") or "")
     )
+    state["kramli"] = _kramli_state(language)
     return state
+
+
+def _kramli_state(language=None):
+    language = play_logic.coerce_language(language or session.get("language") or "en")
+    show = i18n.kramli_supported(language) and not session.get("kramli_ad_hidden")
+    return {
+        "show": show,
+        "href": f"https://kramli.de/?lang={i18n.kramli_site_lang(language)}",
+    }
 
 
 def _page_context(auth=None, auth_error=None):
@@ -269,6 +279,7 @@ def _page_context(auth=None, auth_error=None):
         auth=auth,
         auth_error=auth_error,
         state_json=state,
+        kramli=state["kramli"],
     )
 
 
@@ -545,6 +556,15 @@ def account_delete():
     return _account_reply(True)
 
 
+@app.route("/kramli/dismiss", methods=["POST"])
+def kramli_dismiss():
+    session["kramli_ad_hidden"] = True
+    if _wants_json():
+        language = session.get("language") or "en"
+        return jsonify({"ok": True, "kramli": _kramli_state(language)})
+    return redirect(request.referrer or url_for("game"))
+
+
 def _player_id():
     if "mp_id" not in session:
         session["mp_id"] = uuid.uuid4().hex
@@ -606,6 +626,7 @@ def multiplayer_room(code):
         copy=i18n.catalog(language),
         html_lang=i18n.html_lang(language),
         user_language=language,
+        kramli=_kramli_state(language),
         dark_mode=bool(session.get("dark_mode", False)),
         room_code=code,
         player_id=session.get("mp_id"),
