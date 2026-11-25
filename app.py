@@ -41,6 +41,8 @@ from flask import (
 )
 from flask_wtf.csrf import CSRFProtect
 
+from request_utils import client_ip
+
 import firebase_admin
 from firebase_admin import credentials, auth
 from firebase_admin import firestore
@@ -349,7 +351,9 @@ def _apply_pending_score():
         return
     session.pop("pending_score", None)
     session.pop("register_offer", None)
-    session["shown_score"] = play_logic.score_after_round(before, pending, _board_score())
+    session["shown_score"] = play_logic.score_after_round(
+        before, pending, _board_score()
+    )
 
 
 def _auth_reply(ok, panel, error_key=None):
@@ -484,10 +488,11 @@ def logout():
 @app.before_request
 def before_request():
     uname = session.get("username")
+    ip = client_ip(request)
     if uname and "@" in uname:
-        sentry_sdk.set_user({"email": uname})
+        sentry_sdk.set_user({"email": uname, "ip_address": ip})
     elif uname:
-        sentry_sdk.set_user({"username": uname})
+        sentry_sdk.set_user({"username": uname, "ip_address": ip})
 
 
 @app.route("/favicon.ico")

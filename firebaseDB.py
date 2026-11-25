@@ -101,3 +101,18 @@ def add_user_to_db(email, username):
             return False
     db.collection("users").add({"email": email, "score": 0, "username": username})
     return True
+
+
+def ensure_user_doc(email, username):
+    """Create a users document for an account that only exists in Firebase Auth.
+
+    Returns True if a document was created, False if one already existed.
+    """
+    db = getDB()
+    for user in getUsers():
+        if user.get("email") == email:
+            return False
+    db.collection("users").add(
+        {"email": email, "score": 0, "username": username, "legacy": False}
+    )
+    return True

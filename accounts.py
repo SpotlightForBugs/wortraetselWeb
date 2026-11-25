@@ -2,8 +2,8 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import auth
 import os, json, requests
+import sentry_sdk
 import firebaseDB
-
 
 WEB_API = os.environ.get("WEB_API")
 rest_api_url = f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword"
@@ -96,7 +96,18 @@ def getUsername(email):
     for doc in users_ref.stream():
         if doc.to_dict()["email"] == email and doc.to_dict().get("username"):
             return {"username": doc.to_dict()["username"], "legacy": True}
-    return {"username": email.split("@")[0]}
+
+    # Auth-only account (no display_name, no Firestore username): fall back to the
+    # email prefix and create the missing users document so future lookups find it.
+    fallback = email.split("@")[0]
+    try:
+        firebaseDB.ensure_user_doc(email, fallback)
+    except Exception as exc:
+        with sentry_sdk.new_scope() as scope:
+            scope.set_extra("email", email)
+            scope.set_extra("fallback_username", fallback)
+            sentry_sdk.capture_exception(exc)
+    return {"username": fallback, "legacy": False}
 
 
 def is_legacy_user(email):  # checks if the user is a legacy user (has no username)
@@ -107,8 +118,7 @@ def is_legacy_user(email):  # checks if the user is a legacy user (has no userna
     :return: A boolean value (true or false)
     :doc-author: @Spotlightforbugs
     """
-    if getUsername(email)["legacy"]:
-        return True
+    return bool(getUsername(email).get("legacy", False))
 
 
 def is_legacy(username_or_email):
