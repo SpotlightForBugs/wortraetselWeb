@@ -330,9 +330,7 @@ def public_state(room, now=None):
         "server_now": time.time() if now is None else now,
         "notice": room.get("notice"),
         "tiles": (
-            game.reveal(word, letters, status, room.get("language"))
-            if word
-            else []
+            game.reveal(word, letters, status, room.get("language")) if word else []
         ),
         "letter_states": game.letter_states(letters, word),
         "letter_values": game.letter_values(room.get("language")),
