@@ -195,7 +195,7 @@ def set_site_config(fields):
 
 
 # Bump when gloss sources change so stale negative misses are refetched.
-_GLOSS_CACHE_VERSION = "2"
+_GLOSS_CACHE_VERSION = "3"
 
 
 def _gloss_doc_id(language, word):

@@ -15,21 +15,11 @@ class WiktionaryTests(unittest.TestCase):
         fetch.assert_not_called()
 
     def test_define_caches_api_result(self):
-        payload = {
-            "de": [
-                {
-                    "partOfSpeech": "Noun",
-                    "definitions": [
-                        {"definition": "house, <a href='/wiki/building'>building</a>"}
-                    ],
-                }
-            ]
-        }
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fetch_en", return_value=payload), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+        ), mock.patch("wiktionary._fallback", return_value=None), mock.patch(
+            "wiktionary._en_rest_gloss", return_value="house, building"
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertEqual(wiktionary.define("Haus", "de"), "house, building")
         set_cache.assert_called_once()
         args = set_cache.call_args[0]
@@ -41,8 +31,8 @@ class WiktionaryTests(unittest.TestCase):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch("wiktionary._fetch_en", return_value=None), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+            "wiktionary._fallback", return_value=None
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertIsNone(wiktionary.define("xyzzyqq", "en"))
         set_cache.assert_called_once()
         self.assertIsNone(set_cache.call_args[0][2])
@@ -102,66 +92,92 @@ class WiktionaryTests(unittest.TestCase):
                 "The uppermost of the mouthparts.",
             )
 
-    def test_german_falls_back_to_de_wiktionary(self):
+    def test_non_english_prefers_native_wiktionary(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fetch_en", return_value=None), mock.patch(
-            "wiktionary._de_wiktionary_gloss",
-            side_effect=lambda term: (
-                "weibliche Person, die sich mit Melken beschäftigt"
-                if term == "Melkerin"
+        ), mock.patch(
+            "wiktionary._native_wiktionary_gloss",
+            side_effect=lambda language, term: (
+                "Grammatik: Synonym zu Akkusativ, 4. Fall"
+                if language == "de" and term == "Wenfall"
                 else None
             ),
-        ) as de_wiki, mock.patch(
-            "wiktionary._dwds_gloss"
-        ) as dwds, mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
-            gloss = "weibliche Person, die sich mit Melken beschäftigt"
-            self.assertEqual(wiktionary.define("melkerin", "de"), gloss)
-        de_wiki.assert_called()
-        dwds.assert_not_called()
+        ) as native, mock.patch("wiktionary._en_rest_gloss") as en_rest, mock.patch(
+            "wiktionary._dwds_gloss", return_value=None
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
+            gloss = "Grammatik: Synonym zu Akkusativ, 4. Fall"
+            self.assertEqual(wiktionary.define("wenfall", "de"), gloss)
+        native.assert_called()
+        en_rest.assert_not_called()
         self.assertEqual(set_cache.call_args[0][2], gloss)
 
     def test_german_falls_back_to_dwds_after_wiktionary_miss(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch("wiktionary._fetch_en", return_value=None), mock.patch(
-            "wiktionary._de_wiktionary_gloss", return_value=None
+            "wiktionary._native_wiktionary_gloss", return_value=None
         ), mock.patch(
             "wiktionary._dwds_gloss",
             side_effect=lambda term: (
                 "Sitz in geschlossener Kniebeuge" if term == "Hocksitz" else None
             ),
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertEqual(
                 wiktionary.define("hocksitz", "de"),
                 "Sitz in geschlossener Kniebeuge",
             )
         self.assertEqual(set_cache.call_args[0][2], "Sitz in geschlossener Kniebeuge")
 
-    def test_de_wiktionary_parses_bedeutungen(self):
-        payload = {
-            "parse": {
-                "wikitext": {
-                    "*": (
-                        "== Melkerin ({{Sprache|Deutsch}}) ==\n"
-                        "{{Bedeutungen}}\n"
-                        ":[1] weibliche Person, die sich (beruflich) "
-                        "mit [[melken|Melken]] beschäftigt\n"
-                        "{{Synonyme}}\n"
-                        ":[1] [[Milchmädchen]]\n"
-                    )
-                }
-            }
-        }
-        with mock.patch("wiktionary._request_json", return_value=payload):
-            self.assertEqual(
-                wiktionary._de_wiktionary_gloss("Melkerin"),
-                "weibliche Person, die sich (beruflich) mit Melken beschäftigt",
-            )
+    def test_extract_de_bedeutungen(self):
+        body = (
+            "== Melkerin ({{Sprache|Deutsch}}) ==\n"
+            "{{Bedeutungen}}\n"
+            ":[1] weibliche Person, die sich (beruflich) "
+            "mit [[melken|Melken]] beschäftigt\n"
+            "{{Synonyme}}\n"
+            ":[1] [[Milchmädchen]]\n"
+        )
+        self.assertEqual(
+            wiktionary._extract_de(body),
+            "weibliche Person, die sich (beruflich) mit Melken beschäftigt",
+        )
+
+    def test_extract_es_numbered_senses(self):
+        body = (
+            "== {{lengua|es}} ==\n"
+            ";1 {{csem|vivienda}}: {{plm|edificación}} destinada a [[vivienda]].\n"
+            ";2: {{plm|domicilio}}.\n"
+        )
+        self.assertEqual(
+            wiktionary._extract_es(body),
+            "edificación destinada a vivienda",
+        )
+
+    def test_extract_hash_skips_examples(self):
+        body = (
+            "=== Nom commun ===\n"
+            "# {{édifices|fr}} [[bâtiment|Bâtiment]] servant de [[logis]].\n"
+            "#*{{exemple|lang=fr|Les maisons}}\n"
+        )
+        self.assertEqual(
+            wiktionary._extract_hash(body),
+            "Bâtiment servant de logis",
+        )
+
+    def test_extract_italian_uses_starred_sense(self):
+        body = (
+            "# {{Pn|w}} ''f sing'' {{Linkp|case}}\n"
+            "#* {{Term|architettura|it}} [[edificio]] [[costruito]] per abitazione\n"
+        )
+        self.assertEqual(
+            wiktionary._extract_hash(body),
+            "edificio costruito per abitazione",
+        )
+
+    def test_skips_weak_surname_gloss(self):
+        self.assertFalse(wiktionary._usable("A surname."))
+        self.assertFalse(wiktionary._usable("a given name"))
+        self.assertTrue(wiktionary._usable("The uppermost of the mouthparts."))
 
     def test_dwds_parses_definition_span(self):
         page = (
