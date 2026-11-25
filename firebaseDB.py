@@ -194,6 +194,10 @@ def set_site_config(fields):
     return True
 
 
+# Bump when gloss sources change so stale negative misses are refetched.
+_GLOSS_CACHE_VERSION = "2"
+
+
 def _gloss_doc_id(language, word):
     """Stable Firestore id for a language+word gloss cache entry."""
     import hashlib
@@ -201,8 +205,12 @@ def _gloss_doc_id(language, word):
 
     language = (language or "en").strip().lower()
     word = (word or "").strip().lower()
-    slug = re.sub(r"[^a-z0-9]+", "-", f"{language}-{word}").strip("-")[:80]
-    digest = hashlib.sha1(f"{language}\0{word}".encode("utf-8")).hexdigest()[:12]
+    slug = re.sub(
+        r"[^a-z0-9]+", "-", f"{language}-{word}-v{_GLOSS_CACHE_VERSION}"
+    ).strip("-")[:80]
+    digest = hashlib.sha1(
+        f"{_GLOSS_CACHE_VERSION}\0{language}\0{word}".encode("utf-8")
+    ).hexdigest()[:12]
     return f"{slug}-{digest}" if slug else digest
 
 

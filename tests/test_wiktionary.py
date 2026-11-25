@@ -9,7 +9,7 @@ class WiktionaryTests(unittest.TestCase):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss",
             return_value={"definition": "house, building"},
-        ) as get_cache, mock.patch("wiktionary._fetch") as fetch:
+        ) as get_cache, mock.patch("wiktionary._fetch_en") as fetch:
             self.assertEqual(wiktionary.define("Haus", "de"), "house, building")
         get_cache.assert_called_once()
         fetch.assert_not_called()
@@ -27,7 +27,7 @@ class WiktionaryTests(unittest.TestCase):
         }
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fetch", return_value=payload), mock.patch(
+        ), mock.patch("wiktionary._fetch_en", return_value=payload), mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ) as set_cache:
             self.assertEqual(wiktionary.define("Haus", "de"), "house, building")
@@ -40,7 +40,7 @@ class WiktionaryTests(unittest.TestCase):
     def test_define_caches_misses(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fetch", return_value=None), mock.patch(
+        ), mock.patch("wiktionary._fetch_en", return_value=None), mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ) as set_cache:
             self.assertIsNone(wiktionary.define("xyzzyqq", "en"))
@@ -51,7 +51,7 @@ class WiktionaryTests(unittest.TestCase):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss",
             return_value={"definition": None, "missing": True},
-        ), mock.patch("wiktionary._fetch") as fetch:
+        ), mock.patch("wiktionary._fetch_en") as fetch:
             self.assertIsNone(wiktionary.define("xyzzyqq", "en"))
         fetch.assert_not_called()
 
@@ -94,12 +94,84 @@ class WiktionaryTests(unittest.TestCase):
 
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fetch", side_effect=fake_fetch), mock.patch(
+        ), mock.patch("wiktionary._fetch_en", side_effect=fake_fetch), mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ):
             self.assertEqual(
                 wiktionary.define("labrum", "en"),
                 "The uppermost of the mouthparts.",
+            )
+
+    def test_german_falls_back_to_de_wiktionary(self):
+        with mock.patch(
+            "wiktionary.firebaseDB.get_word_gloss", return_value=None
+        ), mock.patch("wiktionary._fetch_en", return_value=None), mock.patch(
+            "wiktionary._de_wiktionary_gloss",
+            side_effect=lambda term: (
+                "weibliche Person, die sich mit Melken beschäftigt"
+                if term == "Melkerin"
+                else None
+            ),
+        ) as de_wiki, mock.patch("wiktionary._dwds_gloss") as dwds, mock.patch(
+            "wiktionary.firebaseDB.set_word_gloss"
+        ) as set_cache:
+            gloss = "weibliche Person, die sich mit Melken beschäftigt"
+            self.assertEqual(wiktionary.define("melkerin", "de"), gloss)
+        de_wiki.assert_called()
+        dwds.assert_not_called()
+        self.assertEqual(set_cache.call_args[0][2], gloss)
+
+    def test_german_falls_back_to_dwds_after_wiktionary_miss(self):
+        with mock.patch(
+            "wiktionary.firebaseDB.get_word_gloss", return_value=None
+        ), mock.patch("wiktionary._fetch_en", return_value=None), mock.patch(
+            "wiktionary._de_wiktionary_gloss", return_value=None
+        ), mock.patch(
+            "wiktionary._dwds_gloss",
+            side_effect=lambda term: (
+                "Sitz in geschlossener Kniebeuge"
+                if term == "Hocksitz"
+                else None
+            ),
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
+            self.assertEqual(
+                wiktionary.define("hocksitz", "de"),
+                "Sitz in geschlossener Kniebeuge",
+            )
+        self.assertEqual(set_cache.call_args[0][2], "Sitz in geschlossener Kniebeuge")
+
+    def test_de_wiktionary_parses_bedeutungen(self):
+        payload = {
+            "parse": {
+                "wikitext": {
+                    "*": (
+                        "== Melkerin ({{Sprache|Deutsch}}) ==\n"
+                        "{{Bedeutungen}}\n"
+                        ":[1] weibliche Person, die sich (beruflich) "
+                        "mit [[melken|Melken]] beschäftigt\n"
+                        "{{Synonyme}}\n"
+                        ":[1] [[Milchmädchen]]\n"
+                    )
+                }
+            }
+        }
+        with mock.patch("wiktionary._request_json", return_value=payload):
+            self.assertEqual(
+                wiktionary._de_wiktionary_gloss("Melkerin"),
+                "weibliche Person, die sich (beruflich) mit Melken beschäftigt",
+            )
+
+    def test_dwds_parses_definition_span(self):
+        page = (
+            '<span class="dwdswb-definitionen">'
+            '<span class="dwdswb-definition">'
+            "Sitz in geschlossener Kniebeuge"
+            "</span></span>"
+        )
+        with mock.patch("wiktionary._request_text", return_value=page):
+            self.assertEqual(
+                wiktionary._dwds_gloss("Hocksitz"),
+                "Sitz in geschlossener Kniebeuge",
             )
 
 
