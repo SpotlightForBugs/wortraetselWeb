@@ -226,16 +226,25 @@ block content %}
           <span class="result-source-label" data-i18n="gloss_source"
             >{{ copy.gloss_source }}</span
           >
-          <img
-            id="result-source-icon"
-            class="result-source-icon"
-            src=""
-            alt=""
-            width="22"
-            height="22"
+          <a
+            id="result-source-link"
+            class="result-source-link is-static"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
             hidden
-          />
-          <span id="result-source-name" class="result-source-name"></span>
+          >
+            <img
+              id="result-source-icon"
+              class="result-source-icon"
+              src=""
+              alt=""
+              width="18"
+              height="18"
+              hidden
+            />
+            <span id="result-source-name" class="result-source-name"></span>
+          </a>
         </p>
       </div>
     </aside>
@@ -1021,7 +1030,8 @@ block content %}
     TDK: "{{ url_for('static', filename='assets/gloss/tdk.png') }}",
   };
 
-  function paintSourceAttribution(source, sourceName, sourceIcon, name) {
+  function paintSourceAttribution(source, sourceName, sourceIcon, name, url) {
+    var link = document.getElementById("result-source-link");
     if (!source || !sourceName) return;
     if (!name) {
       source.hidden = true;
@@ -1031,6 +1041,12 @@ block content %}
         sourceIcon.removeAttribute("src");
         sourceIcon.alt = "";
       }
+      if (link) {
+        link.hidden = true;
+        link.href = "#";
+        link.classList.add("is-static");
+        link.removeAttribute("aria-label");
+      }
       return;
     }
     sourceName.textContent = name;
@@ -1038,13 +1054,30 @@ block content %}
       var icon = GLOSS_SOURCE_ICONS[name] || "";
       if (icon) {
         sourceIcon.src = icon;
-        sourceIcon.alt = name;
+        sourceIcon.alt = "";
         sourceIcon.hidden = false;
       } else {
         sourceIcon.hidden = true;
         sourceIcon.removeAttribute("src");
         sourceIcon.alt = "";
       }
+    }
+    if (link) {
+      var href = url ? String(url).trim() : "";
+      if (href) {
+        link.href = href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.classList.remove("is-static");
+        link.setAttribute("aria-label", name);
+      } else {
+        link.href = "#";
+        link.removeAttribute("target");
+        link.removeAttribute("rel");
+        link.classList.add("is-static");
+        link.removeAttribute("aria-label");
+      }
+      link.hidden = false;
     }
     source.hidden = false;
   }
@@ -1060,7 +1093,7 @@ block content %}
     wrap.hidden = true;
     if (info) info.hidden = true;
     node.textContent = "";
-    paintSourceAttribution(source, sourceName, sourceIcon, "");
+    paintSourceAttribution(source, sourceName, sourceIcon, "", "");
     if (!word) {
       fitDrawing();
       return;
@@ -1082,7 +1115,7 @@ block content %}
           wrap.hidden = true;
           if (info) info.hidden = true;
           node.textContent = "";
-          paintSourceAttribution(source, sourceName, sourceIcon, "");
+          paintSourceAttribution(source, sourceName, sourceIcon, "", "");
           fitDrawing();
           return;
         }
@@ -1092,6 +1125,7 @@ block content %}
           sourceName,
           sourceIcon,
           data && data.source ? String(data.source).trim() : "",
+          data && data.source_url ? String(data.source_url).trim() : "",
         );
         wrap.hidden = false;
         if (info) info.hidden = false;
@@ -1101,7 +1135,7 @@ block content %}
         wrap.hidden = true;
         if (info) info.hidden = true;
         node.textContent = "";
-        paintSourceAttribution(source, sourceName, sourceIcon, "");
+        paintSourceAttribution(source, sourceName, sourceIcon, "", "");
         fitDrawing();
       });
   }

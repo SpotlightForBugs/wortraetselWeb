@@ -19,7 +19,7 @@ class WiktionaryTests(unittest.TestCase):
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch(
             "wiktionary._native_lookup",
-            return_value=("house, building", "Wiktionary"),
+            return_value=("house, building", "Wiktionary", "Haus"),
         ), mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ) as set_cache:
@@ -30,12 +30,18 @@ class WiktionaryTests(unittest.TestCase):
         self.assertEqual(args[1], "haus")
         self.assertEqual(args[2], "house, building")
         self.assertEqual(set_cache.call_args[1].get("source"), "Wiktionary")
+        self.assertEqual(
+            set_cache.call_args[1].get("source_url"),
+            "https://de.wiktionary.org/wiki/Haus",
+        )
 
     def test_define_caches_misses(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._en_rest_gloss", return_value=None), mock.patch(
-            "wiktionary._native_lookup", return_value=(None, None)
+        ), mock.patch(
+            "wiktionary._en_rest_gloss", return_value=(None, None)
+        ), mock.patch(
+            "wiktionary._native_lookup", return_value=(None, None, None)
         ), mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ) as set_cache:
@@ -90,8 +96,8 @@ class WiktionaryTests(unittest.TestCase):
 
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
-        ), mock.patch("wiktionary._fetch_en", side_effect=fake_fetch), mock.patch(
-            "wiktionary._native_lookup", return_value=(None, None)
+        ), mock.patch("wiktionary._fetch_en", side_effect=fake_fetch        ), mock.patch(
+            "wiktionary._native_lookup", return_value=(None, None, None)
         ), mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ):
@@ -108,6 +114,7 @@ class WiktionaryTests(unittest.TestCase):
             return_value=(
                 "Grammatik: Synonym zu Akkusativ, 4. Fall",
                 "Wiktionary",
+                "Wenfall",
             ),
         ), mock.patch(
             "wiktionary._en_rest_gloss"
@@ -219,14 +226,43 @@ class WiktionaryTests(unittest.TestCase):
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch(
             "wiktionary._native_lookup",
-            return_value=("house", "Dexonline"),
+            return_value=("house", "Dexonline", "casă"),
         ), mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ) as set_cache:
             entry = wiktionary.define_entry("casa", "ro")
-        self.assertEqual(entry, {"definition": "house", "source": "Dexonline"})
+        self.assertEqual(
+            entry,
+            {
+                "definition": "house",
+                "source": "Dexonline",
+                "source_url": "https://dexonline.ro/definitie/cas%C4%83",
+            },
+        )
         self.assertEqual(set_cache.call_args[0][:3], ("ro", "casa", "house"))
         self.assertEqual(set_cache.call_args[1].get("source"), "Dexonline")
+        self.assertEqual(
+            set_cache.call_args[1].get("source_url"),
+            "https://dexonline.ro/definitie/cas%C4%83",
+        )
+
+    def test_source_url_for_wiktionary_and_locals(self):
+        self.assertEqual(
+            wiktionary._source_url("Wiktionary", "de", "Hocksitz"),
+            "https://de.wiktionary.org/wiki/Hocksitz",
+        )
+        self.assertEqual(
+            wiktionary._source_url("DWDS", "de", "Hocksitz"),
+            "https://www.dwds.de/wb/Hocksitz",
+        )
+        self.assertEqual(
+            wiktionary._source_url("RAE", "es", "casa"),
+            "https://dle.rae.es/casa",
+        )
+        self.assertEqual(
+            wiktionary._source_url("TDK", "tr", "ev"),
+            "https://sozluk.gov.tr/?ara=ev",
+        )
 
     def test_tdk_parses_sense(self):
         payload = [
