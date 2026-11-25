@@ -63,6 +63,13 @@ if not firebase_admin._apps:
 
 db = firestore.client()
 
+try:
+    admin_ops.promote_bootstrap_admins()
+except Exception as exc:
+    with sentry_sdk.new_scope() as scope:
+        scope.set_extra("phase", "admin_bootstrap")
+        sentry_sdk.capture_exception(exc)
+
 
 def _wants_json():
     return "application/json" in request.headers.get("Accept", "")

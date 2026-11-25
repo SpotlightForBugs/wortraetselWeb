@@ -11,9 +11,14 @@ import firebaseDB
 import multiplayer
 
 
+# Always-on owners; extra addresses can still be added with ADMIN_EMAILS.
+_DEFAULT_ADMIN_EMAILS = frozenset({"mail@spotlightforbugs.eu"})
+
+
 def bootstrap_emails():
     raw = os.environ.get("ADMIN_EMAILS") or ""
-    return {part.strip().lower() for part in raw.split(",") if part.strip()}
+    extras = {part.strip().lower() for part in raw.split(",") if part.strip()}
+    return set(_DEFAULT_ADMIN_EMAILS) | extras
 
 
 def is_admin_email(email):
@@ -25,13 +30,21 @@ def is_admin_email(email):
 
 
 def ensure_bootstrap_admin(email):
-    """Promote matching ADMIN_EMAILS accounts so the first admin does not need a manual edit."""
+    """Promote matching bootstrap accounts so the first admin does not need a manual edit."""
     if not email or email.lower() not in bootstrap_emails():
         return False
     if firebaseDB.is_admin(email):
         return False
-    firebaseDB.set_admin(email, True)
-    return True
+    return bool(firebaseDB.set_admin(email, True))
+
+
+def promote_bootstrap_admins():
+    """On app boot, write `admin: true` for every known bootstrap email that exists."""
+    promoted = []
+    for email in sorted(bootstrap_emails()):
+        if firebaseDB.set_admin(email, True):
+            promoted.append(email)
+    return promoted
 
 
 def list_users(query="", limit=40):

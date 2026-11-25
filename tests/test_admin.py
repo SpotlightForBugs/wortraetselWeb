@@ -5,9 +5,16 @@ import admin_ops
 
 
 class AdminOpsTests(unittest.TestCase):
-    def test_bootstrap_emails_parse(self):
+    def test_bootstrap_emails_include_owner_and_env(self):
         with patch.dict("os.environ", {"ADMIN_EMAILS": "a@x.io, B@Y.IO "}):
-            self.assertEqual(admin_ops.bootstrap_emails(), {"a@x.io", "b@y.io"})
+            self.assertEqual(
+                admin_ops.bootstrap_emails(),
+                {"mail@spotlightforbugs.eu", "a@x.io", "b@y.io"},
+            )
+
+    def test_owner_email_is_always_admin(self):
+        with patch.object(admin_ops.firebaseDB, "is_admin", return_value=False):
+            self.assertTrue(admin_ops.is_admin_email("mail@spotlightforbugs.eu"))
 
     def test_is_admin_email_uses_firestore_or_bootstrap(self):
         with patch.object(admin_ops, "bootstrap_emails", return_value={"boss@x.io"}):
@@ -20,6 +27,14 @@ class AdminOpsTests(unittest.TestCase):
             admin_ops, "bootstrap_emails", return_value=set()
         ), patch.object(admin_ops.firebaseDB, "is_admin", return_value=False):
             self.assertFalse(admin_ops.is_admin_email("player@x.io"))
+
+    def test_promote_bootstrap_admins_writes_flags(self):
+        with patch.object(
+            admin_ops, "bootstrap_emails", return_value={"mail@spotlightforbugs.eu"}
+        ), patch.object(admin_ops.firebaseDB, "set_admin", return_value=True) as set_admin:
+            promoted = admin_ops.promote_bootstrap_admins()
+            self.assertEqual(promoted, ["mail@spotlightforbugs.eu"])
+            set_admin.assert_called_once_with("mail@spotlightforbugs.eu", True)
 
     def test_set_score_rejects_bad_values(self):
         ok, error = admin_ops.set_score("a@x.io", "-1")
