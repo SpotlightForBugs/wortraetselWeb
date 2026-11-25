@@ -19,7 +19,9 @@ class WiktionaryTests(unittest.TestCase):
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch(
             "wiktionary._native_lookup", return_value="house, building"
-        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
+        ), mock.patch(
+            "wiktionary.firebaseDB.set_word_gloss"
+        ) as set_cache:
             self.assertEqual(wiktionary.define("Haus", "de"), "house, building")
         set_cache.assert_called_once()
         args = set_cache.call_args[0]
@@ -32,7 +34,9 @@ class WiktionaryTests(unittest.TestCase):
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch("wiktionary._en_rest_gloss", return_value=None), mock.patch(
             "wiktionary._native_lookup", return_value=None
-        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
+        ), mock.patch(
+            "wiktionary.firebaseDB.set_word_gloss"
+        ) as set_cache:
             self.assertIsNone(wiktionary.define("xyzzyqq", "en"))
         set_cache.assert_called_once()
         self.assertIsNone(set_cache.call_args[0][2])
@@ -86,7 +90,9 @@ class WiktionaryTests(unittest.TestCase):
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch("wiktionary._fetch_en", side_effect=fake_fetch), mock.patch(
             "wiktionary._native_lookup", return_value=None
-        ), mock.patch("wiktionary.firebaseDB.set_word_gloss"):
+        ), mock.patch(
+            "wiktionary.firebaseDB.set_word_gloss"
+        ):
             self.assertEqual(
                 wiktionary.define("labrum", "en"),
                 "The uppermost of the mouthparts.",
@@ -98,7 +104,9 @@ class WiktionaryTests(unittest.TestCase):
         ), mock.patch(
             "wiktionary._native_lookup",
             return_value="Grammatik: Synonym zu Akkusativ, 4. Fall",
-        ), mock.patch("wiktionary._en_rest_gloss") as en_rest, mock.patch(
+        ), mock.patch(
+            "wiktionary._en_rest_gloss"
+        ) as en_rest, mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ):
             self.assertEqual(
@@ -128,7 +136,9 @@ class WiktionaryTests(unittest.TestCase):
             side_effect=lambda term: (
                 "Sitz in geschlossener Kniebeuge" if term == "Hocksitz" else None
             ),
-        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
+        ), mock.patch(
+            "wiktionary.firebaseDB.set_word_gloss"
+        ) as set_cache:
             self.assertEqual(
                 wiktionary.define("hocksitz", "de"),
                 "Sitz in geschlossener Kniebeuge",
