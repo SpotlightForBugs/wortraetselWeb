@@ -842,14 +842,6 @@ cap-widget {
   color: var(--muted);
 }
 
-.result-source-sep {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: currentColor;
-  opacity: 0.55;
-}
-
 .result-source-name {
   font-weight: 700;
   color: var(--text);

@@ -207,6 +207,9 @@ block content %}
     <div id="result-gloss" class="result-gloss" hidden>
       <p id="result-definition" class="result-definition"></p>
       <p id="result-source" class="result-source" hidden>
+        <span class="result-source-label" data-i18n="gloss_source"
+          >{{ copy.gloss_source }}</span
+        >
         <img
           id="result-source-icon"
           class="result-source-icon"
@@ -216,10 +219,6 @@ block content %}
           height="16"
           hidden
         />
-        <span class="result-source-label" data-i18n="gloss_source"
-          >{{ copy.gloss_source }}</span
-        >
-        <span class="result-source-sep" aria-hidden="true"></span>
         <span id="result-source-name" class="result-source-name"></span>
       </p>
     </div>
