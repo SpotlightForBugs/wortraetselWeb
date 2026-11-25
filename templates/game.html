@@ -110,6 +110,19 @@ block content %}
     <h3 id="score-line">{{ score_line }}</h3>
   </section>
 
+  <section class="panel multiplayer-entry">
+    <h2 data-i18n="mp_title">{{ copy.mp_title }}</h2>
+    <form method="post" action="{{ url_for('multiplayer_create') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <button type="submit" data-i18n="mp_create">{{ copy.mp_create }}</button>
+    </form>
+    <form method="post" action="{{ url_for('multiplayer_join') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <input name="code" maxlength="5" autocomplete="off" placeholder="{{ copy.mp_code }}" aria-label="{{ copy.mp_code }}" />
+      <button type="submit" data-i18n="mp_join">{{ copy.mp_join }}</button>
+    </form>
+  </section>
+
   <section class="panel leaderboard">
     <h2 data-i18n="leaderboard">{{ copy.leaderboard }}</h2>
     <table translate="no">

@@ -4,6 +4,6 @@
     "python": "3.11"
   },
   "deploy": {
-    "startCommand": "python -c 'import json,os; from pathlib import Path; raw=os.environ.get(\"FIREBASE_SERVICE_ACCOUNT\",\"\").strip(); raw and (json.loads(raw), Path(\"serviceAccountKey.json\").write_text(raw if raw.endswith(\"\\n\") else raw+\"\\n\"))' && gunicorn --bind 0.0.0.0:${PORT:-8000} app:app"
+    "startCommand": "python -c 'import json,os; from pathlib import Path; raw=os.environ.get(\"FIREBASE_SERVICE_ACCOUNT\",\"\").strip(); raw and (json.loads(raw), Path(\"serviceAccountKey.json\").write_text(raw if raw.endswith(\"\\n\") else raw+\"\\n\"))' && gunicorn --workers 1 --threads 100 --bind 0.0.0.0:${PORT:-8000} app:app"
   }
 }

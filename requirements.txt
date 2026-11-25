@@ -10,6 +10,9 @@ cryptography==43.0.1
 firebase-admin==6.1.0
 flask
 Flask-WTF==1.2.2
+flask-socketio
+python-socketio
+simple-websocket
 google-api-core==2.11.0
 google-api-python-client==2.86.0
 google-auth==2.18.1

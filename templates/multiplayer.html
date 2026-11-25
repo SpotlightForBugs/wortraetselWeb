@@ -1,0 +1,142 @@
+{% extends 'scripts.html' %} {% block title %}{{ copy.mp_title }}{% endblock %} {%
+block content %}
+<main class="page multiplayer">
+  <header class="header">
+    <h1>{{ copy.mp_title }}</h1>
+    <a href="{{ url_for('game') }}">{{ copy.mp_back }}</a>
+  </header>
+
+  <p id="room-error" class="panel" {% if not error %}hidden{% endif %}>
+    {% if error %}{{ copy[error] }}{% endif %}
+  </p>
+
+  {% if state %}
+  <section class="panel">
+    <h2 id="room-code">{{ copy.mp_share.replace('{code}', room_code) }}</h2>
+    <h3>{{ copy.mp_players }}</h3>
+    <ul id="players" translate="no"></ul>
+    <p id="room-status"></p>
+    <button type="button" id="start-game" hidden>{{ copy.mp_start }}</button>
+  </section>
+
+  <section class="panel game-area" id="board" hidden>
+    <img id="drawing" alt="{{ copy.hangman_alt }}" />
+    <div id="tiles" class="tiles" translate="no"></div>
+    <div id="letters" class="letters-panel" translate="no">
+      {% for letter in letters %}
+      <button type="button" class="letter" value="{{ letter }}">{{ letter }}</button>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="panel" id="room-result" hidden>
+    <h2 id="result-line"></h2>
+    <p id="winner-line"></p>
+  </section>
+  {% endif %}
+</main>
+
+{% if state %}
+<script type="application/json" id="room-boot">
+  {{ {"state": state, "copy": copy, "me": player_id, "code": room_code}|tojson }}
+</script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
+<script>
+  var boot = JSON.parse(document.getElementById("room-boot").textContent);
+  var copy = boot.copy;
+  var socket = io();
+
+  function fill(template, values) {
+    return Object.keys(values).reduce(function (text, key) {
+      return text.replace("{" + key + "}", values[key]);
+    }, template || "");
+  }
+
+  function nameOf(state, id) {
+    var player = state.players.find(function (p) {
+      return p.id === id;
+    });
+    return player ? player.name : "";
+  }
+
+  function showError(key) {
+    var node = document.getElementById("room-error");
+    node.textContent = copy[key] || copy.try_again;
+    node.hidden = false;
+  }
+
+  function render(state) {
+    document.getElementById("room-error").hidden = true;
+    var list = document.getElementById("players");
+    list.innerHTML = "";
+    state.players.forEach(function (p) {
+      var item = document.createElement("li");
+      item.textContent = p.name + " (" + p.hits + ")";
+      if (p.id === state.turn) {
+        item.className = "me";
+      }
+      list.appendChild(item);
+    });
+
+    var isHost = state.host === boot.me;
+    document.getElementById("start-game").hidden = !isHost || state.state === "playing";
+    document.getElementById("start-game").textContent =
+      state.state === "finished" ? copy.mp_again : copy.mp_start;
+
+    var status = "";
+    if (state.state === "waiting") {
+      status = copy.mp_waiting;
+    } else if (state.state === "playing") {
+      status =
+        state.turn === boot.me ? copy.mp_your_turn : fill(copy.mp_turn_of, { name: nameOf(state, state.turn) });
+    }
+    document.getElementById("room-status").textContent = status;
+
+    document.getElementById("board").hidden = state.state === "waiting";
+    document.getElementById("drawing").src = state.drawing;
+    var tiles = document.getElementById("tiles");
+    tiles.innerHTML = "";
+    state.tiles.forEach(function (ch) {
+      var tile = document.createElement("span");
+      tile.className = "tile";
+      tile.textContent = ch ? ch.toUpperCase() : "";
+      tiles.appendChild(tile);
+    });
+    document.querySelectorAll("#letters button").forEach(function (button) {
+      var letterState = state.letter_states[button.value];
+      button.className = "letter " + letterState;
+      button.disabled = letterState !== "open" || state.state !== "playing" || state.turn !== boot.me;
+    });
+
+    var result = state.result;
+    document.getElementById("room-result").hidden = !result;
+    if (result) {
+      var word = result.word.toUpperCase();
+      document.getElementById("result-line").textContent =
+        result.status === "won" ? fill(copy.mp_won, { word: word }) : fill(copy.mp_lost, { word: word });
+      document.getElementById("winner-line").textContent = result.winner
+        ? fill(copy.mp_winner, { name: nameOf(state, result.winner) })
+        : "";
+    }
+  }
+
+  socket.on("connect", function () {
+    socket.emit("join", { code: boot.code });
+  });
+  socket.on("room_state", render);
+  socket.on("room_error", function (data) {
+    showError(data.error);
+  });
+  document.getElementById("start-game").addEventListener("click", function () {
+    socket.emit("start_game", { code: boot.code });
+  });
+  document.getElementById("letters").addEventListener("click", function (event) {
+    var button = event.target.closest("button");
+    if (button && !button.disabled) {
+      socket.emit("guess", { code: boot.code, letter: button.value });
+    }
+  });
+  render(boot.state);
+</script>
+{% endif %}
+{% endblock %}

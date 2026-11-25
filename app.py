@@ -7,6 +7,7 @@ import cap
 import game as play_logic
 import i18n
 import firebaseDB
+import multiplayer
 
 sentry_sdk.init(
     dsn="https://36685b77d489f469c5f64a85d1839aa3@o4509985277018112.ingest.de.sentry.io/4512480802177104",
@@ -28,6 +29,7 @@ sentry_sdk.init(
 )
 
 import os
+import uuid
 
 from flask import (
     Flask,
@@ -40,6 +42,7 @@ from flask import (
     send_from_directory,
 )
 from flask_wtf.csrf import CSRFProtect
+from flask_socketio import SocketIO, emit, join_room
 
 from request_utils import client_ip
 
@@ -50,6 +53,8 @@ from firebase_admin import firestore
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRETKEY")
 csrf = CSRFProtect(app)
+# Threads, not eventlet: eventlet's monkey-patching does not get along with grpc (Firestore).
+socketio = SocketIO(app, async_mode="threading")
 
 if not firebase_admin._apps:
     cred = credentials.Certificate("serviceAccountKey.json")
@@ -485,6 +490,133 @@ def logout():
     return redirect(url_for("game"))
 
 
+def _player_id():
+    if "mp_id" not in session:
+        session["mp_id"] = uuid.uuid4().hex
+    return session["mp_id"]
+
+
+def _player_name(language):
+    if "username" in session:
+        return session.get("display_name") or session["username"].split("@")[0]
+    return f"{i18n.text(language, 'guest')} {_player_id()[:4].upper()}"
+
+
+@app.route("/multiplayer/create", methods=["POST"])
+def multiplayer_create():
+    _ensure_round()
+    language = session["language"]
+    room = firebaseDB.create_room(
+        _player_id(), _player_name(language), language, session.get("username")
+    )
+    return redirect(url_for("multiplayer_room", code=room["room_code"]))
+
+
+@app.route("/multiplayer/join", methods=["POST"])
+def multiplayer_join():
+    code = multiplayer.normalize_code(request.form.get("code"))
+    if not multiplayer.valid_code(code):
+        return redirect(url_for("game"))
+    return redirect(url_for("multiplayer_room", code=code))
+
+
+@app.route("/multiplayer/<code>")
+def multiplayer_room(code):
+    _ensure_round()
+    language = session["language"]
+    code = multiplayer.normalize_code(code)
+    room, error = None, "mp_room_missing"
+    if multiplayer.valid_code(code):
+        room, error = firebaseDB.join_room_db(
+            code, _player_id(), _player_name(language), session.get("username")
+        )
+    return render_template(
+        "multiplayer.html",
+        copy=i18n.catalog(language),
+        html_lang=i18n.html_lang(language),
+        user_language=language,
+        dark_mode=bool(session.get("dark_mode", False)),
+        room_code=code,
+        player_id=session.get("mp_id"),
+        error=error,
+        state=multiplayer.public_state(room) if room and not error else None,
+        letters=[chr(i) for i in range(65, 91)],
+    )
+
+
+def _room_event(handler):
+    """Socket handlers run outside Flask's request error handling, so report failures here."""
+
+    def wrapped(data=None):
+        try:
+            return handler(data or {})
+        except Exception as error:
+            sentry_sdk.capture_exception(error)
+            emit("room_error", {"error": "try_again"})
+
+    wrapped.__name__ = handler.__name__
+    return wrapped
+
+
+def _broadcast(room):
+    socketio.emit("room_state", multiplayer.public_state(room), to=room["room_code"])
+
+
+def _award_room(room):
+    """Logged-in players get the round on the leaderboard like a solo round."""
+    for player in room.get("players") or []:
+        if not player.get("account"):
+            continue
+        try:
+            play_logic.finish_game(
+                player["account"],
+                word=room["word"],
+                wrong_guesses=room["wrong_guesses"],
+                success=room["result"]["status"] == "won",
+                all_guesses=room["letters"],
+            )
+        except Exception as error:
+            sentry_sdk.capture_exception(error)
+
+
+@socketio.on("join")
+@_room_event
+def on_join(data):
+    code = multiplayer.normalize_code(data.get("code"))
+    room = firebaseDB.get_room(code) if multiplayer.valid_code(code) else None
+    if not room or not multiplayer.is_member(room, session.get("mp_id")):
+        emit("room_error", {"error": "mp_room_missing"})
+        return
+    join_room(code)
+    _broadcast(room)
+
+
+@socketio.on("start_game")
+@_room_event
+def on_start_game(data):
+    code = multiplayer.normalize_code(data.get("code"))
+    room, error = firebaseDB.start_room_db(code, session.get("mp_id"))
+    if error:
+        emit("room_error", {"error": error})
+        return
+    _broadcast(room)
+
+
+@socketio.on("guess")
+@_room_event
+def on_guess(data):
+    code = multiplayer.normalize_code(data.get("code"))
+    room, error = firebaseDB.apply_player_guess(
+        code, session.get("mp_id"), data.get("letter")
+    )
+    if error:
+        emit("room_error", {"error": error})
+        return
+    _broadcast(room)
+    if room["state"] == "finished":
+        _award_room(room)
+
+
 @app.before_request
 def before_request():
     uname = session.get("username")
@@ -522,4 +654,4 @@ def server_error_handler(error):
 
 
 if __name__ == "__main__":
-    app.run(port=8080, debug=True)
+    socketio.run(app, port=8080, debug=True)
