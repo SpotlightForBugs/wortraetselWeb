@@ -48,12 +48,14 @@ class WordListTests(unittest.TestCase):
         self.assertNotIn(" ", joined)
         self.assertNotIn('"', joined)
 
-    def test_german_reveal_keeps_umlauts(self):
+    def test_german_reveal_keeps_umlauts_and_capitalizes(self):
         words = game._local_words("de")
         self.assertIn("aalraeucherei", words)
-        self.assertEqual(game.display_word("de", "aalraeucherei"), "aalräucherei")
-        self.assertEqual(game.display_word("de", "aaskaefer"), "aaskäfer")
-        self.assertEqual(game.display_word("de", "abaenderung"), "abänderung")
+        # Lists are lowercase; German nouns still show with a capital letter.
+        self.assertEqual(game.display_word("de", "aalraeucherei"), "Aalräucherei")
+        self.assertEqual(game.display_word("de", "aaskaefer"), "Aaskäfer")
+        self.assertEqual(game.display_word("de", "abaenderung"), "Abänderung")
+        self.assertEqual(game.display_word("de", "haus"), "Haus")
         self.assertEqual(game.display_word("en", "house"), "house")
 
     def test_normalize_folds_german_umlauts_for_play(self):

@@ -90,7 +90,8 @@ def _local_words(name):
                 continue
             seen.add(word)
             words.append(word)
-            # Keep the list's own casing; play form is always folded lowercase.
+            # Keep diacritics from the dump; play form is always folded lowercase.
+            # Casing for reveal is applied in display_word (German nouns, etc.).
             shown = raw
             if shown != word:
                 display[word] = shown
@@ -104,15 +105,19 @@ def _local_words(name):
 def display_word(language, word):
     """Spelling shown when a round ends.
 
-    Uses the word-list form as written (umlauts, original case). Does not
-    invent capitalization.
+    Restores umlauts from the word list. German nouns are capitalized for
+    the reveal line even though the dump is stored lowercase; other
+    languages keep the list casing (typically lowercase lemmas).
     """
     language = coerce_language(language)
     play = (word or "").lower()
     if not play:
         return ""
     _local_words(language)
-    return _DISPLAY_WORDS.get(language, {}).get(play, play)
+    shown = _DISPLAY_WORDS.get(language, {}).get(play, play)
+    if language == "de" and shown:
+        shown = shown[:1].upper() + shown[1:]
+    return shown
 
 
 def isValidLanguage(language):
