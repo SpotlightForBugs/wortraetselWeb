@@ -29,12 +29,8 @@ _SPACE = re.compile(r"\s+")
 _WIKI_LINK = re.compile(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]")
 _WIKI_TEMPLATE = re.compile(r"\{\{[^{}]*\}\}")
 _DE_SENSE = re.compile(r"^:\[(\d+)\]\s*(.+)$")
-_DE_BEDEUTUNGEN = re.compile(
-    r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S
-)
-_DWDS_DEF = re.compile(
-    r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I
-)
+_DE_BEDEUTUNGEN = re.compile(r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S)
+_DWDS_DEF = re.compile(r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I)
 
 # Hangman language -> Wiktionary language code in the en.wiktionary payload.
 _LANG_KEY = {

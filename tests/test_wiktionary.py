@@ -112,7 +112,9 @@ class WiktionaryTests(unittest.TestCase):
                 if term == "Melkerin"
                 else None
             ),
-        ) as de_wiki, mock.patch("wiktionary._dwds_gloss") as dwds, mock.patch(
+        ) as de_wiki, mock.patch(
+            "wiktionary._dwds_gloss"
+        ) as dwds, mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ) as set_cache:
             gloss = "weibliche Person, die sich mit Melken beschäftigt"
@@ -129,11 +131,11 @@ class WiktionaryTests(unittest.TestCase):
         ), mock.patch(
             "wiktionary._dwds_gloss",
             side_effect=lambda term: (
-                "Sitz in geschlossener Kniebeuge"
-                if term == "Hocksitz"
-                else None
+                "Sitz in geschlossener Kniebeuge" if term == "Hocksitz" else None
             ),
-        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
+        ), mock.patch(
+            "wiktionary.firebaseDB.set_word_gloss"
+        ) as set_cache:
             self.assertEqual(
                 wiktionary.define("hocksitz", "de"),
                 "Sitz in geschlossener Kniebeuge",
