@@ -1373,18 +1373,17 @@ body.dark .mp-letters.locked .btn-primary:disabled {
   width: min(1100px, calc(100% - 24px));
   margin: 0 auto 28px;
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   grid-template-areas:
     "pitch close"
-    "media media"
     "body body";
-  gap: 0;
-  padding: 0;
-  overflow: hidden;
+  gap: 8px 12px;
+  align-items: start;
+  padding: 12px 14px 14px;
   background: var(--kramli-surface);
   color: var(--kramli-text);
   border: 1px solid var(--kramli-line);
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: 0 4px 14px rgba(25, 22, 19, 0.05);
 }
 
@@ -1403,29 +1402,28 @@ body.dark .kramli-ad {
   flex-wrap: wrap;
   gap: 6px 8px;
   margin: 0;
-  padding: 12px 14px;
+  padding: 0;
   color: var(--kramli-muted);
-  font-size: 0.9rem;
+  font-size: 0.84rem;
   line-height: 1.35;
-  border-bottom: 1px solid var(--kramli-line);
 }
 
 .kramli-ad-close {
   grid-area: close;
-  align-self: center;
+  align-self: start;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  margin: 0 10px 0 0;
+  width: 32px;
+  height: 32px;
+  margin: 0;
   padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   color: var(--kramli-muted);
   font: inherit;
-  font-size: 1.35rem;
+  font-size: 1.25rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -1440,34 +1438,19 @@ body.dark .kramli-ad {
   color: var(--kramli-text);
 }
 
+/* Desktop / tablet: compact text ad, no OG image. */
 .kramli-ad-media {
-  grid-area: media;
-  display: block;
-  overflow: hidden;
-  border: 0;
-  border-bottom: 1px solid var(--kramli-line);
-  line-height: 0;
-  background: #1b4634;
-}
-
-.kramli-ad-media img {
-  display: block;
-  width: 100%;
-  height: auto;
-  aspect-ratio: 3 / 1;
-  max-height: 220px;
-  object-fit: cover;
-  object-position: center;
+  display: none;
 }
 
 .kramli-ad-body {
   grid-area: body;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 14px 16px 16px;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  padding: 0;
 }
 
 .kramli-ad-badge {
@@ -1477,7 +1460,7 @@ body.dark .kramli-ad {
   border-radius: 5px;
   background: color-mix(in srgb, var(--kramli-brand) 14%, transparent);
   color: var(--kramli-brand-strong);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1493,69 +1476,69 @@ body.dark .kramli-ad-badge {
   align-items: center;
   gap: 8px;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .kramli-ad-mark {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
 }
 
 .kramli-ad-tagline {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 700;
   line-height: 1.3;
 }
 
 .kramli-ad-blurb {
   margin: 0;
+  flex: 1 1 16rem;
   color: var(--kramli-muted);
-  font-size: 0.92rem;
+  font-size: 0.88rem;
   line-height: 1.4;
-  max-width: 42rem;
+  max-width: 36rem;
 }
 
 .kramli-ad-cta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  margin-top: 8px;
-  min-height: 44px;
-  padding: 8px 16px;
-  border-radius: 10px;
+  margin: 0;
+  min-height: 40px;
+  padding: 7px 14px;
+  border-radius: 9px;
   background: var(--kramli-brand);
   color: #fff !important;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .kramli-ad-cta:hover {
   background: var(--kramli-brand-strong);
 }
 
-@media (max-width: 1024px) {
-  .kramli-ad-media img {
-    aspect-ratio: 16 / 9;
-    max-height: 240px;
-  }
-
-  .kramli-ad-cta {
-    width: 100%;
-  }
-}
-
+/* Phone: stacked layout with full-bleed OG image. */
 @media (max-width: 640px) {
+  .kramli-ad {
+    grid-template-columns: 1fr auto;
+    grid-template-areas:
+      "pitch close"
+      "media media"
+      "body body";
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 16px;
+  }
+
   .kramli-ad-pitch {
     padding: 12px 48px 12px 14px;
     font-size: 0.88rem;
-  }
-
-  .kramli-ad-media img {
-    aspect-ratio: 2 / 1;
-    max-height: 180px;
+    border-bottom: 1px solid var(--kramli-line);
   }
 
   .kramli-ad-close {
@@ -1565,14 +1548,62 @@ body.dark .kramli-ad-badge {
     z-index: 2;
     width: 34px;
     height: 34px;
-    margin: 0;
     border-radius: 999px;
     background: color-mix(in srgb, var(--kramli-surface) 90%, transparent);
     backdrop-filter: blur(4px);
   }
 
+  .kramli-ad-media {
+    grid-area: media;
+    display: block;
+    overflow: hidden;
+    border: 0;
+    border-bottom: 1px solid var(--kramli-line);
+    line-height: 0;
+    background: #1b4634;
+  }
+
+  .kramli-ad-media img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 2 / 1;
+    max-height: 180px;
+    object-fit: cover;
+    object-position: center;
+  }
+
   .kramli-ad-body {
+    flex-direction: column;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    gap: 6px;
     padding: 14px;
+  }
+
+  .kramli-ad-brand {
+    font-size: 1rem;
+  }
+
+  .kramli-ad-mark {
+    width: 22px;
+    height: 22px;
+  }
+
+  .kramli-ad-tagline {
+    font-size: 1.05rem;
+  }
+
+  .kramli-ad-blurb {
+    flex: none;
+    max-width: none;
+    font-size: 0.92rem;
+  }
+
+  .kramli-ad-cta {
+    width: 100%;
+    margin-top: 8px;
+    min-height: 44px;
   }
 }
 
