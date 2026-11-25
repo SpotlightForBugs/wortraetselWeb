@@ -1102,7 +1102,6 @@ cap-widget {
     max-height: min(20vh, 140px);
   }
 
-
   .score-board table,
   .leaderboard table {
     font-size: 0.92rem;
