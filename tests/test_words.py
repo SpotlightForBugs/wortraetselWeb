@@ -62,6 +62,55 @@ class WordListTests(unittest.TestCase):
         self.assertEqual(game.normalize_word("Aalräucherei"), "aalraeucherei")
         self.assertEqual(game.normalize_word("Straße"), "strasse")
 
+    def test_german_board_collapses_umlaut_digraphs(self):
+        # Play form is longer; tiles match the real spelling length.
+        self.assertEqual(len("aalraeucherei"), 13)
+        self.assertEqual(len(game.display_word("de", "aalraeucherei")), 12)
+        blank = game.reveal("aalraeucherei", [], "playing", "de")
+        self.assertEqual(len(blank), 12)
+        self.assertEqual(blank, [""] * 12)
+
+        # ä needs both a and e from the digraph before that tile fills.
+        partial = game.reveal("aalraeucherei", ["a", "l", "r"], "playing", "de")
+        self.assertEqual(
+            partial, ["a", "a", "l", "r", "", "", "", "", "", "r", "", ""]
+        )
+
+        both = game.reveal(
+            "aalraeucherei", ["a", "e", "l", "r", "u", "c", "h", "i"], "playing", "de"
+        )
+        self.assertEqual(
+            both, ["a", "a", "l", "r", "ä", "u", "c", "h", "e", "r", "e", "i"]
+        )
+        self.assertEqual(
+            game.reveal("mueller", ["m", "u", "e", "l", "r"], "playing", "de"),
+            ["m", "ü", "l", "l", "e", "r"],
+        )
+
+        lost = game.reveal("aalraeucherei", [], "lost", "de")
+        self.assertEqual(
+            lost, ["a", "a", "l", "r", "ä", "u", "c", "h", "e", "r", "e", "i"]
+        )
+
+    def test_eszett_collapses_ss_once_s_is_known(self):
+        self.assertEqual(game.display_word("de", "strasse"), "Straße")
+        self.assertEqual(
+            game.reveal("strasse", ["s", "t", "r", "a", "e"], "playing", "de"),
+            ["s", "t", "r", "a", "ß", "e"],
+        )
+
+    def test_literal_ae_is_not_forced_to_umlaut(self):
+        # English (and any word whose list form keeps ae) stays two tiles.
+        self.assertEqual(
+            game.reveal("aerial", ["a", "e"], "playing", "en"),
+            ["a", "e", "", "", "a", ""],
+        )
+        # German "Dauer" keeps u+e; it is not "Däur"/ü.
+        self.assertEqual(
+            game.reveal("dauer", ["d", "a", "u", "e", "r"], "playing", "de"),
+            ["d", "a", "u", "e", "r"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

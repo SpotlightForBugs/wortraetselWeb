@@ -850,7 +850,7 @@ def client_state(language, word, letters, wrong_guesses, result=None, pending=0)
         "flag": game.language_flag(language),
         "flag_name": names.get(language, names["en"]),
         "status": status,
-        "tiles": game.reveal(word, letters, status),
+        "tiles": game.reveal(word, letters, status, language),
         "letter_states": game.letter_states(letters, word),
         "drawing": game.drawing_for(wrong_guesses, status),
         "copy": catalog(language),

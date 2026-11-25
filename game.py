@@ -102,6 +102,16 @@ def _local_words(name):
     return _WORD_LISTS[name]
 
 
+# Play-form digraphs produced by normalize_word, restored only when the
+# word list actually used the matching umlaut/eszett.
+_DIGRAPH_DISPLAY = {
+    "ae": "ä",
+    "oe": "ö",
+    "ue": "ü",
+    "ss": "ß",
+}
+
+
 def display_word(language, word):
     """Spelling shown when a round ends.
 
@@ -118,6 +128,48 @@ def display_word(language, word):
     if language == "de" and shown:
         shown = shown[:1].upper() + shown[1:]
     return shown
+
+
+def display_segments(language, word):
+    """Align play-form letters with display glyphs (ae/oe/ue/ss → umlaut).
+
+    Each item is ``(play_span, glyph)``. Digraph spans collapse to one
+    tile so the board matches the real spelling length.
+    """
+    play = (word or "").lower()
+    if not play:
+        return []
+    language = coerce_language(language)
+    _local_words(language)
+    shown = _DISPLAY_WORDS.get(language, {}).get(play, play).lower()
+    if shown == play:
+        return [(ch, ch) for ch in play]
+
+    segments = []
+    i = j = 0
+    while i < len(play) and j < len(shown):
+        dig = play[i : i + 2]
+        if (
+            len(dig) == 2
+            and _DIGRAPH_DISPLAY.get(dig) == shown[j]
+        ):
+            segments.append((dig, shown[j]))
+            i += 2
+            j += 1
+            continue
+        if play[i] == shown[j]:
+            segments.append((play[i], shown[j]))
+            i += 1
+            j += 1
+            continue
+        # List/play mismatch: keep the play letter visible as itself.
+        segments.append((play[i], play[i]))
+        i += 1
+        j += 1
+    while i < len(play):
+        segments.append((play[i], play[i]))
+        i += 1
+    return segments
 
 
 def isValidLanguage(language):
@@ -231,11 +283,25 @@ def round_status(word, letters, wrong_guesses):
     return "playing"
 
 
-def reveal(word, letters, status):
+def reveal(word, letters, status, language=None):
+    """Tile glyphs for the board.
+
+    When ``language`` is set, digraphs that map to a real umlaut/eszett in
+    the word list collapse to one tile (and one blank) so e.g. ``ue``
+    becomes ``ü`` once both letters are known.
+    """
     show = set(letters or [])
     if status == "lost":
         show.update(word or "")
-    return [ch if ch in show else "" for ch in (word or "")]
+    if not language:
+        return [ch if ch in show else "" for ch in (word or "")]
+    tiles = []
+    for span, glyph in display_segments(language, word):
+        if all(ch in show for ch in span):
+            tiles.append(glyph)
+        else:
+            tiles.append("")
+    return tiles
 
 
 def letter_states(letters, word):
