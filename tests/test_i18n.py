@@ -26,7 +26,7 @@ class LanguageTests(unittest.TestCase):
         self.assertEqual(i18n.match_accept_language(""), "en")
         self.assertEqual(i18n.match_accept_language(None), "en")
 
-    def test_messages_include_the_word(self):
+    def test_result_message_omits_the_word(self):
         state = i18n.client_state(
             "de",
             "haus",
@@ -35,15 +35,14 @@ class LanguageTests(unittest.TestCase):
             result={"success": True, "word": "haus", "offer": True, "points": 900},
         )
         self.assertEqual(state["status"], "won")
-        self.assertIn("Haus", state["result"]["message"])
-        self.assertNotIn("haus", state["result"]["message"])
+        self.assertEqual(state["result"]["message"], "Geschafft.")
         self.assertEqual(state["result"]["word"], "Haus")
         self.assertIn("900", state["result"]["worth"])
         self.assertEqual(state["copy"]["log_in"], "Anmelden")
         self.assertEqual(state["html_lang"], "de")
         self.assertEqual(state["tiles"], ["h", "a", "u", "s"])
 
-    def test_german_loss_message_shows_umlauts(self):
+    def test_german_result_word_keeps_umlauts_and_capital(self):
         state = i18n.client_state(
             "de",
             "aalraeucherei",
@@ -51,7 +50,7 @@ class LanguageTests(unittest.TestCase):
             9,
             result={"success": False, "word": "aalraeucherei", "offer": False},
         )
-        self.assertIn("Aalräucherei", state["result"]["message"])
+        self.assertEqual(state["result"]["message"], "Verloren: zu viele Fehlversuche.")
         self.assertEqual(state["result"]["word"], "Aalräucherei")
         self.assertNotIn("Aalraeucherei", state["result"]["message"])
         self.assertNotIn("aalräucherei", state["result"]["message"])
