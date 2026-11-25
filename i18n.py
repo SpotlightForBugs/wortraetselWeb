@@ -850,9 +850,7 @@ def client_state(language, word, letters, wrong_guesses, result=None, pending=0)
         "result": None,
     }
     if result:
-        shown = game.display_word(
-            language, result.get("word") or word or ""
-        ).capitalize()
+        shown = game.display_word(language, result.get("word") or word or "")
         offer = bool(result.get("offer"))
         state["result"] = {
             "success": bool(result.get("success")),

@@ -219,7 +219,7 @@
         var word = state.result.word;
         var won = state.result.status === "won";
         $("turn").classList.add(won ? "won" : "lost");
-        turn.textContent = fill(won ? copy.mp_won : copy.mp_lost, { word: String(word || "").toUpperCase() });
+        turn.textContent = fill(won ? copy.mp_won : copy.mp_lost, { word: String(word || "") });
         if (state.result.winner) {
           turn.textContent += " " + fill(copy.mp_winner, { name: nameOf(state.result.winner) });
         }

@@ -35,7 +35,9 @@ class LanguageTests(unittest.TestCase):
             result={"success": True, "word": "haus", "offer": True, "points": 900},
         )
         self.assertEqual(state["status"], "won")
-        self.assertIn("Haus", state["result"]["message"])
+        self.assertIn("haus", state["result"]["message"])
+        self.assertNotIn("Haus", state["result"]["message"])
+        self.assertEqual(state["result"]["word"], "haus")
         self.assertIn("900", state["result"]["worth"])
         self.assertEqual(state["copy"]["log_in"], "Anmelden")
         self.assertEqual(state["html_lang"], "de")
@@ -49,7 +51,9 @@ class LanguageTests(unittest.TestCase):
             9,
             result={"success": False, "word": "aalraeucherei", "offer": False},
         )
-        self.assertIn("Aalräucherei", state["result"]["message"])
+        self.assertIn("aalräucherei", state["result"]["message"])
+        self.assertEqual(state["result"]["word"], "aalräucherei")
+        self.assertNotIn("Aalräucherei", state["result"]["message"])
         self.assertNotIn("Aalraeucherei", state["result"]["message"])
 
 

@@ -90,7 +90,8 @@ def _local_words(name):
                 continue
             seen.add(word)
             words.append(word)
-            shown = raw.lower()
+            # Keep the list's own casing; play form is always folded lowercase.
+            shown = raw
             if shown != word:
                 display[word] = shown
         if not words:
@@ -101,7 +102,11 @@ def _local_words(name):
 
 
 def display_word(language, word):
-    """Spelling shown when a round ends. German keeps real umlauts."""
+    """Spelling shown when a round ends.
+
+    Uses the word-list form as written (umlauts, original case). Does not
+    invent capitalization.
+    """
     language = coerce_language(language)
     play = (word or "").lower()
     if not play:
