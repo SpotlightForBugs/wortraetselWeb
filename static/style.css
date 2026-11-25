@@ -589,3 +589,277 @@ cap-widget {
     font-size: 1.15rem;
   }
 }
+
+/* Multiplayer */
+.mp-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.mp-code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  padding: 4px 10px;
+  border: 2px dashed var(--line);
+  border-radius: 10px;
+}
+
+.mp-code-big {
+  display: inline-block;
+  font-size: clamp(2rem, 7vw, 3.4rem);
+  padding: 10px 22px;
+  margin-top: 6px;
+}
+
+.btn.mp-copy {
+  height: 36px;
+  font-size: 0.9rem;
+}
+
+.mp-connection {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fff3cd;
+  color: #664d03;
+  font-weight: 700;
+  text-align: center;
+}
+
+.mp-missing {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.mp-turn {
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  font-weight: 700;
+  text-align: center;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.mp-turn.mine {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  animation: mp-pulse 1.6s ease-in-out infinite;
+}
+
+.mp-turn.won {
+  background: var(--success);
+  border-color: var(--success);
+  color: #fff;
+}
+
+.mp-turn.lost {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+@keyframes mp-pulse {
+  50% {
+    box-shadow: 0 0 0 6px rgba(0, 123, 255, 0.18);
+  }
+}
+
+.mp-lobby {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 260px;
+  color: var(--muted);
+  text-align: center;
+}
+
+.mp-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mp-subtitle {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.mp-players {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.mp-players li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-left: 4px solid transparent;
+  border-radius: 10px;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.mp-players li.active {
+  border-left-color: var(--primary);
+  background: rgba(0, 123, 255, 0.1);
+}
+
+.mp-players li.winner {
+  border-left-color: var(--success);
+  background: rgba(40, 167, 69, 0.12);
+}
+
+.mp-avatar {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.mp-players li.me .mp-avatar {
+  background: var(--success);
+}
+
+.mp-name {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.mp-badge {
+  flex: none;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 1px 8px;
+}
+
+.mp-hits {
+  margin-left: auto;
+  flex: none;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.btn.mp-start {
+  width: 100%;
+}
+
+.mp-letters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mp-letters .btn:disabled {
+  cursor: default;
+  filter: none;
+  opacity: 0.72;
+}
+
+.mp-letters.locked .btn-primary:disabled {
+  opacity: 0.4;
+}
+
+body.dark .mp-letters .btn:disabled {
+  opacity: 1;
+}
+
+body.dark .mp-letters.locked .btn-primary:disabled {
+  opacity: 0.45;
+}
+
+.mp-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: var(--text);
+  color: var(--card);
+  font-weight: 700;
+  box-shadow: var(--shadow);
+  z-index: 50;
+  word-break: break-all;
+}
+
+.mp-entry {
+  margin-top: 16px;
+}
+
+.mp-entry h2 {
+  margin: 0 0 4px;
+}
+
+.mp-entry p {
+  margin: 0 0 12px;
+  color: var(--muted);
+}
+
+.mp-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.mp-entry form {
+  display: flex;
+  gap: 8px;
+  margin: 0;
+}
+
+.mp-entry input[name="code"] {
+  font: inherit;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  width: 9.5ch;
+  height: 44px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.mp-entry-or {
+  color: var(--muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mp-turn.mine {
+    animation: none;
+  }
+}

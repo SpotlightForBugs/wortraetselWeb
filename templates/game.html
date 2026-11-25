@@ -110,17 +110,32 @@ block content %}
     <h3 id="score-line">{{ score_line }}</h3>
   </section>
 
-  <section class="panel multiplayer-entry">
+  <section class="panel mp-entry">
     <h2 data-i18n="mp_title">{{ copy.mp_title }}</h2>
-    <form method="post" action="{{ url_for('multiplayer_create') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <button type="submit" data-i18n="mp_create">{{ copy.mp_create }}</button>
-    </form>
-    <form method="post" action="{{ url_for('multiplayer_join') }}">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-      <input name="code" maxlength="5" autocomplete="off" placeholder="{{ copy.mp_code }}" aria-label="{{ copy.mp_code }}" />
-      <button type="submit" data-i18n="mp_join">{{ copy.mp_join }}</button>
-    </form>
+    <p data-i18n="mp_pitch">{{ copy.mp_pitch }}</p>
+    <div class="mp-entry-actions">
+      <form method="post" action="{{ url_for('multiplayer_create') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="btn btn-success" data-i18n="mp_create">{{ copy.mp_create }}</button>
+      </form>
+      <span class="mp-entry-or" data-i18n="mp_or">{{ copy.mp_or }}</span>
+      <form method="post" action="{{ url_for('multiplayer_join') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input
+          name="code"
+          maxlength="5"
+          minlength="5"
+          required
+          autocomplete="off"
+          autocapitalize="characters"
+          spellcheck="false"
+          pattern="[A-Za-z2-9]{5}"
+          placeholder="ABCDE"
+          aria-label="{{ copy.mp_code }}"
+        />
+        <button type="submit" class="btn" data-i18n="mp_join">{{ copy.mp_join }}</button>
+      </form>
+    </div>
   </section>
 
   <section class="panel leaderboard">

@@ -101,5 +101,30 @@ class CopyTests(unittest.TestCase):
             self.assertTrue(keys <= set(i18n.catalog(language)))
 
 
+class LeaveTests(unittest.TestCase):
+    def test_host_and_turn_move_on_when_a_player_leaves(self):
+        room, _ = multiplayer.add_player(_room(), "p3", "Cem")
+        room, _ = multiplayer.start_room(room, "host", word="cat")
+        room, _ = multiplayer.guess(room, "host", "z")
+        self.assertEqual(multiplayer.current_player(room), "p2")
+        room, _ = multiplayer.remove_player(room, "p2")
+        self.assertEqual(multiplayer.current_player(room), "p3")
+        room, _ = multiplayer.remove_player(room, "host")
+        self.assertEqual(room["host"], "p3")
+        self.assertEqual(multiplayer.current_player(room), "p3")
+        room, _ = multiplayer.remove_player(room, "p3")
+        self.assertEqual(room["players"], [])
+        self.assertEqual(room["state"], "waiting")
+
+    def test_leaving_before_the_current_player_keeps_their_turn(self):
+        room, _ = multiplayer.add_player(_room(), "p3", "Cem")
+        room, _ = multiplayer.start_room(room, "host", word="cat")
+        room, _ = multiplayer.guess(room, "host", "z")
+        room, _ = multiplayer.guess(room, "p2", "q")
+        self.assertEqual(multiplayer.current_player(room), "p3")
+        room, _ = multiplayer.remove_player(room, "p2")
+        self.assertEqual(multiplayer.current_player(room), "p3")
+
+
 if __name__ == "__main__":
     unittest.main()

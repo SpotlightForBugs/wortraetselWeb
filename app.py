@@ -42,7 +42,7 @@ from flask import (
     send_from_directory,
 )
 from flask_wtf.csrf import CSRFProtect
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import SocketIO, emit, join_room, leave_room
 
 from request_utils import client_ip
 
@@ -530,7 +530,8 @@ def multiplayer_room(code):
         room, error = firebaseDB.join_room_db(
             code, _player_id(), _player_name(language), session.get("username")
         )
-    return render_template(
+    state = multiplayer.public_state(room) if room and not error else None
+    page = render_template(
         "multiplayer.html",
         copy=i18n.catalog(language),
         html_lang=i18n.html_lang(language),
@@ -539,9 +540,10 @@ def multiplayer_room(code):
         room_code=code,
         player_id=session.get("mp_id"),
         error=error,
-        state=multiplayer.public_state(room) if room and not error else None,
+        state=state,
         letters=[chr(i) for i in range(65, 91)],
     )
+    return page, (200 if state else 404)
 
 
 def _room_event(handler):
@@ -615,6 +617,17 @@ def on_guess(data):
     _broadcast(room)
     if room["state"] == "finished":
         _award_room(room)
+
+
+@socketio.on("leave")
+@_room_event
+def on_leave(data):
+    code = multiplayer.normalize_code(data.get("code"))
+    room, error = firebaseDB.leave_room_db(code, session.get("mp_id"))
+    leave_room(code)
+    if not error and room:
+        _broadcast(room)
+    return True
 
 
 @app.before_request

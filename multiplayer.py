@@ -156,3 +156,24 @@ def public_state(room):
         "drawing": game.drawing_for(wrong, status if word else "playing"),
         "result": room.get("result") if finished else None,
     }
+
+
+def remove_player(room, player_id):
+    """Drop a player. The host role and the turn move on so the round never stalls."""
+    players = room.get("players") or []
+    index = next((i for i, p in enumerate(players) if p["id"] == player_id), None)
+    if index is None:
+        return room, None
+    remaining = players[:index] + players[index + 1 :]
+    room = dict(room, players=remaining)
+    if not remaining:
+        room["state"] = "waiting"
+        room["turn"] = 0
+        return room, None
+    if room.get("host") == player_id:
+        room["host"] = remaining[0]["id"]
+    turn = int(room.get("turn") or 0) % len(players)
+    if index < turn:
+        turn -= 1
+    room["turn"] = turn % len(remaining)
+    return room, None

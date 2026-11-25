@@ -180,3 +180,9 @@ def apply_player_guess(code, player_id, letter):
     import multiplayer
 
     return update_room(code, lambda room: multiplayer.guess(room, player_id, letter))
+
+
+def leave_room_db(code, player_id):
+    import multiplayer
+
+    return update_room(code, lambda room: multiplayer.remove_player(room, player_id))
