@@ -484,14 +484,23 @@ block content %}
     return document.getElementById("csrf-token").value;
   }
 
+  function readJson(response) {
+    var type = (response.headers.get("content-type") || "").toLowerCase();
+    if (!response.ok || type.indexOf("application/json") === -1) {
+      return response.text().then(function () {
+        throw new Error("bad-response:" + response.status);
+      });
+    }
+    return response.json();
+  }
+
   function postForm(url, body) {
     return fetch(url, {
       method: "POST",
       body: body,
       headers: { Accept: "application/json" },
-    }).then(function (response) {
-      return response.json();
-    });
+      credentials: "same-origin",
+    }).then(readJson);
   }
 
   function applyCopy(next) {
@@ -849,11 +858,11 @@ block content %}
     var next = resultNextButton();
     var later = document.getElementById("result-later");
     if (!document.getElementById("result-layer").hidden && next && !next.hidden) {
-      postForm("/continue", tokenBody()).then(applyState);
+      postForm("/continue", tokenBody()).then(applyState).catch(function () {});
       return;
     }
     if (!document.getElementById("result-layer").hidden && later && !later.hidden) {
-      postForm("/dismiss_save", tokenBody()).then(applyState);
+      postForm("/dismiss_save", tokenBody()).then(applyState).catch(function () {});
     }
   }
 
@@ -1237,9 +1246,7 @@ block content %}
       headers: { Accept: "application/json" },
       credentials: "same-origin",
     })
-      .then(function (response) {
-        return response.json();
-      })
+      .then(readJson)
       .then(function (data) {
         if (!data.ok) {
           adminMessage(false, data.error);
@@ -1414,7 +1421,7 @@ block content %}
     var body = new FormData();
     body.append("csrf_token", csrf());
     body.append("language", select.value);
-    postForm("/set_language", body).then(applyState);
+    postForm("/set_language", body).then(applyState).catch(function () {});
   });
 
   document.getElementById("theme-form").addEventListener("submit", function (event) {
@@ -1422,17 +1429,21 @@ block content %}
     var body = new FormData();
     body.append("csrf_token", csrf());
     body.append("dark_mode", "1");
-    postForm("/set_dark_mode", body).then(function (data) {
-      paintTheme(data.dark);
-    });
+    postForm("/set_dark_mode", body)
+      .then(function (data) {
+        paintTheme(data.dark);
+      })
+      .catch(function () {});
   });
 
   document.getElementById("log-out").addEventListener("click", function () {
-    fetch("/logout", { headers: { Accept: "application/json" } })
-      .then(function (response) {
-        return response.json();
-      })
-      .then(applyState);
+    fetch("/logout", {
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    })
+      .then(readJson)
+      .then(applyState)
+      .catch(function () {});
   });
 
   function tokenBody() {
@@ -1442,13 +1453,13 @@ block content %}
   }
   document.getElementById("result-next").addEventListener("click", function () {
     clearResultAdvance();
-    postForm("/continue", tokenBody()).then(applyState);
+    postForm("/continue", tokenBody()).then(applyState).catch(function () {});
   });
   document.getElementById("result-next").addEventListener("pointerenter", pauseResultAdvance);
   document.getElementById("result-next").addEventListener("pointerleave", resumeResultAdvance);
   document.getElementById("result-later").addEventListener("click", function () {
     clearResultAdvance();
-    postForm("/dismiss_save", tokenBody()).then(applyState);
+    postForm("/dismiss_save", tokenBody()).then(applyState).catch(function () {});
   });
   document.getElementById("result-save").addEventListener("click", function () {
     clearResultAdvance();
@@ -1472,6 +1483,7 @@ block content %}
       body.append("letter", button.value);
       postForm(form.action, body)
         .then(applyState)
+        .catch(function () {})
         .finally(function () {
           sending = false;
         });
