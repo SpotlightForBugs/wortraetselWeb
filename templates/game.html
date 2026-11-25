@@ -782,10 +782,12 @@ block content %}
   function fitDrawing() {
     var stage = document.querySelector(".stage");
     var layer = document.getElementById("result-layer");
+    var stack = document.querySelector("#result-layer .result-stack");
     var card = document.querySelector("#result-layer .result-card");
     var image = document.getElementById("drawing");
     var page = document.querySelector(".page");
-    if (!stage || !card || !layer || layer.hidden) {
+    var overlay = stack || card;
+    if (!stage || !overlay || !layer || layer.hidden) {
       return;
     }
     if (
@@ -807,15 +809,16 @@ block content %}
       image.style.marginInline = "";
       image.style.objectFit = "";
     }
-    var cardBox = card.getBoundingClientRect();
+    // Reserve the full bottom stack (gloss + result), so the word stays clear.
+    var overlayBox = overlay.getBoundingClientRect();
     var gap = 16;
-    var reserve = Math.ceil(cardBox.height) + gap + 12;
+    var reserve = Math.ceil(overlayBox.height) + gap + 12;
     if (page) {
       page.style.paddingBottom = reserve + "px";
     }
     var stageTop = stage.getBoundingClientRect().top;
     var word = document.getElementById("word");
-    var wordH = word ? word.getBoundingClientRect().height + 12 : 48;
+    var wordH = word && !word.hidden ? word.getBoundingClientRect().height + 12 : 48;
     var available = window.innerHeight - stageTop - reserve - wordH;
     if (available < 96) {
       available = Math.max(72, window.innerHeight - stageTop - reserve - 8);

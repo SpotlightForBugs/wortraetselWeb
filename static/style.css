@@ -869,14 +869,12 @@ body:has(#result-layer:not([hidden])) .score-board,
 body:has(#result-layer:not([hidden])) .mp-entry,
 body:has(#result-layer:not([hidden])) .leaderboard,
 body:has(#result-layer:not([hidden])) .kramli-ad,
-body:has(#result-layer:not([hidden])) .site-announcement,
-body:has(#result-layer:not([hidden])) .word {
+body:has(#result-layer:not([hidden])) .site-announcement {
   display: none;
 }
 
 body:has(#result-layer:not([hidden])) .page {
   margin-top: 12px;
-  padding-bottom: min(48vh, 380px);
 }
 
 body:has(#result-layer:not([hidden])) .game-area {
@@ -887,6 +885,12 @@ body:has(#result-layer:not([hidden])) .game-area {
 
 body:has(#result-layer:not([hidden])) .game-area > .panel {
   width: min(100%, 720px);
+}
+
+body:has(#result-layer:not([hidden])) .word {
+  margin-bottom: 0;
+  position: relative;
+  z-index: 1;
 }
 
 .sheet .auth-card {
@@ -1098,9 +1102,6 @@ cap-widget {
     max-height: min(20vh, 140px);
   }
 
-  body:has(#result-layer:not([hidden])) .page {
-    padding-bottom: min(46vh, 360px);
-  }
 
   .score-board table,
   .leaderboard table {
