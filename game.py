@@ -149,10 +149,7 @@ def display_segments(language, word):
     i = j = 0
     while i < len(play) and j < len(shown):
         dig = play[i : i + 2]
-        if (
-            len(dig) == 2
-            and _DIGRAPH_DISPLAY.get(dig) == shown[j]
-        ):
+        if len(dig) == 2 and _DIGRAPH_DISPLAY.get(dig) == shown[j]:
             segments.append((dig, shown[j]))
             i += 2
             j += 1

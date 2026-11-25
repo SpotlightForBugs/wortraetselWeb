@@ -72,9 +72,7 @@ class WordListTests(unittest.TestCase):
 
         # ä needs both a and e from the digraph before that tile fills.
         partial = game.reveal("aalraeucherei", ["a", "l", "r"], "playing", "de")
-        self.assertEqual(
-            partial, ["a", "a", "l", "r", "", "", "", "", "", "r", "", ""]
-        )
+        self.assertEqual(partial, ["a", "a", "l", "r", "", "", "", "", "", "r", "", ""])
 
         both = game.reveal(
             "aalraeucherei", ["a", "e", "l", "r", "u", "c", "h", "i"], "playing", "de"
