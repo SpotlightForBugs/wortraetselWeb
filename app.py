@@ -224,6 +224,7 @@ def _payload(leaderboard=None):
         found = _lookup_score(session.get("display_name"), leaderboard)
         if found is not None:
             session["shown_score"] = found
+    dark = bool(session.get("dark_mode", False))
     state = i18n.client_state(
         language,
         session.get("word") or "",
@@ -231,11 +232,12 @@ def _payload(leaderboard=None):
         session.get("wrong_guesses") or 0,
         result=session.get("result"),
         pending=session.get("pending_score") or 0,
+        dark=dark,
     )
     guest = "username" not in session
     state["score_line"] = _score_line(language)
     state["shown_score"] = _visible_score()
-    state["dark"] = bool(session.get("dark_mode", False))
+    state["dark"] = dark
     state["guest"] = guest
     state["username"] = (
         i18n.text(language, "guest") if guest else (session.get("display_name") or "")
@@ -391,8 +393,23 @@ def set_language():
 def dark_mode():
     session["dark_mode"] = not session.get("dark_mode", False)
     if _wants_json():
-        return jsonify({"dark": session["dark_mode"]})
+        _ensure_round()
+        return jsonify(_payload())
     return redirect(url_for("game"))
+
+
+@app.route("/drawing/<name>.svg")
+def hangman_drawing(name):
+    """Serve hangman SVGs with optional dark-mode ink colors."""
+    path = play_logic.hangman_svg_path(name)
+    if not path or not path.is_file():
+        return ("", 404)
+    svg = path.read_text(encoding="utf-8")
+    dark = request.args.get("theme") == "dark"
+    body = play_logic.theme_hangman_svg(svg, dark=dark)
+    response = app.response_class(body, mimetype="image/svg+xml")
+    response.headers["Cache-Control"] = "public, max-age=86400"
+    return response
 
 
 def _clear_offer():

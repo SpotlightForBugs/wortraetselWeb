@@ -300,7 +300,16 @@
       $("lobby").hidden = !waiting;
       $("board").hidden = waiting;
       if (waiting) return;
-      if ($("drawing").getAttribute("src") !== state.drawing) $("drawing").src = state.drawing;
+      var dark = document.body.classList.contains("dark");
+      var drawing = state.drawing || "";
+      var base = drawing.replace(/\?.*$/, "");
+      if (base.indexOf("/static/assets/") !== -1) {
+        base = "/drawing/" + base.split("/").pop();
+      }
+      if (base.indexOf("/drawing/") !== -1) {
+        drawing = dark ? base + "?theme=dark" : base;
+      }
+      if ($("drawing").getAttribute("src") !== drawing) $("drawing").src = drawing;
       var tiles = $("tiles");
       tiles.textContent = "";
       state.tiles.forEach(function (ch) {
