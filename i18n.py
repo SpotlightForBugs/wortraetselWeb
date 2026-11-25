@@ -864,9 +864,7 @@ def client_state(language, word, letters, wrong_guesses, result=None, pending=0)
             "success": bool(result.get("success")),
             "offer": offer,
             "word": shown,
-            "message": text(
-                language, "win" if result.get("success") else "loss"
-            ),
+            "message": text(language, "win" if result.get("success") else "loss"),
             "worth": (
                 text(language, "worth", n=result.get("points", pending))
                 if offer
