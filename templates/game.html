@@ -148,11 +148,6 @@ block content %}
     <div class="mp-entry-actions">
       <form method="post" action="{{ url_for('multiplayer_create') }}" id="mp-create-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <select name="language" aria-label="{{ copy.mp_language }}" {% if guest %}disabled{% endif %}>
-          {% for code in all_languages %}
-          <option value="{{ code }}" {% if code == user_language %}selected{% endif %}>{{ language_names[code] }}</option>
-          {% endfor %}
-        </select>
         <button type="submit" class="btn btn-success" id="mp-create-btn" data-i18n="mp_create" {% if guest %}disabled{% endif %}>{{ copy.mp_create }}</button>
       </form>
       <span class="mp-entry-or" data-i18n="mp_or">{{ copy.mp_or }}</span>
@@ -440,12 +435,17 @@ block content %}
     <p id="admin-ok" class="account-ok" hidden></p>
 
     <section class="auth-section admin-section">
-      <h3 data-i18n="admin_announcement">{{ copy.admin_announcement }}</h3>
+      <h3 id="admin-announcement-heading" data-i18n="admin_announcement">{{ copy.admin_announcement }}</h3>
       <form id="admin-announcement-form" class="admin-announce">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <label class="admin-field">
-          <span class="admin-field-label" data-i18n="admin_announcement">{{ copy.admin_announcement }}</span>
-          <textarea id="admin-announcement-input" name="message" maxlength="280" rows="3">{{ announcement }}</textarea>
+          <textarea
+            id="admin-announcement-input"
+            name="message"
+            maxlength="280"
+            rows="3"
+            aria-labelledby="admin-announcement-heading"
+          >{{ announcement }}</textarea>
         </label>
         <div class="admin-actions">
           <button type="submit" class="btn btn-primary" data-i18n="admin_save_announcement">{{ copy.admin_save_announcement }}</button>
@@ -541,9 +541,7 @@ block content %}
     var guestName = document.getElementById("mp-guest-name");
     if (guestName) guestName.hidden = !guest;
     var createBtn = document.getElementById("mp-create-btn");
-    var createLang = document.querySelector("#mp-create-form select");
     if (createBtn) createBtn.disabled = !!guest;
-    if (createLang) createLang.disabled = !!guest;
     if (guest) {
       document.getElementById("admin-open").hidden = true;
     }

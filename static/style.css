@@ -773,20 +773,199 @@ cap-widget {
   border: 1px solid var(--line);
 }
 
-@media (max-width: 800px) {
-  .gate {
-    grid-template-columns: 1fr;
-    padding: 20px 0 32px;
+@media (max-width: 1024px) {
+  .page {
+    width: min(1100px, calc(100% - 20px));
+    margin: 12px auto 28px;
+    padding-bottom: 88px;
+  }
+
+  .header {
+    align-items: flex-start;
+    padding: 14px;
+  }
+
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .language-switcher {
+    flex-wrap: wrap;
   }
 
   .game-area {
     grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .letters-panel {
+    align-items: stretch;
+  }
+
+  #game-form-Big,
+  .mp-letters {
+    gap: 8px;
+  }
+
+  .btn,
+  #game-form-Big button {
+    min-width: 48px;
+    height: 48px;
+    font-size: 1.05rem;
+  }
+
+  .mp-entry-actions,
+  .mp-join-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .mp-entry form {
+    flex-direction: column;
+  }
+
+  .mp-entry input[name="code"],
+  .mp-entry input[name="guest_name"],
+  .mp-entry .btn {
+    width: 100%;
+  }
+
+  .mp-entry-or {
+    text-align: center;
+  }
+
+  .sheet {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .sheet .auth-card {
+    width: 100%;
+    max-height: min(92vh, 920px);
+    border-radius: 18px 18px 0 0;
+    padding: 22px 18px 28px;
+  }
+
+  .sheet.auth-sheet .auth-card,
+  .sheet .auth-card--settings,
+  .sheet .auth-card--panel {
+    width: 100%;
+  }
+
+  #result-layer.sheet {
+    padding: 0 12px 12px;
+  }
+
+  #result-layer .auth-card {
+    width: 100%;
+    border-radius: 16px;
+    margin: 0;
+  }
+
+  .score-board table,
+  .leaderboard table {
+    font-size: 0.92rem;
+  }
+
+  th,
+  td {
+    padding: 10px 8px;
+  }
+}
+
+@media (max-width: 800px) {
+  .gate {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 20px 0 32px;
+  }
+
+  .gate-drawing {
+    width: 100%;
   }
 
   .tile {
     width: 26px;
     height: 36px;
     font-size: 1.15rem;
+  }
+
+  .auth-wrap {
+    align-items: flex-start;
+    padding: 16px 12px 32px;
+  }
+
+  .auth-card {
+    width: 100%;
+    padding: 22px 18px 18px;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    width: calc(100% - 16px);
+    margin: 8px auto 24px;
+  }
+
+  .header {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .username {
+    font-size: 1rem;
+  }
+
+  .header-actions .btn {
+    min-width: 0;
+    height: 40px;
+    padding: 0 10px;
+    font-size: 0.9rem;
+  }
+
+  .flags img {
+    width: 28px;
+    height: 28px;
+  }
+
+  .word {
+    gap: 4px;
+    min-height: 40px;
+  }
+
+  .tile {
+    width: 22px;
+    height: 32px;
+    font-size: 1.05rem;
+  }
+
+  .btn,
+  #game-form-Big button {
+    min-width: 42px;
+    height: 42px;
+    padding: 0 10px;
+  }
+
+  .mp-code-big {
+    letter-spacing: 0.12em;
+    padding: 8px 14px;
+  }
+
+  .mp-players li {
+    padding: 10px;
+  }
+
+  .sheet .auth-card {
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
   }
 }
 
@@ -1121,7 +1300,6 @@ body.dark .mp-letters.locked .btn-primary:disabled {
   font-size: 0.9rem;
 }
 
-.mp-entry select,
 .mp-entry input[name="guest_name"] {
   height: 44px;
 }
@@ -1191,17 +1369,22 @@ body.dark .mp-letters.locked .btn-primary:disabled {
   --kramli-text: #191613;
   --kramli-muted: #6f6860;
   --kramli-line: #e4ddd2;
+  position: relative;
   width: min(1100px, calc(100% - 24px));
   margin: 0 auto 28px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 14px 16px;
-  align-items: center;
-  padding: 12px 14px;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "pitch close"
+    "media media"
+    "body body";
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
   background: var(--kramli-surface);
   color: var(--kramli-text);
   border: 1px solid var(--kramli-line);
-  border-radius: 14px;
+  border-radius: 16px;
   box-shadow: 0 4px 14px rgba(25, 22, 19, 0.05);
 }
 
@@ -1213,52 +1396,88 @@ body.dark .kramli-ad {
   box-shadow: none;
 }
 
-.kramli-ad-visual {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  min-width: 0;
-}
-
-.kramli-ad-media {
-  display: block;
-  flex-shrink: 0;
-  border-radius: 10px;
-  overflow: hidden;
-  border: 1px solid var(--kramli-line);
-  line-height: 0;
-}
-
-.kramli-ad-media img {
-  display: block;
-  width: 108px;
-  height: 72px;
-  object-fit: cover;
-}
-
-.kramli-ad-body {
-  min-width: 0;
-}
-
 .kramli-ad-pitch {
+  grid-area: pitch;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 6px 8px;
   margin: 0;
+  padding: 12px 14px;
   color: var(--kramli-muted);
-  font-size: 0.8rem;
-  line-height: 1.3;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  border-bottom: 1px solid var(--kramli-line);
+}
+
+.kramli-ad-close {
+  grid-area: close;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin: 0 10px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--kramli-muted);
+  font: inherit;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.kramli-ad-close span {
+  display: block;
+  transform: translateY(-1px);
+}
+
+.kramli-ad-close:hover {
+  background: color-mix(in srgb, var(--kramli-text) 8%, transparent);
+  color: var(--kramli-text);
+}
+
+.kramli-ad-media {
+  grid-area: media;
+  display: block;
+  overflow: hidden;
+  border: 0;
+  border-bottom: 1px solid var(--kramli-line);
+  line-height: 0;
+  background: #1b4634;
+}
+
+.kramli-ad-media img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 1;
+  max-height: 220px;
+  object-fit: cover;
+  object-position: center;
+}
+
+.kramli-ad-body {
+  grid-area: body;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 14px 16px 16px;
 }
 
 .kramli-ad-badge {
   display: inline-flex;
   align-items: center;
-  padding: 2px 6px;
-  border-radius: 4px;
+  padding: 3px 7px;
+  border-radius: 5px;
   background: color-mix(in srgb, var(--kramli-brand) 14%, transparent);
   color: var(--kramli-brand-strong);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1273,39 +1492,43 @@ body.dark .kramli-ad-badge {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin: 0 0 2px;
-  font-size: 0.95rem;
+  margin: 0;
+  font-size: 1rem;
 }
 
 .kramli-ad-mark {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
 }
 
 .kramli-ad-tagline {
   margin: 0;
-  font-size: 0.92rem;
-  font-weight: 600;
+  font-size: 1.05rem;
+  font-weight: 700;
   line-height: 1.3;
 }
 
 .kramli-ad-blurb {
-  margin: 4px 0 0;
+  margin: 0;
   color: var(--kramli-muted);
-  font-size: 0.84rem;
-  line-height: 1.35;
+  font-size: 0.92rem;
+  line-height: 1.4;
+  max-width: 42rem;
 }
 
 .kramli-ad-cta {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   margin-top: 8px;
-  padding: 7px 12px;
-  border-radius: 8px;
+  min-height: 44px;
+  padding: 8px 16px;
+  border-radius: 10px;
   background: var(--kramli-brand);
   color: #fff !important;
   text-decoration: none;
-  font-size: 0.84rem;
+  font-size: 0.95rem;
   font-weight: 700;
 }
 
@@ -1313,92 +1536,26 @@ body.dark .kramli-ad-badge {
   background: var(--kramli-brand-strong);
 }
 
-.kramli-ad-close {
-  align-self: start;
-  width: 28px;
-  height: 28px;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--kramli-muted);
-  font: inherit;
-  font-size: 1.2rem;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.kramli-ad-close:hover {
-  background: color-mix(in srgb, var(--kramli-text) 8%, transparent);
-  color: var(--kramli-text);
-}
-
-@media (max-width: 640px) {
-  .kramli-ad {
-    position: relative;
-    grid-template-columns: 1fr;
-    gap: 0;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  .kramli-ad-visual {
-    gap: 0;
-  }
-
-  .kramli-ad-pitch {
-    padding: 10px 44px 10px 14px;
-    font-size: 0.88rem;
-    border-bottom: 1px solid var(--kramli-line);
-  }
-
-  .kramli-ad-badge {
-    font-size: 0.72rem;
-  }
-
-  .kramli-ad-media {
-    border: 0;
-    border-radius: 0;
-    border-bottom: 1px solid var(--kramli-line);
-  }
-
+@media (max-width: 1024px) {
   .kramli-ad-media img {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 3 / 2;
-    max-height: 168px;
-  }
-
-  .kramli-ad-body {
-    padding: 12px 14px 14px;
-  }
-
-  .kramli-ad-brand {
-    font-size: 1.05rem;
-  }
-
-  .kramli-ad-mark {
-    width: 24px;
-    height: 24px;
-  }
-
-  .kramli-ad-tagline {
-    font-size: 1rem;
-  }
-
-  .kramli-ad-blurb {
-    font-size: 0.9rem;
+    aspect-ratio: 16 / 9;
+    max-height: 240px;
   }
 
   .kramli-ad-cta {
-    display: flex;
-    align-items: center;
-    justify-content: center;
     width: 100%;
-    margin-top: 12px;
-    padding: 11px 14px;
-    font-size: 0.95rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .kramli-ad-pitch {
+    padding: 12px 48px 12px 14px;
+    font-size: 0.88rem;
+  }
+
+  .kramli-ad-media img {
+    aspect-ratio: 2 / 1;
+    max-height: 180px;
   }
 
   .kramli-ad-close {
@@ -1406,12 +1563,16 @@ body.dark .kramli-ad-badge {
     top: 8px;
     right: 8px;
     z-index: 2;
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
+    margin: 0;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--kramli-surface) 88%, transparent);
-    color: var(--kramli-text);
+    background: color-mix(in srgb, var(--kramli-surface) 90%, transparent);
     backdrop-filter: blur(4px);
+  }
+
+  .kramli-ad-body {
+    padding: 14px;
   }
 }
 
@@ -1441,6 +1602,21 @@ body.dark .kramli-ad-badge {
   max-height: calc(100vh - 24px);
   margin: auto;
   padding: 24px 20px 20px;
+  border-radius: 16px;
+}
+
+@media (max-width: 1024px) {
+  .sheet.admin-sheet {
+    align-items: stretch;
+    padding: 10px;
+  }
+
+  .sheet .auth-card--admin {
+    width: 100%;
+    max-height: calc(100vh - 20px);
+    max-height: calc(100dvh - 20px);
+    border-radius: 16px;
+  }
 }
 
 .admin-head .auth-lead {
