@@ -585,6 +585,17 @@ block content %}
     document.title = copy.title;
   }
 
+  function themedDrawingSrc(src) {
+    if (!src) return src;
+    var dark = document.body.classList.contains("dark");
+    var base = String(src).replace(/\?.*$/, "");
+    if (base.indexOf("/static/assets/") !== -1) {
+      base = "/drawing/" + base.split("/").pop();
+    }
+    if (base.indexOf("/drawing/") === -1) return src;
+    return dark ? base + "?theme=dark" : base;
+  }
+
   function paintTheme(dark) {
     document.body.classList.toggle("dark", !!dark);
     var button = document.getElementById("theme");
@@ -593,6 +604,10 @@ block content %}
     button.textContent = copy[key];
     button.classList.toggle("btn-light", !!dark);
     button.classList.toggle("btn-dark", !dark);
+    var img = document.getElementById("drawing");
+    if (img && img.getAttribute("src")) {
+      img.setAttribute("src", themedDrawingSrc(img.getAttribute("src")));
+    }
   }
 
   function paintGuest(guest) {
@@ -700,8 +715,9 @@ block content %}
       });
     }
     var img = document.getElementById("drawing");
-    if (img.getAttribute("src") !== data.drawing) {
-      img.setAttribute("src", data.drawing);
+    var nextDrawing = themedDrawingSrc(data.drawing);
+    if (img.getAttribute("src") !== nextDrawing) {
+      img.setAttribute("src", nextDrawing);
     }
     Object.keys(data.letter_states).forEach(function (letter) {
       var button = document.querySelector('#game-form-Big button[value="' + letter + '"]');
@@ -1647,11 +1663,7 @@ block content %}
     var body = new FormData();
     body.append("csrf_token", csrf());
     body.append("dark_mode", "1");
-    postForm("/set_dark_mode", body)
-      .then(function (data) {
-        paintTheme(data.dark);
-      })
-      .catch(function () {});
+    postForm("/set_dark_mode", body).then(applyState).catch(function () {});
   });
 
   document.getElementById("log-out").addEventListener("click", function () {

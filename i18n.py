@@ -866,7 +866,9 @@ def match_accept_language(header):
     return "en"
 
 
-def client_state(language, word, letters, wrong_guesses, result=None, pending=0):
+def client_state(
+    language, word, letters, wrong_guesses, result=None, pending=0, dark=False
+):
     """Board data the page can apply without loading a new document."""
     language = language if language in _STRINGS else "en"
     letters = [ch.lower() for ch in letters or []]
@@ -884,7 +886,7 @@ def client_state(language, word, letters, wrong_guesses, result=None, pending=0)
         "status": status,
         "tiles": game.reveal(word, letters, status, language),
         "letter_states": game.letter_states(letters, word),
-        "drawing": game.drawing_for(wrong_guesses, status),
+        "drawing": game.drawing_for(wrong_guesses, status, dark=bool(dark)),
         "copy": catalog(language),
         "title": text(language, "title"),
         "result": None,

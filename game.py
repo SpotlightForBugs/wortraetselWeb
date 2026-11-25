@@ -1,5 +1,6 @@
 import math
 import random
+import re
 import unicodedata
 from pathlib import Path
 
@@ -316,34 +317,68 @@ def letter_states(letters, word):
     return states
 
 
-def drawing_for(wrong, status):
+# Hangman frames under static/assets/; served via /drawing/<name>.svg so
+# dark mode can recolor ink without CSS-filter invert on the <img>.
+_HANGMAN_FRAMES = (
+    "base",
+    "Hangman1_01_Zeichenflache_1",
+    "Hangman2_01_Zeichenflache_1",
+    "Hangman3_01_Zeichenflache_1",
+    "Hangman4_01_Zeichenflache_1",
+    "Hangman5_01_Zeichenflache_1",
+    "Hangman6_01_Zeichenflache_1",
+    "Hangman7_01_Zeichenflache_1",
+    "Hangman8_01_Zeichenflache_1",
+    "killed",
+)
+_HANGMAN_WON = "won"
+_HANGMAN_ASSETS = frozenset(_HANGMAN_FRAMES + (_HANGMAN_WON,))
+_DARK_INK = "#e8eef4"
+_DARK_ACCENT = "#ff5c5c"
+
+
+def drawing_asset_name(wrong, status):
     if status == "won":
-        return "/static/assets/won.svg"
-    return generate_hangman(min(int(wrong or 0), 9), 1000, 1000)
+        return _HANGMAN_WON
+    tries = min(int(wrong or 0), len(_HANGMAN_FRAMES) - 1)
+    return _HANGMAN_FRAMES[tries]
+
+
+def drawing_for(wrong, status, dark=False):
+    name = drawing_asset_name(wrong, status)
+    url = f"/drawing/{name}.svg"
+    if dark:
+        url += "?theme=dark"
+    return url
+
+
+def hangman_svg_path(name):
+    """Filesystem path for a hangman SVG asset, or None if unknown."""
+    if name not in _HANGMAN_ASSETS:
+        return None
+    return Path(__file__).resolve().parent / "static" / "assets" / f"{name}.svg"
+
+
+def theme_hangman_svg(svg_text, dark=False):
+    """Retint hangman SVG ink for dark mode (not a CSS invert).
+
+    Black strokes/fills become light ink; the red accent stays a clear red.
+    Class rules (``.st2``, ``fill:none``) still override the injected path fill.
+    """
+    if not dark or not svg_text:
+        return svg_text
+    themed = svg_text.replace("stroke:#000", f"stroke:{_DARK_INK}")
+    themed = themed.replace("fill:#fc0000", f"fill:{_DARK_ACCENT}")
+    inject = f"path{{fill:{_DARK_INK}}}"
+    if inject not in themed:
+        themed = re.sub(r"(<style[^>]*>)", rf"\1{inject}", themed, count=1)
+    return themed
 
 
 def generate_hangman(tries, n, m):
-    # the svg images are: static/assets/base.svg, static/assets/Hangman1_01_Zeichenflache_1.svg to static/assets/Hangman8_01_Zeichenflache_1.svg, last is called killed.svg
-    image_list = [
-        "base",
-        "Hangman1_01_Zeichenflache_1",
-        "Hangman2_01_Zeichenflache_1",
-        "Hangman3_01_Zeichenflache_1",
-        "Hangman4_01_Zeichenflache_1",
-        "Hangman5_01_Zeichenflache_1",
-        "Hangman6_01_Zeichenflache_1",
-        "Hangman7_01_Zeichenflache_1",
-        "Hangman8_01_Zeichenflache_1",
-        "killed",
-    ]
-
-    image_extension = ".svg"
-
-    if tries > len(image_list) - 1:
-        html = f"<h1>YOU SHOULD BE DEAD, MOM...</h1>"
-
-        return html
-    return f"/static/assets/{image_list[tries]}{image_extension}"
+    # Kept for callers that still pass width/height; theme via drawing_for.
+    del n, m
+    return drawing_for(tries, "playing", dark=False)
 
 
 def check_game_status(word, guessed_letters, wrong_tries):
