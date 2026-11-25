@@ -230,18 +230,32 @@ def displayed_score(saved, pending, logged_in):
     return pending
 
 
+def score_number(value):
+    """A board cell has to be a number. Labels and blanks become zero."""
+    if isinstance(value, bool) or value is None:
+        return 0
+    if isinstance(value, (int, float)):
+        return int(value)
+    text = str(value).strip().replace(" ", "")
+    if text.lstrip("-").isdigit():
+        return int(text)
+    return 0
+
+
 def place_player(rows, name, score):
-    """Put this player's current score on the board."""
-    placed = [dict(row) for row in rows or []]
-    if not name:
-        return placed
-    for row in placed:
-        if row.get("username") == name:
-            row["score"] = score
-            break
-    else:
-        placed.append({"username": name, "score": score})
-    placed.sort(key=lambda row: row.get("score") or 0, reverse=True)
+    """One row per name, ordered by the numeric score."""
+    merged = {}
+    for row in rows or []:
+        label = (row.get("username") or "").strip()
+        if not label:
+            continue
+        points = score_number(row.get("score"))
+        merged[label] = max(merged.get(label, points), points)
+    player = (name or "").strip()
+    if player:
+        merged[player] = score_number(score)
+    placed = [{"username": label, "score": points} for label, points in merged.items()]
+    placed.sort(key=lambda row: (-row["score"], row["username"].casefold()))
     return placed
 
 

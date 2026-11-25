@@ -88,16 +88,17 @@ block content %}
       </div>
     </div>
     <div class="panel letters-panel">
-      <form method="post" id="game-form-Big" action="{{ url_for('game') }}">
+      <form method="post" id="game-form-Big" action="{{ url_for('game') }}" translate="no">
         {% for letter in letters %}
         <button
           type="submit"
           name="letter"
           value="{{ letter }}"
+          translate="no"
           class="btn {% if letter_states[letter] == 'hit' %}btn-success{% elif letter_states[letter] == 'miss' %}btn-danger{% else %}btn-primary{% endif %}"
           {% if letter_states[letter] != 'open' %}disabled{% endif %}
         >
-          {{ letter }}
+          <span translate="no">{{ letter }}</span>
         </button>
         {% endfor %}
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -111,7 +112,7 @@ block content %}
 
   <section class="panel leaderboard">
     <h2 data-i18n="leaderboard">{{ copy.leaderboard }}</h2>
-    <table>
+    <table translate="no">
       <thead>
         <tr>
           <th data-i18n="username">{{ copy.username }}</th>
@@ -289,25 +290,52 @@ block content %}
     if (!table || data.shown_score == null) {
       return;
     }
-    var row = table.querySelector("tr.me");
-    if (data.guest) {
-      if (row && row.getAttribute("data-local") === "1") {
-        row.remove();
-      } else if (row) {
+    var name = (data.username || "").trim();
+    var rows = Array.prototype.slice.call(table.querySelectorAll("tr"));
+    var kept = null;
+    rows.forEach(function (row) {
+      var label = row.children[0] ? row.children[0].textContent.trim() : "";
+      if (!name || label !== name) {
         row.classList.remove("me");
+        return;
+      }
+      if (!kept) {
+        kept = row;
+        return;
+      }
+      row.remove();
+    });
+    if (data.guest) {
+      if (kept && kept.getAttribute("data-local") === "1") {
+        kept.remove();
       }
       return;
     }
-    if (!row) {
-      row = document.createElement("tr");
-      row.className = "me";
-      row.setAttribute("data-local", "1");
-      row.appendChild(document.createElement("td"));
-      row.appendChild(document.createElement("td"));
-      table.prepend(row);
+    if (!name) {
+      return;
     }
-    row.children[0].textContent = data.username || "";
-    row.children[1].textContent = data.shown_score;
+    if (!kept) {
+      kept = document.createElement("tr");
+      kept.setAttribute("data-local", "1");
+      kept.appendChild(document.createElement("td"));
+      kept.appendChild(document.createElement("td"));
+      table.appendChild(kept);
+    }
+    kept.classList.add("me");
+    kept.children[0].textContent = name;
+    kept.children[1].textContent = data.shown_score;
+    var ordered = Array.prototype.slice.call(table.querySelectorAll("tr"));
+    ordered.sort(function (a, b) {
+      var points = function (row) {
+        var cell = row.children[1] ? row.children[1].textContent.replace(/\s/g, "") : "";
+        var value = parseInt(cell, 10);
+        return isNaN(value) ? 0 : value;
+      };
+      return points(b) - points(a);
+    });
+    ordered.forEach(function (row) {
+      table.appendChild(row);
+    });
   }
 
   function paintBoard(data) {

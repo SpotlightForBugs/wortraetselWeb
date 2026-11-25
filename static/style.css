@@ -45,6 +45,7 @@ body.dark a {
 .page {
   width: min(1100px, calc(100% - 24px));
   margin: 16px auto 32px;
+  padding-bottom: 96px;
 }
 
 .header,
