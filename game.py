@@ -1,3 +1,4 @@
+import math
 import random
 import unicodedata
 from pathlib import Path
@@ -26,6 +27,11 @@ _LANGUAGE_FLAGS = {
     "tr": "TR",
 }
 _WORD_LISTS = {}
+_LETTER_RATES = {}
+# Hit payout scales with how rare the letter is in that language's word list.
+_LETTER_VALUE_FLOOR = 5
+_LETTER_VALUE_CAP = 90
+_LETTER_VALUE_SCALE = 15
 _LETTER_FOLDS = str.maketrans(
     {
         "ä": "ae",
@@ -111,6 +117,70 @@ def getRandomWord(language):
     return random.choice(_local_words(coerce_language(language)))
 
 
+def letter_rates(language):
+    """Share of each A-Z letter across the language's hangman word list."""
+    language = coerce_language(language)
+    if language not in _LETTER_RATES:
+        counts = {chr(c): 0 for c in range(97, 123)}
+        total = 0
+        for word in _local_words(language):
+            for ch in word:
+                if ch in counts:
+                    counts[ch] += 1
+                    total += 1
+        if not total:
+            _LETTER_RATES[language] = {ch: 1 / 26 for ch in counts}
+        else:
+            _LETTER_RATES[language] = {
+                ch: (counts[ch] / total) if counts[ch] else (0.5 / total) for ch in counts
+            }
+    return _LETTER_RATES[language]
+
+
+def letter_value(language, letter):
+    """Points a correct guess of this letter is worth in this language.
+
+    Rarer letters in the language's dictionary pay more. The value is the
+    inverse of the letter's rate versus a uniform 1/26 baseline, clamped so
+    common letters stay readable and rare ones do not explode the score.
+    """
+    letter = (letter or "").lower()
+    if len(letter) != 1 or not letter.isalpha():
+        return _LETTER_VALUE_FLOOR
+    rate = letter_rates(language).get(letter) or (1 / 26)
+    uniform = 1 / 26
+    return max(
+        _LETTER_VALUE_FLOOR,
+        min(_LETTER_VALUE_CAP, round(_LETTER_VALUE_SCALE * (uniform / rate))),
+    )
+
+
+def score_guess(language, word, letter):
+    """Points for one guess: +value×hits, or a transparent miss based on value."""
+    letter = (letter or "").lower()
+    value = letter_value(language, letter)
+    count = (word or "").count(letter)
+    if count:
+        return value * count
+    # Missing a rare letter costs more; the value table stays the one source of truth.
+    return -max(_LETTER_VALUE_FLOOR, value // 4)
+
+
+def calculate_points(
+    wrong_guesses: int, word: str, guessed_letters: list, success: bool, language="en"
+):
+    """Sum of per-letter scores for the round in this language."""
+    points = 0
+    for letter in guessed_letters or []:
+        points += score_guess(language, word, letter)
+    return points
+
+
+def letter_values(language):
+    """A-Z point table for the UI so scoring stays visible."""
+    return {chr(c).upper(): letter_value(language, chr(c)) for c in range(97, 123)}
+
+
 def apply_guess(word, letters, wrong_guesses, letter):
     """Return the board after one guess. A repeated or empty guess changes nothing."""
     letters = [ch.lower() for ch in letters or []]
@@ -192,24 +262,6 @@ def check_game_status(word, guessed_letters, wrong_tries):
     return f"Won: {word} withing {9 - len(guessed_letters)} tries"
 
 
-def calculate_points(
-    wrong_guesses: int, word: str, guessed_letters: list, success: bool
-):
-    points = 0
-
-    if success:
-        points = 1000 - (wrong_guesses * 100)
-    else:
-        percentage = 0
-        for letter in word:
-            if letter not in guessed_letters:
-                percentage += 1
-        percentage = percentage / len(word) * 100
-        points = int(percentage) * -1
-
-    return points
-
-
 def should_offer_save(logged_in, dismissed, solved):
     """Ask a guest to register once, after they solve a word."""
     if logged_in or dismissed:
@@ -275,8 +327,9 @@ def finish_game(
     wrong_guesses: int,
     success: bool,
     legacy_account=False,
+    language="en",
 ):
-    points = calculate_points(wrong_guesses, word, all_guesses, success)
+    points = calculate_points(wrong_guesses, word, all_guesses, success, language)
     import firebaseDB
 
     firebaseDB.setScore(username, points)

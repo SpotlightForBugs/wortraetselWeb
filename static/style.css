@@ -917,23 +917,82 @@ body.dark .mp-letters.locked .btn-primary:disabled {
 }
 
 .mp-entry .mp-entry-guest {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
   margin: -6px 0 12px;
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
-.mp-entry .mp-entry-guest p {
-  margin: 0;
-  flex: 1 1 12rem;
-}
-
-.mp-entry .mp-entry-guest .btn {
-  flex: none;
-}
-
-.mp-entry select {
+.mp-entry select,
+.mp-entry input[name="guest_name"] {
   height: 44px;
+}
+
+.mp-entry input[name="guest_name"] {
+  font: inherit;
+  width: 11rem;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-sizing: border-box;
+}
+
+.mp-join-form {
+  flex-wrap: wrap;
+}
+
+.account-soft {
+  margin: 6px 0 0;
+  font-size: 0.9rem;
+}
+
+.account-soft a {
+  color: var(--muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.account-ok {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.account-danger {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.account-danger p {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.auth-card input.danger-submit {
+  background: var(--danger);
+}
+
+.auth-card input.danger-submit:hover {
+  filter: brightness(0.95);
+}
+
+.mp-name-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.mp-name-field input {
+  font: inherit;
+  height: 44px;
+  padding: 0 10px;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 8px;
 }

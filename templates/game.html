@@ -58,6 +58,15 @@ block content %}
       >
       <button
         type="button"
+        class="btn btn-light"
+        id="account-open"
+        data-i18n="account"
+        {% if guest %}hidden{% endif %}
+      >
+        {{ copy.account }}
+      </button>
+      <button
+        type="button"
         class="btn btn-primary"
         id="log-out"
         data-i18n="log_out"
@@ -108,22 +117,17 @@ block content %}
 
   <section class="panel score-board">
     <h3 id="score-line">{{ score_line }}</h3>
+    <p class="account-soft" id="guest-save-hint" {% if not guest %}hidden{% endif %}>
+      <a href="{{ url_for('login') }}" data-auth="register" data-i18n="guest_save_hint">{{ copy.guest_save_hint }}</a>
+    </p>
   </section>
 
   <section class="panel mp-entry">
     <h2 data-i18n="mp_title">{{ copy.mp_title }}</h2>
     <p data-i18n="mp_pitch">{{ copy.mp_pitch }}</p>
-    <div class="mp-entry-guest" id="mp-guest-hint" {% if not guest %}hidden{% endif %}>
-      <p data-i18n="mp_host_login">{{ copy.mp_host_login }}</p>
-      <a
-        class="btn btn-primary"
-        id="mp-login"
-        href="{{ url_for('login') }}"
-        data-auth="login"
-        data-i18n="log_in"
-        >{{ copy.log_in }}</a
-      >
-    </div>
+    <p class="mp-entry-guest" id="mp-guest-hint" data-i18n="mp_host_login" {% if not guest %}hidden{% endif %}>
+      {{ copy.mp_host_login }}
+    </p>
     <div class="mp-entry-actions">
       <form method="post" action="{{ url_for('multiplayer_create') }}" id="mp-create-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
@@ -135,8 +139,18 @@ block content %}
         <button type="submit" class="btn btn-success" id="mp-create-btn" data-i18n="mp_create" {% if guest %}disabled{% endif %}>{{ copy.mp_create }}</button>
       </form>
       <span class="mp-entry-or" data-i18n="mp_or">{{ copy.mp_or }}</span>
-      <form method="post" action="{{ url_for('multiplayer_join') }}">
+      <form method="post" action="{{ url_for('multiplayer_join') }}" class="mp-join-form">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input
+          name="guest_name"
+          maxlength="20"
+          autocomplete="nickname"
+          placeholder="{{ copy.mp_your_name }}"
+          aria-label="{{ copy.mp_your_name }}"
+          value="{{ session.get('guest_name', '') }}"
+          {% if not guest %}hidden{% endif %}
+          id="mp-guest-name"
+        />
         <input
           name="code"
           maxlength="5"
@@ -209,6 +223,50 @@ block content %}
     >
       {{ copy.not_now }}
     </button>
+  </section>
+</div>
+
+<div id="account-layer" class="sheet auth-sheet" hidden>
+  <section class="auth-card" role="dialog" aria-modal="true" aria-labelledby="account-title">
+    <button type="button" id="account-close" class="auth-close" data-i18n="close">
+      {{ copy.close }}
+    </button>
+    <h2 id="account-title" data-i18n="account">{{ copy.account }}</h2>
+    <p id="account-error" class="error" hidden></p>
+    <p id="account-ok" class="account-ok" hidden></p>
+
+    <form id="account-name-form" method="POST" action="{{ url_for('account_name') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <label for="account-name" data-i18n="name_label">{{ copy.name_label }}</label>
+      <input
+        type="text"
+        id="account-name"
+        name="username"
+        maxlength="20"
+        minlength="2"
+        required
+        autocomplete="nickname"
+        value="{{ session.get('display_name', '') }}"
+      />
+      <input type="submit" data-i18n="save_name" value="{{ copy.save_name }}" />
+    </form>
+
+    <form id="account-password-form" method="POST" action="{{ url_for('account_password') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <label for="account-current" data-i18n="current_password">{{ copy.current_password }}</label>
+      <input type="password" id="account-current" name="current_password" autocomplete="current-password" required />
+      <label for="account-new" data-i18n="new_password">{{ copy.new_password }}</label>
+      <input type="password" id="account-new" name="new_password" autocomplete="new-password" required minlength="6" />
+      <input type="submit" data-i18n="change_password" value="{{ copy.change_password }}" />
+    </form>
+
+    <form id="account-delete-form" method="POST" action="{{ url_for('account_delete') }}" class="account-danger">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <p data-i18n="delete_account_help">{{ copy.delete_account_help }}</p>
+      <label for="account-delete-password" data-i18n="password">{{ copy.password }}</label>
+      <input type="password" id="account-delete-password" name="password" autocomplete="current-password" required />
+      <input type="submit" class="danger-submit" data-i18n="delete_account" value="{{ copy.delete_account }}" />
+    </form>
   </section>
 </div>
 
@@ -324,7 +382,11 @@ block content %}
   function paintGuest(guest) {
     document.getElementById("save-score").hidden = !guest;
     document.getElementById("log-out").hidden = !!guest;
+    document.getElementById("account-open").hidden = !!guest;
     document.getElementById("mp-guest-hint").hidden = !guest;
+    document.getElementById("guest-save-hint").hidden = !guest;
+    var guestName = document.getElementById("mp-guest-name");
+    if (guestName) guestName.hidden = !guest;
     var createBtn = document.getElementById("mp-create-btn");
     var createLang = document.querySelector("#mp-create-form select");
     if (createBtn) createBtn.disabled = !!guest;
@@ -430,6 +492,7 @@ block content %}
   function sheetOpen() {
     return (
       !document.getElementById("auth-layer").hidden ||
+      !document.getElementById("account-layer").hidden ||
       !document.getElementById("result-layer").hidden
     );
   }
@@ -606,6 +669,7 @@ block content %}
   }
 
   function openAuth(which) {
+    document.getElementById("account-layer").hidden = true;
     document.getElementById("auth-layer").hidden = false;
     document.getElementById("login-form").hidden = which === "register";
     document.getElementById("register-form").hidden = which !== "register";
@@ -618,6 +682,21 @@ block content %}
     syncScrollLock();
   }
 
+  function openAccount() {
+    document.getElementById("auth-layer").hidden = true;
+    document.getElementById("account-layer").hidden = false;
+    document.getElementById("account-error").hidden = true;
+    document.getElementById("account-ok").hidden = true;
+    var name = document.getElementById("player-name").textContent.trim();
+    if (name) document.getElementById("account-name").value = name;
+    syncScrollLock();
+  }
+
+  function closeAccount() {
+    document.getElementById("account-layer").hidden = true;
+    syncScrollLock();
+  }
+
   document.addEventListener("click", function (event) {
     var trigger = event.target.closest("[data-auth]");
     if (!trigger) {
@@ -627,6 +706,45 @@ block content %}
     openAuth(trigger.getAttribute("data-auth"));
   });
   document.getElementById("auth-close").addEventListener("click", closeAuth);
+  document.getElementById("account-open").addEventListener("click", openAccount);
+  document.getElementById("account-close").addEventListener("click", closeAccount);
+
+  function bindAccount(form, confirmKey) {
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      if (confirmKey && !window.confirm(copy[confirmKey])) {
+        return;
+      }
+      postForm(form.action, new FormData(form))
+        .then(function (data) {
+          var error = document.getElementById("account-error");
+          var ok = document.getElementById("account-ok");
+          if (!data.ok) {
+            ok.hidden = true;
+            error.hidden = false;
+            error.textContent = data.error || copy.try_again;
+            return;
+          }
+          error.hidden = true;
+          if (form.id === "account-delete-form") {
+            window.location.assign("{{ url_for('game') }}");
+            return;
+          }
+          applyState(data);
+          ok.hidden = false;
+          ok.textContent = copy.account_saved;
+          if (form.id === "account-password-form") form.reset();
+        })
+        .catch(function () {
+          var error = document.getElementById("account-error");
+          error.hidden = false;
+          error.textContent = copy.try_again;
+        });
+    });
+  }
+  bindAccount(document.getElementById("account-name-form"));
+  bindAccount(document.getElementById("account-password-form"));
+  bindAccount(document.getElementById("account-delete-form"), "delete_account_confirm");
   document.querySelectorAll(".sheet").forEach(function (sheet) {
     sheet.addEventListener(
       "wheel",
@@ -768,7 +886,8 @@ block content %}
       }
       if (
         !document.getElementById("result-layer").hidden ||
-        !document.getElementById("auth-layer").hidden
+        !document.getElementById("auth-layer").hidden ||
+        !document.getElementById("account-layer").hidden
       ) {
         return;
       }

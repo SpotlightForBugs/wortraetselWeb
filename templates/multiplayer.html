@@ -50,6 +50,16 @@
       <h2 class="mp-subtitle">{{ copy.mp_players }}</h2>
       <ul class="mp-players" id="players" translate="no"></ul>
       <div class="mp-actions">
+        <label class="mp-name-field" id="join-name-wrap" hidden>
+          <span>{{ copy.mp_your_name }}</span>
+          <input
+            type="text"
+            id="join-name"
+            maxlength="20"
+            autocomplete="nickname"
+            placeholder="{{ copy.mp_your_name }}"
+          />
+        </label>
         <button type="button" class="btn btn-success mp-start" id="join-room" hidden>{{ copy.mp_join }}</button>
         <p class="mp-hint" id="join-hint" hidden></p>
         <button type="button" class="btn btn-success mp-start" id="start-game" hidden>{{ copy.mp_start }}</button>
@@ -57,7 +67,7 @@
       </div>
       <div class="mp-letters" id="letters" translate="no">
         {% for letter in letters %}
-        <button type="button" class="btn btn-primary" value="{{ letter }}" disabled>{{ letter }}</button>
+        <button type="button" class="btn btn-primary" value="{{ letter }}" disabled title="">{{ letter }}</button>
         {% endfor %}
       </div>
     </div>
@@ -69,7 +79,7 @@
 
 {% if state %}
 <script type="application/json" id="room-boot">
-  {{ {"state": state, "copy": copy, "me": player_id, "code": room_code}|tojson }}
+  {{ {"state": state, "copy": copy, "me": player_id, "code": room_code, "guest_name": session.get("guest_name", "")}|tojson }}
 </script>
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" crossorigin="anonymous"></script>
 <script>
@@ -204,8 +214,11 @@
       var myTurn = state.state === "playing" && state.turn === boot.me && !pending;
       $("letters").classList.toggle("locked", !myTurn);
       $("letters").hidden = state.state === "waiting";
+      var values = state.letter_values || {};
       document.querySelectorAll("#letters button").forEach(function (button) {
         var letterState = state.letter_states[button.value];
+        var value = values[button.value];
+        button.title = value != null ? fill(copy.mp_letter_value, { n: value }) : "";
         button.classList.toggle("btn-success", letterState === "hit");
         button.classList.toggle("btn-danger", letterState === "miss");
         button.classList.toggle("btn-primary", letterState === "open");
@@ -224,8 +237,13 @@
       var member = isMember(state);
       var full = state.players.length >= state.max_players;
       var join = $("join-room");
+      var nameWrap = $("join-name-wrap");
       join.hidden = member;
       join.disabled = state.state === "playing" || full;
+      nameWrap.hidden = member;
+      if (!member && boot.guest_name && !$("join-name").value) {
+        $("join-name").value = boot.guest_name;
+      }
       $("join-hint").hidden = member || !join.disabled;
       $("join-hint").textContent = full ? copy.mp_room_full : copy.mp_room_started;
       var select = $("room-language");
@@ -256,6 +274,7 @@
       }
     }
 
+    var lastGuessKey = null;
     function render(state) {
       current = state;
       pending = false;
@@ -265,6 +284,19 @@
         toast(fill(state.notice.type === "removed" ? copy.mp_afk_removed : copy.mp_afk, { name: state.notice.name }));
       }
       lastNotice = notice;
+      if (state.last_guess) {
+        var key = JSON.stringify(state.last_guess) + state.turn_deadline;
+        if (key !== lastGuessKey) {
+          var pts = state.last_guess.points;
+          toast(
+            fill(copy.mp_guess_points, {
+              letter: state.last_guess.letter,
+              n: (pts > 0 ? "+" : "") + pts,
+            })
+          );
+        }
+        lastGuessKey = key;
+      }
       renderLobby(state);
       renderTurn(state);
       renderPlayers(state);
@@ -301,7 +333,8 @@
 
     $("join-room").addEventListener("click", function () {
       this.disabled = true;
-      socket.emit("join", { code: boot.code });
+      var name = ($("join-name").value || "").trim();
+      socket.emit("join", { code: boot.code, name: name });
     });
     $("start-game").addEventListener("click", function () {
       this.disabled = true;

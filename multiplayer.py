@@ -1,5 +1,7 @@
 """Shared-room hangman. Pure room logic; storage lives in firebaseDB."""
 
+import random
+import re
 import secrets
 import time
 
@@ -31,6 +33,14 @@ def valid_code(code):
     return len(code) == CODE_LENGTH and all(ch in _CODE_ALPHABET for ch in code)
 
 
+def sanitize_name(name, fallback):
+    """Keep a short display name guests can choose themselves."""
+    cleaned = re.sub(r"\s+", " ", (name or "").strip())
+    cleaned = "".join(ch for ch in cleaned if ch.isprintable())
+    cleaned = cleaned[:20].strip()
+    return cleaned or fallback
+
+
 def _player(player_id, name, account=None):
     return {
         "id": player_id,
@@ -38,6 +48,7 @@ def _player(player_id, name, account=None):
         "account": account,
         "hits": 0,
         "misses": 0,
+        "round": 0,
         "score": 0,
         "strikes": 0,
     }
@@ -58,6 +69,7 @@ def new_room(code, host_id, host_name, language, account=None, now=None):
         "state": "waiting",
         "result": None,
         "notice": None,
+        "starter": 0,
         "updated_at": stamp,
     }
 
@@ -104,29 +116,41 @@ def set_language(room, player_id, language, now=None):
     return touch(dict(room, language=language), now), None
 
 
-def start_room(room, player_id, word=None, now=None):
-    """The host starts (or restarts) a round with a fresh word."""
+def start_room(room, player_id, word=None, now=None, rng=None):
+    """The host starts (or restarts) a round with a fresh word.
+
+    The first turn rotates so the host does not always open. The very first
+    round picks a random starter; later rounds pass the opening seat along.
+    """
     if player_id != room.get("host"):
         return room, "mp_host_only"
     if room.get("state") == "playing":
         return room, "mp_room_started"
-    if len(room.get("players") or []) < MIN_PLAYERS:
+    players = room.get("players") or []
+    if len(players) < MIN_PLAYERS:
         return room, "mp_need_players"
     stamp = time.time() if now is None else now
+    picker = rng or random
+    if room.get("state") == "finished":
+        starter = (int(room.get("starter") or 0) + 1) % len(players)
+    else:
+        starter = picker.randrange(len(players))
     room = dict(
         room,
         word=word or game.getRandomWord(room.get("language")),
         letters=[],
         wrong_guesses=0,
-        turn=0,
+        turn=starter,
+        starter=starter,
         turn_started=stamp,
         state="playing",
         result=None,
         notice=None,
+        last_guess=None,
         updated_at=stamp,
     )
     room["players"] = [
-        dict(p, hits=0, misses=0, strikes=0) for p in room.get("players") or []
+        dict(p, hits=0, misses=0, round=0, strikes=0) for p in players
     ]
     return room, None
 
@@ -139,7 +163,7 @@ def current_player(room):
 
 
 def room_winner(room):
-    """The player with the most revealed letters in a solved word, or None on a tie or loss."""
+    """Highest letter-score this round on a win; None on a tie or loss."""
     status = game.round_status(
         room.get("word"), room.get("letters") or [], room.get("wrong_guesses") or 0
     )
@@ -148,33 +172,24 @@ def room_winner(room):
     players = room.get("players") or []
     if not players:
         return None
-    best = max(p.get("hits", 0) for p in players)
-    leaders = [p for p in players if p.get("hits", 0) == best]
+    best = max(p.get("round", 0) for p in players)
+    leaders = [p for p in players if p.get("round", 0) == best]
     return leaders[0]["id"] if len(leaders) == 1 else None
 
 
-def round_shares(players, points, status):
-    """Split the round's points by contribution.
-
-    A solved word pays out by revealed letters; a lost word charges the penalty
-    to whoever guessed wrong. Nobody earns points for watching.
-    """
-    key = "hits" if status == "won" else "misses"
-    total = sum(p.get(key, 0) for p in players)
-    if not total:
-        return {p["id"]: 0 for p in players}
-    return {p["id"]: round(points * p.get(key, 0) / total) for p in players}
+def round_shares(players):
+    """Each player's letter-score for this round (already applied to score)."""
+    return {p["id"]: int(p.get("round") or 0) for p in players}
 
 
 def _finish(room, status, now=None):
     word = room["word"]
     letters = room.get("letters") or []
-    wrong = room.get("wrong_guesses") or 0
-    points = game.calculate_points(wrong, word, letters, status == "won")
-    shares = round_shares(room["players"], points, status)
-    room["players"] = [
-        dict(p, score=p.get("score", 0) + shares[p["id"]]) for p in room["players"]
-    ]
+    language = room.get("language")
+    points = game.calculate_points(
+        room.get("wrong_guesses") or 0, word, letters, status == "won", language
+    )
+    shares = round_shares(room["players"])
     room["state"] = "finished"
     room["result"] = {
         "status": status,
@@ -182,12 +197,17 @@ def _finish(room, status, now=None):
         "points": points,
         "shares": shares,
         "winner": room_winner(room),
+        "letter_values": game.letter_values(language),
     }
     return touch(room, now)
 
 
 def guess(room, player_id, letter, now=None):
-    """Apply one guess. A hit keeps the turn, a miss passes it on."""
+    """Apply one guess. A hit keeps the turn, a miss passes it on.
+
+    Points land immediately from the language's letter table so both sides see
+    why a guess paid what it did.
+    """
     if room.get("state") != "playing":
         return room, "mp_not_playing"
     if current_player(room) != player_id:
@@ -196,12 +216,16 @@ def guess(room, player_id, letter, now=None):
     if len(letter) != 1 or not letter.isalpha() or letter in room.get("letters", []):
         return room, "mp_bad_letter"
     word = room["word"]
+    language = room.get("language")
+    delta = game.score_guess(language, word, letter)
     letters, wrong, status = game.apply_guess(
         word, room.get("letters") or [], room.get("wrong_guesses") or 0, letter
     )
     players = [dict(p) for p in room["players"]]
     index = int(room.get("turn") or 0) % len(players)
     players[index]["strikes"] = 0
+    players[index]["round"] = players[index].get("round", 0) + delta
+    players[index]["score"] = players[index].get("score", 0) + delta
     stamp = time.time() if now is None else now
     room = dict(
         room,
@@ -209,6 +233,12 @@ def guess(room, player_id, letter, now=None):
         wrong_guesses=wrong,
         players=players,
         notice=None,
+        last_guess={
+            "player": player_id,
+            "letter": letter.upper(),
+            "points": delta,
+            "value": game.letter_value(language, letter),
+        },
         turn_started=stamp,
         updated_at=stamp,
     )
@@ -303,7 +333,9 @@ def public_state(room, now=None):
         "notice": room.get("notice"),
         "tiles": game.reveal(word, letters, status) if word else [],
         "letter_states": game.letter_states(letters, word),
+        "letter_values": game.letter_values(room.get("language")),
         "wrong_guesses": wrong,
         "drawing": game.drawing_for(wrong, status if word else "playing"),
+        "last_guess": room.get("last_guess") if playing or finished else None,
         "result": room.get("result") if finished else None,
     }

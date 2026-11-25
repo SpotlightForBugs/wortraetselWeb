@@ -97,6 +97,22 @@ def setScore(username_or_email, score, overwrite=False):
     return False
 
 
+def set_username(email, username):
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    document.update({"username": username})
+    return True
+
+
+def delete_user_doc(email):
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    document.delete()
+    return True
+
+
 def add_user_to_db(email, username):
     db = getDB()
     users = getUsers()

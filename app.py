@@ -136,8 +136,9 @@ def _settle_round():
         return
     success = status == "won"
     word = session["word"]
+    language = play_logic.coerce_language(session.get("language"))
     points = play_logic.calculate_points(
-        session["wrong_guesses"], word, session["letters"], success
+        session["wrong_guesses"], word, session["letters"], success, language
     )
     offer = False
     if "username" in session:
@@ -148,6 +149,7 @@ def _settle_round():
                 wrong_guesses=session["wrong_guesses"],
                 success=True,
                 all_guesses=session["letters"],
+                language=language,
             )
         else:
             play_logic.finish_game(
@@ -157,6 +159,7 @@ def _settle_round():
                 success=False,
                 all_guesses=session["letters"],
                 legacy_account=accounts.is_legacy(session["username"]),
+                language=language,
             )
         before = session.get("shown_score") or 0
         session["shown_score"] = play_logic.score_after_round(
@@ -490,16 +493,73 @@ def logout():
     return redirect(url_for("game"))
 
 
+def _account_reply(ok, error=None, **extra):
+    _ensure_round()
+    payload = _payload()
+    payload.update(extra)
+    payload["ok"] = ok
+    if error:
+        payload["error"] = i18n.text(session["language"], error)
+        payload["error_key"] = error
+    return jsonify(payload)
+
+
+@app.route("/account/name", methods=["POST"])
+def account_name():
+    if "username" not in session:
+        return _account_reply(False, "session_expired"), 401
+    ok, result = accounts.update_display_name(
+        session["username"], request.form.get("username")
+    )
+    if not ok:
+        return _account_reply(False, result)
+    session["display_name"] = result
+    return _account_reply(True)
+
+
+@app.route("/account/password", methods=["POST"])
+def account_password():
+    if "username" not in session:
+        return _account_reply(False, "session_expired"), 401
+    ok, error = accounts.change_password(
+        session["username"],
+        request.form.get("current_password"),
+        request.form.get("new_password"),
+    )
+    if not ok:
+        return _account_reply(False, error)
+    return _account_reply(True)
+
+
+@app.route("/account/delete", methods=["POST"])
+def account_delete():
+    if "username" not in session:
+        return _account_reply(False, "session_expired"), 401
+    ok, error = accounts.delete_account(
+        session["username"], request.form.get("password")
+    )
+    if not ok:
+        return _account_reply(False, error)
+    session.clear()
+    _ensure_round()
+    return _account_reply(True)
+
+
 def _player_id():
     if "mp_id" not in session:
         session["mp_id"] = uuid.uuid4().hex
     return session["mp_id"]
 
 
-def _player_name(language):
+def _player_name(language, requested=None):
     if "username" in session:
         return session.get("display_name") or session["username"].split("@")[0]
-    return f"{i18n.text(language, 'guest')} {_player_id()[:4].upper()}"
+    fallback = f"{i18n.text(language, 'guest')} {_player_id()[:4].upper()}"
+    if requested is not None:
+        session["guest_name"] = multiplayer.sanitize_name(requested, fallback)
+    elif "guest_name" not in session:
+        session["guest_name"] = fallback
+    return session["guest_name"]
 
 
 @app.route("/multiplayer/create", methods=["POST"])
@@ -519,6 +579,10 @@ def multiplayer_create():
 
 @app.route("/multiplayer/join", methods=["POST"])
 def multiplayer_join():
+    _ensure_round()
+    language = session.get("language") or "en"
+    if "username" not in session:
+        _player_name(language, request.form.get("guest_name"))
     code = multiplayer.normalize_code(request.form.get("code"))
     if not multiplayer.valid_code(code):
         return redirect(url_for("game"))
@@ -572,16 +636,22 @@ def _broadcast(room):
 
 
 def _award_room(room):
-    """Signed-in players' share of the round goes to the global leaderboard."""
+    """Letter-scores from this round: accounts go to the board, guests stash pending."""
     shares = room["result"].get("shares") or {}
+    me = session.get("mp_id")
     for player in room.get("players") or []:
         points = shares.get(player["id"], 0)
-        if not player.get("account") or not points:
+        if not points:
             continue
-        try:
-            firebaseDB.setScore(player["account"], points)
-        except Exception as error:
-            sentry_sdk.capture_exception(error)
+        if player.get("account"):
+            try:
+                firebaseDB.setScore(player["account"], points)
+            except Exception as error:
+                sentry_sdk.capture_exception(error)
+        elif player["id"] == me:
+            session["pending_score"] = play_logic.stash_guest_points(
+                session.get("pending_score", 0), points
+            )
 
 
 @socketio.on("watch")
@@ -607,11 +677,7 @@ def on_join(data):
         emit("room_error", {"error": "mp_room_missing"})
         return
     language = play_logic.coerce_language(session.get("language"))
-    if "username" in session:
-        name = session.get("display_name") or session["username"].split("@")[0]
-    else:
-        name = f"{i18n.text(language, 'guest')} {player_id[:4].upper()}"
-    # One lobby per player: leave_other_rooms runs inside join_room_db.
+    name = _player_name(language, data.get("name") if "username" not in session else None)
     left = firebaseDB.leave_other_rooms(player_id, keep_code=code)
     for left_code, left_room in left:
         if left_room:
