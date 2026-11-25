@@ -60,9 +60,7 @@ class WiktionaryTests(unittest.TestCase):
         self.assertEqual(wiktionary._titles("Labrum", "en"), ["labrum", "Labrum"])
 
     def test_german_titles_prefer_capitalized(self):
-        self.assertEqual(
-            wiktionary._titles("hocksitz", "de"), ["Hocksitz", "hocksitz"]
-        )
+        self.assertEqual(wiktionary._titles("hocksitz", "de"), ["Hocksitz", "hocksitz"])
 
     def test_english_lookup_skips_surname_page(self):
         surname = {
@@ -77,9 +75,7 @@ class WiktionaryTests(unittest.TestCase):
             "en": [
                 {
                     "partOfSpeech": "Noun",
-                    "definitions": [
-                        {"definition": "The uppermost of the mouthparts."}
-                    ],
+                    "definitions": [{"definition": "The uppermost of the mouthparts."}],
                 }
             ]
         }
