@@ -153,6 +153,71 @@ class WiktionaryTests(unittest.TestCase):
                 "Clădire care servește drept locuință",
             )
 
+    def test_dexonline_parses_mda2_range_sense(self):
+        """MDA2 uses @1-3@ and nested markers; must not return the headword line."""
+        payload = {
+            "definitions": [
+                {
+                    "internalRep": (
+                        "@$bacilur&#039;ie$@ $#sf#$ "
+                        "[#At:# DN^{3} / #Pl:# $~&#039;ii$ / "
+                        "#E:# #fr# @$bacillurie$@] @1-3@ "
+                        "(Buletin de) analiză cu "
+                        "(prezența bacililor în urină)."
+                    )
+                }
+            ]
+        }
+        with mock.patch("wiktionary._request_json", return_value=payload):
+            self.assertEqual(
+                wiktionary._dexonline_gloss("baciluria"),
+                "(Buletin de) analiză cu (prezența bacililor în urină)",
+            )
+
+    def test_dexonline_parses_mda2_numbered_senses(self):
+        """MDA2 @1@/@2@ without a period must yield only the first sense."""
+        payload = {
+            "definitions": [
+                {
+                    "internalRep": (
+                        "@$erg&#039;ot$@ $#sn#$ "
+                        "[#At:# DN^4 / #Pl:# $~uri$ / #E:# #fr# @$ergot$@] "
+                        "@1@ Formație vegetală parazitară veninoasă "
+                        "care apare sub formă de mici puncte pe spicul "
+                        "unor graminee. @2@ Boală criptogamică ##a## "
+                        "gramineelor."
+                    )
+                }
+            ]
+        }
+        with mock.patch("wiktionary._request_json", return_value=payload):
+            self.assertEqual(
+                wiktionary._dexonline_gloss("ergot"),
+                (
+                    "Formație vegetală parazitară veninoasă care apare "
+                    "sub formă de mici puncte pe spicul unor graminee"
+                ),
+            )
+
+    def test_dexonline_strips_headword_without_sense_number(self):
+        """DEX '16 entries like aplicare have lemma+POS then the gloss."""
+        payload = {
+            "definitions": [
+                {
+                    "internalRep": (
+                        "@APLIC'ARE,@ $aplicări,$ #s.f.#\n"
+                        "Acțiunea de $a aplica$ și rezultatul ei.\n"
+                        "- #V.# @aplica.@"
+                    )
+                }
+            ]
+        }
+        with mock.patch("wiktionary._request_json", return_value=payload):
+            self.assertEqual(
+                wiktionary._dexonline_gloss("aplicarile"),
+                "Acțiunea de a aplica și rezultatul ei",
+            )
+
     def test_tdk_parses_sense(self):
         payload = [
             {

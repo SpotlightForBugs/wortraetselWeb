@@ -61,6 +61,30 @@ _DWDS_DEF = re.compile(
     r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I
 )
 _DEX_MARK = re.compile(r"[@$#]([^@$#]*)[@$#]")
+_DEX_BRACKET = re.compile(r"\[[^\]]*\]")
+# MDA2 marks senses as @1@ / @1-3@ / @1.@ before the gloss text.
+_DEX_MARKED_SENSE = re.compile(
+    r"@(\d+(?:\s*[-–]\s*\d+)?)(?:\.)?@\s*(.+?)(?=\s*@\d+(?:\s*[-–]\s*\d+)?(?:\.)?@|\s*$)",
+    re.S,
+)
+# Fallback after markers are stripped: "1." / "1-3" / "I. 1.".
+_DEX_SENSE = re.compile(
+    r"(?:^|\s)(?:[IVX]+\.\s+)?(\d+(?:\s*[-–]\s*\d+)?)\s*[.)]?\s+(.+)$"
+)
+_DEX_NEXT_SENSE = re.compile(
+    r"\s+\d+(?:\s*[-–]\s*\d+)?\s*[.)]?(?=\s+\S)"
+)
+_DEX_CUT = re.compile(r"\s+(?:\*|◊|♦)\s+")
+# DEX '09/'16 often has no sense number: "APLIC'ARE, aplicări, s.f. Acțiunea…"
+_DEX_POS_HEAD = re.compile(
+    r"^.*?\b(?:s\.\s*[fnm]\.?|sf|sm|sn|adj\.?|vb\.?|adv\.?|interj\.?|prep\.?|conj\.?)\s+",
+    re.I | re.S,
+)
+_DEX_XREF = re.compile(r"\s+-\s*[Vv]\.\s+")
+_DEX_META_LEFT = re.compile(r"\[At:|\bPl:|\bE:\s|[@#$]")
+_DEX_HEADWORD_LEFT = re.compile(
+    r"^[A-ZĂÂÎȘŢ]{2,}['’`]?[A-ZĂÂÎȘŢ]*\b"
+)
 _META_DESC = re.compile(
     r'<meta\s+name="description"\s+content="([^"]+)"', re.I
 )
@@ -327,11 +351,15 @@ def _native_candidates(word, language):
                 continue
             if title not in found:
                 found.append(title)
+    # Prefer titles that *add* diacritics (casa → casă), never ones that
+    # strip them (casă → casa), so the verb "casa" cannot beat the noun.
+    shown_marks = sum(1 for ch in shown if ord(ch) >= 128)
     preferred = [
         title
         for title in found
         if title.casefold() != shown.casefold()
         and not _only_stress_marks(title, shown)
+        and sum(1 for ch in title if ord(ch) >= 128) > shown_marks
     ]
     # Bare hangman spelling before stress-only lookalikes (casá).
     ordered = []
@@ -421,20 +449,49 @@ def _dwds_gloss(term):
 
 
 def _dexonline_gloss(term):
-    """First Dexonline sense for a Romanian lemma, or None."""
+    """First Dexonline sense for a Romanian lemma, or None.
+
+    Dexonline ``internalRep`` mixes lemma, POS, bracketed attestation, and
+    sense text with ``@``/``$``/``#`` markers. MDA2 often uses range heads
+    like ``@1-3@`` instead of ``@1.@``, so a narrow ``1.`` match used to
+    return the whole headword line (e.g. baciluria).
+    """
     payload = _request_json(_DEXONLINE.format(term=urllib.parse.quote(term)))
     if not payload:
         return None
     for entry in payload.get("definitions") or []:
-        rep = entry.get("internalRep") or ""
-        text = _DEX_MARK.sub(r"\1", rep)
-        text = html.unescape(text)
-        match = re.search(
-            r"(?:^|[.])\s*1\.\s*(.+?)(?:\s*\*\s*|\s*2\.|\s*$)", text
-        )
-        if match:
-            text = match.group(1)
+        rep = html.unescape(entry.get("internalRep") or "")
+        if not rep:
+            continue
+        marked = _DEX_MARKED_SENSE.search(rep)
+        if marked:
+            text = marked.group(2)
+        else:
+            text = _DEX_BRACKET.sub("", rep)
+            for _ in range(6):
+                cleaned = _DEX_MARK.sub(r"\1", text)
+                if cleaned == text:
+                    break
+                text = cleaned
+            text = _SPACE.sub(" ", text).strip()
+            match = _DEX_SENSE.search(text)
+            if match:
+                text = match.group(2)
+            else:
+                text = _DEX_POS_HEAD.sub("", text, count=1)
+            text = _DEX_NEXT_SENSE.split(text, maxsplit=1)[0]
+        # Nested @ $ # still sit inside the sense body (##a##, @$lemma$@).
+        text = _DEX_BRACKET.sub("", text)
+        for _ in range(6):
+            cleaned = _DEX_MARK.sub(r"\1", text)
+            if cleaned == text:
+                break
+            text = cleaned
+        text = _DEX_CUT.split(text, maxsplit=1)[0]
+        text = _DEX_XREF.split(text, maxsplit=1)[0]
         text = _SPACE.sub(" ", text).strip(" .;")
+        if _DEX_META_LEFT.search(text) or _DEX_HEADWORD_LEFT.match(text):
+            continue
         if _usable(text, term):
             return text
     return None
