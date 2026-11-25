@@ -28,7 +28,26 @@
       </div>
       <div class="result-gloss" id="mp-gloss" hidden>
         <p class="result-definition" id="mp-definition"></p>
-        <span class="result-source" id="mp-source" hidden></span>
+        <p class="result-source" id="mp-source" hidden>
+          <svg
+            class="result-source-icon"
+            viewBox="0 0 24 24"
+            width="14"
+            height="14"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path
+              fill="currentColor"
+              d="M6 4.5A2.5 2.5 0 0 1 8.5 2H19a1 1 0 0 1 1 1v16.5a.5.5 0 0 1-.8.4L16 17.5l-3.2 2.4a.5.5 0 0 1-.8-.4V4.5A.5.5 0 0 0 11.5 4H8.5A.5.5 0 0 0 8 4.5v13A1.5 1.5 0 0 1 6.5 19H5a1 1 0 0 1-1-1V7a2.5 2.5 0 0 1 2-2.45V4.5Z"
+            />
+          </svg>
+          <span class="result-source-label" data-i18n="gloss_source"
+            >{{ copy.gloss_source }}</span
+          >
+          <span class="result-source-sep" aria-hidden="true"></span>
+          <span id="mp-source-name" class="result-source-name"></span>
+        </p>
       </div>
       <div class="mp-lobby" id="lobby">
         <p>{{ copy.mp_invite }}</p>
@@ -181,13 +200,12 @@
       var wrap = $("mp-gloss");
       var node = $("mp-definition");
       var source = $("mp-source");
+      var sourceName = $("mp-source-name");
       if (!wrap || !node) return;
       wrap.hidden = true;
       node.textContent = "";
-      if (source) {
-        source.hidden = true;
-        source.textContent = "";
-      }
+      if (source) source.hidden = true;
+      if (sourceName) sourceName.textContent = "";
       if (!word) return;
       var lang = current.language || document.documentElement.getAttribute("data-lang") || "en";
       fetch(
@@ -202,33 +220,26 @@
           if (!text) {
             wrap.hidden = true;
             node.textContent = "";
-            if (source) {
-              source.hidden = true;
-              source.textContent = "";
-            }
+            if (source) source.hidden = true;
+            if (sourceName) sourceName.textContent = "";
             return;
           }
           node.textContent = text;
-          if (source) {
-            var name = data && data.source ? String(data.source).trim() : "";
-            if (name) {
-              var template = (copy && copy.gloss_from) || "from {source}";
-              source.textContent = template.replace("{source}", name);
-              source.hidden = false;
-            } else {
-              source.hidden = true;
-              source.textContent = "";
-            }
+          var name = data && data.source ? String(data.source).trim() : "";
+          if (source && sourceName && name) {
+            sourceName.textContent = name;
+            source.hidden = false;
+          } else if (source) {
+            source.hidden = true;
+            if (sourceName) sourceName.textContent = "";
           }
           wrap.hidden = false;
         })
         .catch(function () {
           wrap.hidden = true;
           node.textContent = "";
-          if (source) {
-            source.hidden = true;
-            source.textContent = "";
-          }
+          if (source) source.hidden = true;
+          if (sourceName) sourceName.textContent = "";
         });
     }
 
