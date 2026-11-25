@@ -10,12 +10,18 @@ block content %}
     <p id="site-announcement-text">{{ announcement }}</p>
   </div>
   <header class="header">
-    <div class="username" id="player-name">{{ username }}</div>
+    <div class="header-brand">
+      <div class="username" id="player-name">{{ username }}</div>
+    </div>
     <div class="header-actions">
-      <div class="language-switcher">
-        <p data-i18n="change_language">{{ copy.change_language }}</p>
+      <div class="header-lang" role="group" aria-label="{{ copy.change_language }}">
         <form method="post" id="language-form" action="{{ url_for('set_language') }}">
-          <select name="language">
+          <select
+            name="language"
+            id="language-select"
+            data-i18n-aria="change_language"
+            aria-label="{{ copy.change_language }}"
+          >
             {% for language in all_languages %}
             <option value="{{ language }}" {% if language == user_language %}selected{% endif %}>
               {{ language_names[language] }}
@@ -24,73 +30,75 @@ block content %}
           </select>
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         </form>
+        <div class="flags">
+          <img
+            id="language-flag"
+            src="https://flagsapi.com/{{ language_flag }}/shiny/64.png"
+            width="28"
+            height="28"
+            alt="{{ language_names[user_language] }}"
+          />
+          <img
+            id="us-flag"
+            src="https://flagsapi.com/US/shiny/64.png"
+            width="28"
+            height="28"
+            alt="US"
+            {% if user_language != 'en' %}hidden{% endif %}
+          />
+        </div>
       </div>
-      <div class="flags">
-        <img
-          id="language-flag"
-          src="https://flagsapi.com/{{ language_flag }}/shiny/64.png"
-          width="32"
-          height="32"
-          alt="{{ language_names[user_language] }}"
-        />
-        <img
-          id="us-flag"
-          src="https://flagsapi.com/US/shiny/64.png"
-          width="32"
-          height="32"
-          alt="US"
-          {% if user_language != 'en' %}hidden{% endif %}
-        />
-      </div>
-      <form id="theme-form" action="{{ url_for('dark_mode') }}" method="post">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button
-          type="submit"
-          id="theme"
-          name="dark_mode"
-          value="dark_mode"
-          class="btn {% if dark_mode %}btn-light{% else %}btn-dark{% endif %}"
-          data-i18n="{% if dark_mode %}light_mode{% else %}dark_mode{% endif %}"
+      <div class="header-tools">
+        <form id="theme-form" action="{{ url_for('dark_mode') }}" method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button
+            type="submit"
+            id="theme"
+            name="dark_mode"
+            value="dark_mode"
+            class="btn btn-header {% if dark_mode %}btn-light{% else %}btn-dark{% endif %}"
+            data-i18n="{% if dark_mode %}light_mode{% else %}dark_mode{% endif %}"
+          >
+            {% if dark_mode %}{{ copy.light_mode }}{% else %}{{ copy.dark_mode }}{% endif %}
+          </button>
+        </form>
+        <a
+          class="btn btn-primary btn-header"
+          id="save-score"
+          href="{{ url_for('login') }}"
+          data-auth="login"
+          data-i18n="log_in"
+          {% if not guest %}hidden{% endif %}
+          >{{ copy.log_in }}</a
         >
-          {% if dark_mode %}{{ copy.light_mode }}{% else %}{{ copy.dark_mode }}{% endif %}
+        <button
+          type="button"
+          class="btn btn-light btn-header"
+          id="account-open"
+          data-i18n="account"
+          {% if guest %}hidden{% endif %}
+        >
+          {{ copy.account }}
         </button>
-      </form>
-      <a
-        class="btn btn-primary"
-        id="save-score"
-        href="{{ url_for('login') }}"
-        data-auth="login"
-        data-i18n="log_in"
-        {% if not guest %}hidden{% endif %}
-        >{{ copy.log_in }}</a
-      >
-      <button
-        type="button"
-        class="btn btn-light"
-        id="account-open"
-        data-i18n="account"
-        {% if guest %}hidden{% endif %}
-      >
-        {{ copy.account }}
-      </button>
-      <button
-        type="button"
-        class="btn btn-light"
-        id="admin-open"
-        data-i18n="admin_open"
-        {% if not is_admin %}hidden{% endif %}
-      >
-        {{ copy.admin_open }}
-      </button>
-      <button
-        type="button"
-        class="btn btn-primary"
-        id="log-out"
-        data-i18n="log_out"
-        {% if guest %}hidden{% endif %}
-      >
-        {{ copy.log_out }}
-      </button>
+        <button
+          type="button"
+          class="btn btn-light btn-header"
+          id="admin-open"
+          data-i18n="admin_open"
+          {% if not is_admin %}hidden{% endif %}
+        >
+          {{ copy.admin_open }}
+        </button>
+        <button
+          type="button"
+          class="btn later btn-header"
+          id="log-out"
+          data-i18n="log_out"
+          {% if guest %}hidden{% endif %}
+        >
+          {{ copy.log_out }}
+        </button>
+      </div>
     </div>
   </header>
 
@@ -207,7 +215,7 @@ block content %}
       id="info-panel"
       class="info-panel"
       aria-labelledby="info-panel-title"
-      {% if not result %}hidden{% endif %}
+      hidden
     >
       <h3 id="info-panel-title" class="info-panel-title" data-i18n="info_panel">
         {{ copy.info_panel }}
@@ -229,30 +237,6 @@ block content %}
           />
           <span id="result-source-name" class="result-source-name"></span>
         </p>
-      </div>
-      <div class="info-panel-prefs">
-        <label class="info-autoskip" for="result-autoskip">
-          <input
-            type="checkbox"
-            id="result-autoskip"
-            {% if state_json.result_prefs.autoskip %}checked{% endif %}
-          />
-          <span data-i18n="result_autoskip">{{ copy.result_autoskip }}</span>
-        </label>
-        <label class="info-autoskip-delay" for="result-autoskip-sec">
-          <span data-i18n="result_autoskip_delay">{{ copy.result_autoskip_delay }}</span>
-          <select id="result-autoskip-sec">
-            {% set delay = state_json.result_prefs.seconds %}
-            <option value="0" {% if delay == 0 %}selected{% endif %} data-i18n="result_autoskip_instant">
-              {{ copy.result_autoskip_instant }}
-            </option>
-            {% for sec in [5, 10, 15, 20, 25, 30] %}
-            <option value="{{ sec }}" {% if delay == sec %}selected{% endif %}>
-              {{ sec }} s
-            </option>
-            {% endfor %}
-          </select>
-        </label>
       </div>
     </aside>
     <section class="auth-card result-card" role="dialog" aria-modal="true">
@@ -329,6 +313,34 @@ block content %}
         </div>
         <input type="submit" data-i18n="save_name" value="{{ copy.save_name }}" />
       </form>
+    </section>
+
+    <section class="auth-section">
+      <h3 data-i18n="account_gameplay">{{ copy.account_gameplay }}</h3>
+      <div class="account-prefs">
+        <label class="info-autoskip" for="result-autoskip">
+          <input
+            type="checkbox"
+            id="result-autoskip"
+            {% if state_json.result_prefs.autoskip %}checked{% endif %}
+          />
+          <span data-i18n="result_autoskip">{{ copy.result_autoskip }}</span>
+        </label>
+        <label class="info-autoskip-delay" for="result-autoskip-sec">
+          <span data-i18n="result_autoskip_delay">{{ copy.result_autoskip_delay }}</span>
+          <select id="result-autoskip-sec">
+            {% set delay = state_json.result_prefs.seconds %}
+            <option value="0" {% if delay == 0 %}selected{% endif %} data-i18n="result_autoskip_instant">
+              {{ copy.result_autoskip_instant }}
+            </option>
+            {% for sec in [5, 10, 15, 20, 25, 30] %}
+            <option value="{{ sec }}" {% if delay == sec %}selected{% endif %}>
+              {{ sec }} s
+            </option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
     </section>
 
     <section class="auth-section">
@@ -1035,6 +1047,7 @@ block content %}
   }
 
   function paintDefinition(word) {
+    var info = document.getElementById("info-panel");
     var wrap = document.getElementById("result-gloss");
     var node = document.getElementById("result-definition");
     var source = document.getElementById("result-source");
@@ -1042,6 +1055,7 @@ block content %}
     var sourceIcon = document.getElementById("result-source-icon");
     if (!wrap || !node) return;
     wrap.hidden = true;
+    if (info) info.hidden = true;
     node.textContent = "";
     paintSourceAttribution(source, sourceName, sourceIcon, "");
     if (!word) {
@@ -1063,6 +1077,7 @@ block content %}
         var text = data && data.definition ? String(data.definition).trim() : "";
         if (!text) {
           wrap.hidden = true;
+          if (info) info.hidden = true;
           node.textContent = "";
           paintSourceAttribution(source, sourceName, sourceIcon, "");
           fitDrawing();
@@ -1076,10 +1091,12 @@ block content %}
           data && data.source ? String(data.source).trim() : "",
         );
         wrap.hidden = false;
+        if (info) info.hidden = false;
         fitDrawing();
       })
       .catch(function () {
         wrap.hidden = true;
+        if (info) info.hidden = true;
         node.textContent = "";
         paintSourceAttribution(source, sourceName, sourceIcon, "");
         fitDrawing();
@@ -1106,7 +1123,7 @@ block content %}
     document.getElementById("result-save").hidden = !result.offer;
     document.getElementById("result-later").hidden = !result.offer;
     layer.hidden = false;
-    if (info) info.hidden = false;
+    if (info) info.hidden = true;
     fitDrawing();
     syncScrollLock();
     armResultAdvance();

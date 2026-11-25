@@ -61,21 +61,68 @@ body.dark a {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px 16px;
-  flex-wrap: wrap;
-  padding: 12px 14px;
+  gap: 10px 14px;
+  flex-wrap: nowrap;
+  padding: 10px 12px;
+}
+
+.header-brand {
+  min-width: 0;
+  flex: 0 1 auto;
 }
 
 .username {
   font-weight: 700;
   font-size: 1.05rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 28vw;
 }
 
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 10px 14px;
+  justify-content: flex-end;
+  gap: 8px 10px;
+  flex: 1 1 auto;
   flex-wrap: wrap;
+  min-width: 0;
+}
+
+.header-lang {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.header-lang select {
+  max-width: 9.5rem;
+}
+
+.header-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.header-tools .btn-header {
+  width: auto;
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  margin: 0;
+  font-size: 0.88rem;
+  white-space: nowrap;
+}
+
+.header-tools #log-out {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
 }
 
 .language-switcher {
@@ -735,8 +782,8 @@ body.scroll-lock {
   width: min(440px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  max-height: min(72vh, 560px);
+  gap: 8px;
+  max-height: min(46vh, 360px);
 }
 
 #result-layer .info-panel,
@@ -750,34 +797,30 @@ body.scroll-lock {
 }
 
 #result-layer .result-card {
-  max-height: min(36vh, 260px);
+  max-height: min(28vh, 220px);
 }
 
 #result-layer .info-panel {
-  max-height: min(34vh, 280px);
+  max-height: min(22vh, 160px);
   background: var(--card);
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 14px;
-  padding: 12px 14px 14px;
+  padding: 10px 12px 12px;
   text-align: left;
 }
 
 .info-panel-title {
-  margin: 0 0 8px;
-  font-size: 0.92rem;
+  margin: 0 0 6px;
+  font-size: 0.88rem;
   font-weight: 700;
   letter-spacing: -0.01em;
 }
 
-.info-panel-prefs {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
+.account-prefs {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 16px;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .info-autoskip,
@@ -787,7 +830,7 @@ body.scroll-lock {
   gap: 8px;
   margin: 0;
   color: var(--muted);
-  font-size: 0.82rem;
+  font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -799,9 +842,14 @@ body.scroll-lock {
   cursor: pointer;
 }
 
+.info-autoskip-delay {
+  justify-content: space-between;
+  width: 100%;
+}
+
 .info-autoskip-delay select {
   min-width: 7.5rem;
-  padding: 4px 8px;
+  padding: 6px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--bg);
@@ -821,12 +869,14 @@ body:has(#result-layer:not([hidden])) .score-board,
 body:has(#result-layer:not([hidden])) .mp-entry,
 body:has(#result-layer:not([hidden])) .leaderboard,
 body:has(#result-layer:not([hidden])) .kramli-ad,
-body:has(#result-layer:not([hidden])) .site-announcement {
+body:has(#result-layer:not([hidden])) .site-announcement,
+body:has(#result-layer:not([hidden])) .word {
   display: none;
 }
 
 body:has(#result-layer:not([hidden])) .page {
   margin-top: 12px;
+  padding-bottom: min(48vh, 380px);
 }
 
 body:has(#result-layer:not([hidden])) .game-area {
@@ -837,10 +887,6 @@ body:has(#result-layer:not([hidden])) .game-area {
 
 body:has(#result-layer:not([hidden])) .game-area > .panel {
   width: min(100%, 720px);
-}
-
-body:has(#result-layer:not([hidden])) .word {
-  margin-bottom: 0;
 }
 
 .sheet .auth-card {
@@ -944,13 +990,26 @@ cap-widget {
   }
 
   .header {
-    align-items: flex-start;
-    padding: 14px;
+    align-items: center;
+    padding: 10px 12px;
+    flex-wrap: wrap;
+  }
+
+  .header-brand {
+    width: 100%;
+  }
+
+  .username {
+    max-width: 100%;
   }
 
   .header-actions {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .header-tools {
+    justify-content: flex-end;
   }
 
   .language-switcher {
@@ -1022,6 +1081,7 @@ cap-widget {
 
   #result-layer .result-stack {
     width: 100%;
+    max-height: min(44vh, 340px);
   }
 
   #result-layer .info-panel,
@@ -1031,11 +1091,15 @@ cap-widget {
   }
 
   #result-layer .result-card {
-    max-height: min(40vh, 280px);
+    max-height: min(26vh, 200px);
   }
 
   #result-layer .info-panel {
-    max-height: min(36vh, 300px);
+    max-height: min(20vh, 140px);
+  }
+
+  body:has(#result-layer:not([hidden])) .page {
+    padding-bottom: min(46vh, 360px);
   }
 
   .score-board table,
@@ -1084,24 +1148,29 @@ cap-widget {
   }
 
   .header {
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 10px;
   }
 
   .username {
     font-size: 1rem;
   }
 
-  .header-actions .btn {
-    min-width: 0;
-    height: 40px;
-    padding: 0 10px;
-    font-size: 0.9rem;
+  .header-lang select {
+    max-width: 8.25rem;
+    padding: 5px 6px;
+    font-size: 0.88rem;
+  }
+
+  .header-tools .btn-header {
+    height: 34px;
+    padding: 0 9px;
+    font-size: 0.84rem;
   }
 
   .flags img {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
   }
 
   .word {
