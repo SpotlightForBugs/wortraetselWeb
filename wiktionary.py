@@ -38,13 +38,9 @@ _BOLD = re.compile(r"'{2,}")
 _WIKI_LINK = re.compile(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]")
 _WIKI_TEMPLATE = re.compile(r"\{\{[^{}]*\}\}")
 _DE_SENSE = re.compile(r"^:\[(\d+)\]\s*(.+)$")
-_DE_BEDEUTUNGEN = re.compile(
-    r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S
-)
+_DE_BEDEUTUNGEN = re.compile(r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S)
 _ES_SENSE = re.compile(r"^;(\d+)\s*(?:\{\{[^{}]*\}\})?\s*:\s*(.+)$")
-_DWDS_DEF = re.compile(
-    r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I
-)
+_DWDS_DEF = re.compile(r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I)
 _WEAK_GLOSS = re.compile(
     r"^(?:a |an |eine? )?"
     r"(?:surname|given name|family name|male given name|female given name|"
