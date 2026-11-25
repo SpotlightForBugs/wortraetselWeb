@@ -191,7 +191,7 @@ def _finish(room, status, now=None):
     room["state"] = "finished"
     room["result"] = {
         "status": status,
-        "word": word,
+        "word": game.display_word(language, word),
         "points": points,
         "shares": shares,
         "winner": room_winner(room),

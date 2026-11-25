@@ -48,6 +48,18 @@ class WordListTests(unittest.TestCase):
         self.assertNotIn(" ", joined)
         self.assertNotIn('"', joined)
 
+    def test_german_reveal_keeps_umlauts(self):
+        words = game._local_words("de")
+        self.assertIn("aalraeucherei", words)
+        self.assertEqual(game.display_word("de", "aalraeucherei"), "aalräucherei")
+        self.assertEqual(game.display_word("de", "aaskaefer"), "aaskäfer")
+        self.assertEqual(game.display_word("de", "abaenderung"), "abänderung")
+        self.assertEqual(game.display_word("en", "house"), "house")
+
+    def test_normalize_folds_german_umlauts_for_play(self):
+        self.assertEqual(game.normalize_word("Aalräucherei"), "aalraeucherei")
+        self.assertEqual(game.normalize_word("Straße"), "strasse")
+
 
 if __name__ == "__main__":
     unittest.main()

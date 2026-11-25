@@ -41,6 +41,17 @@ class LanguageTests(unittest.TestCase):
         self.assertEqual(state["html_lang"], "de")
         self.assertEqual(state["tiles"], ["h", "a", "u", "s"])
 
+    def test_german_loss_message_shows_umlauts(self):
+        state = i18n.client_state(
+            "de",
+            "aalraeucherei",
+            [],
+            9,
+            result={"success": False, "word": "aalraeucherei", "offer": False},
+        )
+        self.assertIn("Aalräucherei", state["result"]["message"])
+        self.assertNotIn("Aalraeucherei", state["result"]["message"])
+
 
 class GuessTests(unittest.TestCase):
     def test_a_guess_updates_the_same_word(self):

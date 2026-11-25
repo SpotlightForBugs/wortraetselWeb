@@ -27,6 +27,7 @@ _LANGUAGE_FLAGS = {
     "tr": "TR",
 }
 _WORD_LISTS = {}
+_DISPLAY_WORDS = {}
 _LETTER_RATES = {}
 # Hit payout scales with how rare the letter is in that language's word list.
 _LETTER_VALUE_FLOOR = 5
@@ -59,6 +60,7 @@ def normalize_word(raw):
 
     The word dump includes phrases and UI strings such as "Das ist ein Traum".
     Anything with spaces, quotes, or other non-letters is dropped.
+    German umlauts fold to ae/oe/ue/ss so the A-Z board can still spell them.
     """
     if not isinstance(raw, str) or any(ch.isspace() for ch in raw):
         return None
@@ -79,16 +81,33 @@ def _local_words(name):
     if name not in _WORD_LISTS:
         path = Path(__file__).resolve().parent / "data" / f"{name}.txt"
         words = []
+        display = {}
         seen = set()
         for line in path.read_text(encoding="utf-8").splitlines():
-            word = normalize_word(line)
-            if word and word not in seen:
-                seen.add(word)
-                words.append(word)
+            raw = line.strip()
+            word = normalize_word(raw)
+            if not word or word in seen:
+                continue
+            seen.add(word)
+            words.append(word)
+            shown = raw.lower()
+            if shown != word:
+                display[word] = shown
         if not words:
             raise ValueError(f"no hangman words for {name}")
         _WORD_LISTS[name] = words
+        _DISPLAY_WORDS[name] = display
     return _WORD_LISTS[name]
+
+
+def display_word(language, word):
+    """Spelling shown when a round ends. German keeps real umlauts."""
+    language = coerce_language(language)
+    play = (word or "").lower()
+    if not play:
+        return ""
+    _local_words(language)
+    return _DISPLAY_WORDS.get(language, {}).get(play, play)
 
 
 def isValidLanguage(language):
