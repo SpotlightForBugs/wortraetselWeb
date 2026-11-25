@@ -245,8 +245,14 @@ block content %}
 
 <div id="account-layer" class="sheet auth-sheet" hidden>
   <section class="auth-card auth-card--settings" role="dialog" aria-modal="true" aria-labelledby="account-title">
-    <button type="button" id="account-close" class="auth-close" data-i18n="close">
-      {{ copy.close }}
+    <button
+      type="button"
+      id="account-close"
+      class="auth-close"
+      data-i18n-aria="close"
+      aria-label="{{ copy.close }}"
+    >
+      <span aria-hidden="true">&times;</span>
     </button>
     <header class="auth-card-head">
       <p class="auth-kicker">Hangman</p>
@@ -309,8 +315,14 @@ block content %}
 
 <div id="auth-layer" class="sheet auth-sheet" {% if not auth %}hidden{% endif %}>
   <section class="auth-card auth-card--panel" role="dialog" aria-modal="true">
-    <button type="button" id="auth-close" class="auth-close" data-i18n="close">
-      {{ copy.close }}
+    <button
+      type="button"
+      id="auth-close"
+      class="auth-close"
+      data-i18n-aria="close"
+      aria-label="{{ copy.close }}"
+    >
+      <span aria-hidden="true">&times;</span>
     </button>
     <header class="auth-card-head">
       <p class="auth-kicker">Hangman</p>
@@ -411,7 +423,15 @@ block content %}
 
 <div id="admin-layer" class="sheet auth-sheet" hidden>
   <section class="auth-card auth-card--admin" role="dialog" aria-modal="true" aria-labelledby="admin-title">
-    <button type="button" id="admin-close" class="auth-close" data-i18n="close">{{ copy.close }}</button>
+    <button
+      type="button"
+      id="admin-close"
+      class="auth-close"
+      data-i18n-aria="close"
+      aria-label="{{ copy.close }}"
+    >
+      <span aria-hidden="true">&times;</span>
+    </button>
     <header class="auth-card-head">
       <p class="auth-kicker">Hangman</p>
       <h2 id="admin-title" data-i18n="admin">{{ copy.admin }}</h2>
@@ -486,6 +506,12 @@ block content %}
         return;
       }
       node.textContent = copy[key];
+    });
+    document.querySelectorAll("[data-i18n-aria]").forEach(function (node) {
+      var key = node.getAttribute("data-i18n-aria");
+      if (copy[key]) {
+        node.setAttribute("aria-label", copy[key]);
+      }
     });
     var drawing = document.getElementById("drawing");
     drawing.alt = copy.hangman_alt;

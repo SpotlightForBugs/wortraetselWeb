@@ -390,7 +390,7 @@ tr.me {
 
 .auth-card-head {
   margin: 0 0 16px;
-  padding-right: 28px;
+  padding-right: 40px;
 }
 
 .auth-kicker {
@@ -485,21 +485,32 @@ tr.me {
   position: absolute;
   top: 12px;
   right: 12px;
-  width: 32px;
-  height: 32px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   margin: 0;
   padding: 0;
   border: 1px solid var(--line);
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--bg);
   color: var(--muted);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 1.35rem;
+  line-height: 1;
   cursor: pointer;
+}
+
+.auth-close span {
+  display: block;
+  transform: translateY(-1px);
 }
 
 .auth-close:hover {
   color: var(--text);
+  background: color-mix(in srgb, var(--text) 6%, var(--bg));
 }
 
 .auth-links button {
