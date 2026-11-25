@@ -530,6 +530,55 @@ tr.me {
   height: auto;
 }
 
+.result-next {
+  --result-advance-ms: 6500ms;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.result-next-label {
+  position: relative;
+  z-index: 1;
+}
+
+.result-next.is-counting::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  transform: scaleX(0);
+  transform-origin: left center;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, #fff 10%, transparent) 0%,
+    color-mix(in srgb, #fff 34%, transparent) 55%,
+    color-mix(in srgb, #fff 55%, transparent) 100%
+  );
+  animation: result-next-fill var(--result-advance-ms) linear forwards;
+  pointer-events: none;
+}
+
+.result-next.is-counting.is-paused::before {
+  animation-play-state: paused;
+}
+
+@keyframes result-next-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-next.is-counting::before {
+    animation: none;
+    transform: scaleX(0);
+  }
+}
+
 .auth-card h2 {
   margin: 0;
   font-size: 1.35rem;

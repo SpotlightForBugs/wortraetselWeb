@@ -198,11 +198,11 @@ block content %}
     <button
       type="button"
       id="result-next"
-      class="btn"
+      class="btn result-next"
       data-i18n="next_word"
       {% if result and result.offer %}hidden{% endif %}
     >
-      {{ copy.next_word }}
+      <span class="result-next-label">{{ copy.next_word }}</span>
     </button>
     <button
       type="button"
@@ -421,9 +421,14 @@ block content %}
       }
       if (node.tagName === "INPUT") {
         node.value = copy[key];
-      } else {
-        node.textContent = copy[key];
+        return;
       }
+      var label = node.querySelector(".result-next-label");
+      if (label) {
+        label.textContent = copy[key];
+        return;
+      }
+      node.textContent = copy[key];
     });
     var drawing = document.getElementById("drawing");
     drawing.alt = copy.hangman_alt;
@@ -644,18 +649,82 @@ block content %}
   }
 
   var resultAdvanceTimer = null;
-  var RESULT_ADVANCE_MS = 2500;
+  var resultAdvanceStarted = 0;
+  var resultAdvanceRemaining = 0;
+  var resultAdvancePaused = false;
+  var RESULT_ADVANCE_MS = 6500;
+
+  function resultNextButton() {
+    return document.getElementById("result-next");
+  }
 
   function clearResultAdvance() {
     if (resultAdvanceTimer) {
       clearTimeout(resultAdvanceTimer);
       resultAdvanceTimer = null;
     }
+    resultAdvancePaused = false;
+    resultAdvanceRemaining = 0;
+    var next = resultNextButton();
+    if (next) {
+      next.classList.remove("is-counting", "is-paused");
+    }
+  }
+
+  function pauseResultAdvance() {
+    var next = resultNextButton();
+    if (resultAdvancePaused || !resultAdvanceTimer) {
+      return;
+    }
+    clearTimeout(resultAdvanceTimer);
+    resultAdvanceTimer = null;
+    resultAdvanceRemaining = Math.max(
+      0,
+      resultAdvanceRemaining - (performance.now() - resultAdvanceStarted),
+    );
+    resultAdvancePaused = true;
+    if (next) next.classList.add("is-paused");
+  }
+
+  function resumeResultAdvance() {
+    var next = resultNextButton();
+    if (!resultAdvancePaused || resultAdvanceRemaining <= 0) {
+      if (resultAdvancePaused && resultAdvanceRemaining <= 0) {
+        advanceResult();
+      }
+      return;
+    }
+    resultAdvancePaused = false;
+    if (next) next.classList.remove("is-paused");
+    resultAdvanceStarted = performance.now();
+    resultAdvanceTimer = setTimeout(advanceResult, resultAdvanceRemaining);
+  }
+
+  function armResultAdvance() {
+    clearResultAdvance();
+    var next = resultNextButton();
+    var later = document.getElementById("result-later");
+    var layer = document.getElementById("result-layer");
+    if (layer.hidden) {
+      return;
+    }
+    resultAdvanceRemaining = RESULT_ADVANCE_MS;
+    resultAdvancePaused = false;
+    if (next && !next.hidden) {
+      next.classList.add("is-counting");
+      // Restart the fill animation from the left.
+      next.style.setProperty("--result-advance-ms", RESULT_ADVANCE_MS + "ms");
+      void next.offsetWidth;
+    }
+    if ((next && !next.hidden) || (later && !later.hidden)) {
+      resultAdvanceStarted = performance.now();
+      resultAdvanceTimer = setTimeout(advanceResult, resultAdvanceRemaining);
+    }
   }
 
   function advanceResult() {
     clearResultAdvance();
-    var next = document.getElementById("result-next");
+    var next = resultNextButton();
     var later = document.getElementById("result-later");
     if (!document.getElementById("result-layer").hidden && next && !next.hidden) {
       postForm("/continue", tokenBody()).then(applyState);
@@ -685,8 +754,7 @@ block content %}
     layer.hidden = false;
     fitDrawing();
     syncScrollLock();
-    // Win and lose both move on after a short beat so play stays continuous.
-    resultAdvanceTimer = setTimeout(advanceResult, RESULT_ADVANCE_MS);
+    armResultAdvance();
   }
 
   function applyState(data) {
@@ -914,6 +982,8 @@ block content %}
     clearResultAdvance();
     postForm("/continue", tokenBody()).then(applyState);
   });
+  document.getElementById("result-next").addEventListener("pointerenter", pauseResultAdvance);
+  document.getElementById("result-next").addEventListener("pointerleave", resumeResultAdvance);
   document.getElementById("result-later").addEventListener("click", function () {
     clearResultAdvance();
     postForm("/dismiss_save", tokenBody()).then(applyState);
