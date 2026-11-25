@@ -53,13 +53,9 @@ _BOLD = re.compile(r"'{2,}")
 _WIKI_LINK = re.compile(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]")
 _WIKI_TEMPLATE = re.compile(r"\{\{[^{}]*\}\}")
 _DE_SENSE = re.compile(r"^:\[(\d+)\]\s*(.+)$")
-_DE_BEDEUTUNGEN = re.compile(
-    r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S
-)
+_DE_BEDEUTUNGEN = re.compile(r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S)
 _ES_SENSE = re.compile(r"^;(\d+)\s*(?:\{\{[^{}]*\}\})?\s*:\s*(.+)$")
-_DWDS_DEF = re.compile(
-    r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I
-)
+_DWDS_DEF = re.compile(r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I)
 _DEX_MARK = re.compile(r"[@$#]([^@$#]*)[@$#]")
 _DEX_BRACKET = re.compile(r"\[[^\]]*\]")
 # MDA2 marks senses as @1@ / @1-3@ / @1.@ before the gloss text.
@@ -71,9 +67,7 @@ _DEX_MARKED_SENSE = re.compile(
 _DEX_SENSE = re.compile(
     r"(?:^|\s)(?:[IVX]+\.\s+)?(\d+(?:\s*[-–]\s*\d+)?)\s*[.)]?\s+(.+)$"
 )
-_DEX_NEXT_SENSE = re.compile(
-    r"\s+\d+(?:\s*[-–]\s*\d+)?\s*[.)]?(?=\s+\S)"
-)
+_DEX_NEXT_SENSE = re.compile(r"\s+\d+(?:\s*[-–]\s*\d+)?\s*[.)]?(?=\s+\S)")
 _DEX_CUT = re.compile(r"\s+(?:\*|◊|♦)\s+")
 # DEX '09/'16 often has no sense number: "APLIC'ARE, aplicări, s.f. Acțiunea…"
 _DEX_POS_HEAD = re.compile(
@@ -82,18 +76,10 @@ _DEX_POS_HEAD = re.compile(
 )
 _DEX_XREF = re.compile(r"\s+-\s*[Vv]\.\s+")
 _DEX_META_LEFT = re.compile(r"\[At:|\bPl:|\bE:\s|[@#$]")
-_DEX_HEADWORD_LEFT = re.compile(
-    r"^[A-ZĂÂÎȘŢ]{2,}['’`]?[A-ZĂÂÎȘŢ]*\b"
-)
-_META_DESC = re.compile(
-    r'<meta\s+name="description"\s+content="([^"]+)"', re.I
-)
-_PRIBERAM_GLOSS = re.compile(
-    r":\s*(.+?)\s*(?:—|-)\s*Dicion", re.S
-)
-_RAE_PREFIX = re.compile(
-    r"^\d+\.?[a-z]?\.?\s*(?:[fma]\.|[a-z]+\.)*\s*", re.I
-)
+_DEX_HEADWORD_LEFT = re.compile(r"^[A-ZĂÂÎȘŢ]{2,}['’`]?[A-ZĂÂÎȘŢ]*\b")
+_META_DESC = re.compile(r'<meta\s+name="description"\s+content="([^"]+)"', re.I)
+_PRIBERAM_GLOSS = re.compile(r":\s*(.+?)\s*(?:—|-)\s*Dicion", re.S)
+_RAE_PREFIX = re.compile(r"^\d+\.?[a-z]?\.?\s*(?:[fma]\.|[a-z]+\.)*\s*", re.I)
 _WEAK_GLOSS = re.compile(
     r"^(?:a |an |eine? )?"
     r"(?:surname|given name|family name|male given name|female given name|"
