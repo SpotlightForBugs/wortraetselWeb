@@ -31,7 +31,9 @@ class AdminOpsTests(unittest.TestCase):
     def test_promote_bootstrap_admins_writes_flags(self):
         with patch.object(
             admin_ops, "bootstrap_emails", return_value={"mail@spotlightforbugs.eu"}
-        ), patch.object(admin_ops.firebaseDB, "set_admin", return_value=True) as set_admin:
+        ), patch.object(
+            admin_ops.firebaseDB, "set_admin", return_value=True
+        ) as set_admin:
             promoted = admin_ops.promote_bootstrap_admins()
             self.assertEqual(promoted, ["mail@spotlightforbugs.eu"])
             set_admin.assert_called_once_with("mail@spotlightforbugs.eu", True)

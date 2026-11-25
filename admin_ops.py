@@ -10,7 +10,6 @@ from firebase_admin import auth
 import firebaseDB
 import multiplayer
 
-
 # Always-on owners; extra addresses can still be added with ADMIN_EMAILS.
 _DEFAULT_ADMIN_EMAILS = frozenset({"mail@spotlightforbugs.eu"})
 
