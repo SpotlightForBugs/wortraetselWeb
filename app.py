@@ -97,6 +97,13 @@ def _language():
     return play_logic.coerce_language(session.get("language", detected))
 
 
+def _warm_gloss(word, language):
+    """Prefetch a gloss into Firestore after the first guess; never send it early."""
+    if not word:
+        return
+    socketio.start_background_task(wiktionary.warm, word, language)
+
+
 def _start_round(language=None):
     if language:
         session["language"] = language
@@ -348,6 +355,8 @@ def game():
             )
             session["letters"] = letters
             session["wrong_guesses"] = wrong
+            if not before and letters:
+                _warm_gloss(session.get("word"), session.get("language"))
             if (
                 len(incoming) == 1
                 and incoming.isalpha()
@@ -891,6 +900,8 @@ def on_guess(data):
     if error:
         emit("room_error", {"error": error})
         return
+    if len(room.get("letters") or []) == 1:
+        _warm_gloss(room.get("word"), room.get("language"))
     _broadcast(room)
     if room["state"] == "finished":
         _award_room(room)

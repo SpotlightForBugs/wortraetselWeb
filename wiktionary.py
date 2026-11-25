@@ -1,7 +1,8 @@
 """Short glosses from English Wiktionary. Missing entries stay silent.
 
 Lookups are cached in Firestore (including negative misses) so repeat
-reveals do not hammer the API.
+reveals do not hammer the API. The first guess of a round can warm the
+cache server-side via warm() without sending the gloss to the client.
 """
 
 import html
@@ -120,3 +121,14 @@ def define(word, language):
     except Exception:
         pass
     return gloss
+
+
+def warm(word, language):
+    """Fill the gloss cache without returning anything to the client.
+
+    Safe to run on a background thread after the first guess of a round.
+    """
+    try:
+        define(word, language)
+    except Exception:
+        pass

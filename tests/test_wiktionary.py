@@ -62,6 +62,15 @@ class WiktionaryTests(unittest.TestCase):
     def test_german_titles_prefer_capitalized(self):
         self.assertEqual(wiktionary._titles("hocksitz", "de"), ["Hocksitz", "hocksitz"])
 
+    def test_warm_fills_cache_quietly(self):
+        with mock.patch("wiktionary.define") as define:
+            wiktionary.warm("haus", "de")
+        define.assert_called_once_with("haus", "de")
+
+    def test_warm_swallows_lookup_errors(self):
+        with mock.patch("wiktionary.define", side_effect=RuntimeError("offline")):
+            wiktionary.warm("haus", "de")
+
     def test_english_lookup_skips_surname_page(self):
         surname = {
             "en": [
