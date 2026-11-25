@@ -21,6 +21,10 @@
     />
   </a>
   <div class="kramli-ad-body">
+    <p class="kramli-ad-pitch">
+      <span class="kramli-ad-badge" data-i18n="kramli_ad_label">{{ copy.kramli_ad_label }}</span>
+      <span data-i18n="kramli_pitch">{{ copy.kramli_pitch }}</span>
+    </p>
     <div class="kramli-ad-brand">
       <img
         class="kramli-ad-mark"
@@ -75,12 +79,12 @@
         if (media) media.href = state.href;
       }
       if (copy) {
-        var tag = ad.querySelector('[data-i18n="kramli_tagline"]');
-        var blurb = ad.querySelector('[data-i18n="kramli_blurb"]');
-        var cta = ad.querySelector('[data-i18n="kramli_cta"]');
-        if (tag && copy.kramli_tagline) tag.textContent = copy.kramli_tagline;
-        if (blurb && copy.kramli_blurb) blurb.textContent = copy.kramli_blurb;
-        if (cta && copy.kramli_cta) cta.textContent = copy.kramli_cta;
+        ["kramli_ad_label", "kramli_pitch", "kramli_tagline", "kramli_blurb", "kramli_cta"].forEach(
+          function (key) {
+            var node = ad.querySelector('[data-i18n="' + key + '"]');
+            if (node && copy[key]) node.textContent = copy[key];
+          },
+        );
         if (close && copy.kramli_dismiss) {
           close.setAttribute("aria-label", copy.kramli_dismiss);
         }

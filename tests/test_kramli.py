@@ -16,6 +16,8 @@ class KramliLanguageTests(unittest.TestCase):
 
     def test_copy_keys_exist_for_every_language(self):
         keys = {
+            "kramli_ad_label",
+            "kramli_pitch",
             "kramli_tagline",
             "kramli_blurb",
             "kramli_cta",
