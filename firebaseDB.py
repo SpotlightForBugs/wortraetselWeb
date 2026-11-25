@@ -127,10 +127,76 @@ def get_room(code):
     return snapshot.to_dict() if snapshot.exists else None
 
 
+def delete_room(code):
+    getDB().collection("rooms").document(code).delete()
+
+
+def find_player_room(player_id):
+    """Return the room this player is already seated in, if any.
+
+    A player may only occupy one lobby at a time. Rooms are few and short-lived,
+    so a collection scan is fine.
+    """
+    import multiplayer
+
+    if not player_id:
+        return None
+    for snapshot in getDB().collection("rooms").stream():
+        room = snapshot.to_dict() or {}
+        if multiplayer.is_member(room, player_id):
+            return room
+    return None
+
+
+def cleanup_stale_rooms(now=None):
+    """Delete empty rooms and rooms that have been idle past the TTL."""
+    import multiplayer
+
+    removed = 0
+    for snapshot in getDB().collection("rooms").stream():
+        room = snapshot.to_dict() or {}
+        if multiplayer.is_stale(room, now=now):
+            snapshot.reference.delete()
+            removed += 1
+    return removed
+
+
+def leave_other_rooms(player_id, keep_code=None):
+    """Enforce one lobby per player by removing them from every other room."""
+    import multiplayer
+
+    if not player_id:
+        return []
+    left = []
+    for snapshot in getDB().collection("rooms").stream():
+        code = snapshot.id
+        if keep_code and code == keep_code:
+            continue
+        room = snapshot.to_dict() or {}
+        if not multiplayer.is_member(room, player_id):
+            continue
+        room, _ = update_room(
+            code, lambda current: multiplayer.remove_player(current, player_id)
+        )
+        if room is not None and not (room.get("players") or []):
+            delete_room(code)
+            room = None
+        left.append((code, room))
+    return left
+
+
 def create_room(host_id, host_name, language, account=None, attempts=5):
-    """Store a new room under an unused code. create() fails if the code is taken."""
+    """Store a new room under an unused code. create() fails if the code is taken.
+
+    One lobby per player: an existing seat is reused instead of opening a second room.
+    """
     import multiplayer
     from google.api_core.exceptions import AlreadyExists
+
+    cleanup_stale_rooms()
+    existing = find_player_room(host_id)
+    if existing:
+        return existing
 
     rooms = getDB().collection("rooms")
     for _ in range(attempts):
@@ -185,7 +251,13 @@ def apply_player_guess(code, player_id, letter):
 def leave_room_db(code, player_id):
     import multiplayer
 
-    return update_room(code, lambda room: multiplayer.remove_player(room, player_id))
+    room, error = update_room(
+        code, lambda current: multiplayer.remove_player(current, player_id)
+    )
+    if not error and room is not None and not (room.get("players") or []):
+        delete_room(code)
+        return None, None
+    return room, error
 
 
 def skip_turn_db(code, player_id):

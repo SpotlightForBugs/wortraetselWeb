@@ -205,5 +205,29 @@ class AfkTests(unittest.TestCase):
         self.assertEqual(room["players"][0]["strikes"], 0)
 
 
+class StaleRoomTests(unittest.TestCase):
+    def test_empty_rooms_and_idle_rooms_are_stale(self):
+        room = multiplayer.new_room("ABCDE", "host", "Ana", "en", now=1000)
+        self.assertFalse(multiplayer.is_stale(room, now=1000))
+        self.assertFalse(
+            multiplayer.is_stale(room, now=1000 + multiplayer.ROOM_TTL_SECONDS - 1)
+        )
+        self.assertTrue(
+            multiplayer.is_stale(room, now=1000 + multiplayer.ROOM_TTL_SECONDS)
+        )
+        empty, _ = multiplayer.remove_player(room, "host", now=1000)
+        self.assertEqual(empty["players"], [])
+        self.assertTrue(multiplayer.is_stale(empty, now=1000))
+
+    def test_activity_refreshes_updated_at(self):
+        room = multiplayer.new_room("ABCDE", "host", "Ana", "en", now=1000)
+        room, _ = multiplayer.add_player(room, "p2", "Ben", now=1500)
+        self.assertEqual(room["updated_at"], 1500)
+        room, _ = multiplayer.start_room(room, "host", word="cat", now=2000)
+        self.assertEqual(room["updated_at"], 2000)
+        room, _ = multiplayer.guess(room, "host", "c", now=2100)
+        self.assertEqual(room["updated_at"], 2100)
+
+
 if __name__ == "__main__":
     unittest.main()

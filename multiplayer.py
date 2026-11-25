@@ -12,6 +12,8 @@ CODE_LENGTH = 5
 TURN_SECONDS = 30
 # Consecutive timed-out turns before an idle player is removed from the room.
 AFK_STRIKES = 2
+# Rooms with no activity this long are deleted so abandoned lobbies do not pile up.
+ROOM_TTL_SECONDS = 2 * 60 * 60
 # No 0/O or 1/I so a code read aloud is unambiguous.
 _CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
@@ -41,7 +43,8 @@ def _player(player_id, name, account=None):
     }
 
 
-def new_room(code, host_id, host_name, language, account=None):
+def new_room(code, host_id, host_name, language, account=None, now=None):
+    stamp = time.time() if now is None else now
     return {
         "room_code": code,
         "host": host_id,
@@ -55,14 +58,27 @@ def new_room(code, host_id, host_name, language, account=None):
         "state": "waiting",
         "result": None,
         "notice": None,
+        "updated_at": stamp,
     }
+
+
+def touch(room, now=None):
+    """Mark the room as recently used so cleanup keeps it."""
+    return dict(room, updated_at=time.time() if now is None else now)
+
+
+def is_stale(room, now=None):
+    now = time.time() if now is None else now
+    if not (room.get("players") or []):
+        return True
+    return now - float(room.get("updated_at") or 0) >= ROOM_TTL_SECONDS
 
 
 def is_member(room, player_id):
     return any(p["id"] == player_id for p in (room or {}).get("players") or [])
 
 
-def add_player(room, player_id, name, account=None):
+def add_player(room, player_id, name, account=None, now=None):
     """Return (room, error). Joining twice is a no-op."""
     if is_member(room, player_id):
         return room, None
@@ -70,14 +86,14 @@ def add_player(room, player_id, name, account=None):
         return room, "mp_room_started"
     if len(room.get("players") or []) >= MAX_PLAYERS:
         return room, "mp_room_full"
-    room = dict(room)
+    room = touch(dict(room), now)
     room["players"] = list(room.get("players") or []) + [
         _player(player_id, name, account)
     ]
     return room, None
 
 
-def set_language(room, player_id, language):
+def set_language(room, player_id, language, now=None):
     """The host picks the word language between rounds."""
     if player_id != room.get("host"):
         return room, "mp_host_only"
@@ -85,7 +101,7 @@ def set_language(room, player_id, language):
         return room, "mp_room_started"
     if not game.isValidLanguage(language):
         return room, "mp_bad_language"
-    return dict(room, language=language), None
+    return touch(dict(room, language=language), now), None
 
 
 def start_room(room, player_id, word=None, now=None):
@@ -96,16 +112,18 @@ def start_room(room, player_id, word=None, now=None):
         return room, "mp_room_started"
     if len(room.get("players") or []) < MIN_PLAYERS:
         return room, "mp_need_players"
+    stamp = time.time() if now is None else now
     room = dict(
         room,
         word=word or game.getRandomWord(room.get("language")),
         letters=[],
         wrong_guesses=0,
         turn=0,
-        turn_started=time.time() if now is None else now,
+        turn_started=stamp,
         state="playing",
         result=None,
         notice=None,
+        updated_at=stamp,
     )
     room["players"] = [
         dict(p, hits=0, misses=0, strikes=0) for p in room.get("players") or []
@@ -148,7 +166,7 @@ def round_shares(players, points, status):
     return {p["id"]: round(points * p.get(key, 0) / total) for p in players}
 
 
-def _finish(room, status):
+def _finish(room, status, now=None):
     word = room["word"]
     letters = room.get("letters") or []
     wrong = room.get("wrong_guesses") or 0
@@ -165,7 +183,7 @@ def _finish(room, status):
         "shares": shares,
         "winner": room_winner(room),
     }
-    return room
+    return touch(room, now)
 
 
 def guess(room, player_id, letter, now=None):
@@ -184,13 +202,15 @@ def guess(room, player_id, letter, now=None):
     players = [dict(p) for p in room["players"]]
     index = int(room.get("turn") or 0) % len(players)
     players[index]["strikes"] = 0
+    stamp = time.time() if now is None else now
     room = dict(
         room,
         letters=letters,
         wrong_guesses=wrong,
         players=players,
         notice=None,
-        turn_started=time.time() if now is None else now,
+        turn_started=stamp,
+        updated_at=stamp,
     )
     if letter in word:
         players[index]["hits"] = players[index].get("hits", 0) + word.count(letter)
@@ -198,7 +218,7 @@ def guess(room, player_id, letter, now=None):
         players[index]["misses"] = players[index].get("misses", 0) + 1
         room["turn"] = (index + 1) % len(players)
     if status != "playing":
-        room = _finish(room, status)
+        room = _finish(room, status, now=stamp)
     return room, None
 
 
@@ -215,7 +235,7 @@ def skip_turn(room, player_id, now=None):
     index = int(room.get("turn") or 0) % len(players)
     idle = players[index]
     idle["strikes"] = idle.get("strikes", 0) + 1
-    room = dict(room, players=players, turn_started=now)
+    room = dict(room, players=players, turn_started=now, updated_at=now)
     if idle["strikes"] >= AFK_STRIKES:
         room, _ = remove_player(room, idle["id"], now=now)
         room["notice"] = {"type": "removed", "name": idle["name"]}
@@ -232,7 +252,7 @@ def remove_player(room, player_id, now=None):
     if index is None:
         return room, None
     remaining = players[:index] + players[index + 1 :]
-    room = dict(room, players=remaining)
+    room = touch(dict(room, players=remaining), now)
     if not remaining:
         room["state"] = "waiting"
         room["turn"] = 0

@@ -82,7 +82,9 @@
     var clockOffset = 0;
     var lastNotice = null;
     var lastSkip = 0;
-    var socket = io({ transports: ["websocket", "polling"] });
+    // Start on long-polling and upgrade to WebSocket when the network allows it.
+    // A WebSocket-only client never falls back, so one blocked upgrade froze the room.
+    var socket = io({ transports: ["polling", "websocket"] });
     var $ = function (id) {
       return document.getElementById(id);
     };
@@ -284,6 +286,9 @@
       socket.emit("watch", { code: boot.code });
     });
     socket.on("disconnect", function () {
+      $("connection").hidden = false;
+    });
+    socket.on("connect_error", function () {
       $("connection").hidden = false;
     });
     socket.on("room_state", render);

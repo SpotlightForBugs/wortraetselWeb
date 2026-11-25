@@ -611,6 +611,13 @@ def on_join(data):
         name = session.get("display_name") or session["username"].split("@")[0]
     else:
         name = f"{i18n.text(language, 'guest')} {player_id[:4].upper()}"
+    # One lobby per player: leave_other_rooms runs inside join_room_db.
+    left = firebaseDB.leave_other_rooms(player_id, keep_code=code)
+    for left_code, left_room in left:
+        if left_room:
+            _broadcast(left_room)
+        else:
+            socketio.emit("room_error", {"error": "mp_room_missing"}, to=left_code)
     room, error = firebaseDB.join_room_db(
         code, player_id, name, session.get("username")
     )
@@ -680,8 +687,13 @@ def on_leave(data):
     code = multiplayer.normalize_code(data.get("code"))
     room, error = firebaseDB.leave_room_db(code, session.get("mp_id"))
     leave_room(code)
-    if not error and room:
+    if error:
+        return True
+    if room:
         _broadcast(room)
+    else:
+        # Last player left and the lobby was deleted.
+        socketio.emit("room_error", {"error": "mp_room_missing"}, to=code)
     return True
 
 
