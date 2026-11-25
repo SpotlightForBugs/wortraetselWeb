@@ -243,6 +243,7 @@ def _payload(leaderboard=None):
     state["kramli"] = _kramli_state(language)
     state["is_admin"] = bool(session.get("is_admin"))
     state["announcement"] = admin_ops.get_announcement()
+    state["result_prefs"] = _result_prefs()
     return state
 
 
@@ -331,6 +332,10 @@ def _remember_player(email, display_name=None):
     session["username"] = email
     admin_ops.ensure_bootstrap_admin(email)
     session["is_admin"] = admin_ops.is_admin_email(email)
+    try:
+        session["result_prefs"] = firebaseDB.get_result_prefs(email)
+    except Exception:
+        session["result_prefs"] = firebaseDB.normalize_result_prefs()
     if display_name:
         session["display_name"] = display_name
         return
@@ -338,6 +343,21 @@ def _remember_player(email, display_name=None):
         session["display_name"] = accounts.getUsername(email)["username"]
     except Exception:
         session["display_name"] = email.split("@")[0]
+
+
+def _result_prefs():
+    """Autoskip prefs for the current player (session, Firestore, or defaults)."""
+    if "username" in session:
+        cached = session.get("result_prefs")
+        if isinstance(cached, dict):
+            return firebaseDB.normalize_result_prefs(cached)
+        try:
+            prefs = firebaseDB.get_result_prefs(session["username"])
+        except Exception:
+            prefs = firebaseDB.normalize_result_prefs()
+        session["result_prefs"] = prefs
+        return prefs
+    return firebaseDB.normalize_result_prefs(session.get("result_prefs"))
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -564,6 +584,7 @@ def logout():
     session.pop("display_name", None)
     session.pop("is_admin", None)
     session.pop("shown_score", None)
+    session.pop("result_prefs", None)
     if _wants_json():
         _ensure_round()
         return jsonify(_payload())
@@ -620,6 +641,35 @@ def account_delete():
     session.clear()
     _ensure_round()
     return _account_reply(True)
+
+
+@app.route("/account/result_prefs", methods=["POST"])
+def account_result_prefs():
+    """Save reveal auto-advance prefs (Firestore for accounts, session for guests)."""
+    raw = request.get_json(silent=True) or {}
+    if request.form:
+        raw = {
+            "autoskip": request.form.get("autoskip", raw.get("autoskip")),
+            "seconds": request.form.get("seconds", raw.get("seconds")),
+        }
+    # Checkbox / JSON may send "true"/"false" or 1/0.
+    autoskip = raw.get("autoskip", True)
+    if isinstance(autoskip, str):
+        autoskip = autoskip.strip().lower() in ("1", "true", "yes", "on")
+    prefs = firebaseDB.normalize_result_prefs(
+        {"autoskip": autoskip, "seconds": raw.get("seconds", 10)}
+    )
+    if "username" in session:
+        try:
+            ok = firebaseDB.set_result_prefs(
+                session["username"], prefs["autoskip"], prefs["seconds"]
+            )
+        except Exception:
+            ok = False
+        if not ok:
+            return _account_reply(False, "try_again"), 500
+    session["result_prefs"] = prefs
+    return _account_reply(True, result_prefs=prefs)
 
 
 @app.route("/kramli/dismiss", methods=["POST"])

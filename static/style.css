@@ -726,14 +726,89 @@ body.scroll-lock {
   padding: 0 12px 12px;
 }
 
+#result-layer .result-stack {
+  pointer-events: none;
+  width: min(440px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: min(72vh, 560px);
+}
+
+#result-layer .info-panel,
 #result-layer .auth-card,
 #result-layer .result-card {
   pointer-events: auto;
-  width: min(440px, 100%);
-  max-height: min(42vh, 320px);
+  width: 100%;
   margin: 0;
   overflow: auto;
   box-shadow: 0 -8px 28px rgba(20, 30, 40, 0.14);
+}
+
+#result-layer .result-card {
+  max-height: min(36vh, 260px);
+}
+
+#result-layer .info-panel {
+  max-height: min(34vh, 280px);
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 12px 14px 14px;
+  text-align: left;
+}
+
+.info-panel-title {
+  margin: 0 0 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.info-panel-prefs {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+}
+
+.info-autoskip,
+.info-autoskip-delay {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.info-autoskip input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+.info-autoskip-delay select {
+  min-width: 7.5rem;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+}
+
+.info-autoskip-delay select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 body:has(#result-layer:not([hidden])) .header,
@@ -799,7 +874,7 @@ cap-widget {
 }
 
 .result-gloss {
-  margin: 8px 0 0;
+  margin: 0;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -941,10 +1016,22 @@ cap-widget {
     width: 100%;
   }
 
+  #result-layer .result-stack {
+    width: 100%;
+  }
+
+  #result-layer .info-panel,
   #result-layer .result-card {
     width: 100%;
-    max-height: min(46vh, 340px);
     border-radius: 16px;
+  }
+
+  #result-layer .result-card {
+    max-height: min(40vh, 280px);
+  }
+
+  #result-layer .info-panel {
+    max-height: min(36vh, 300px);
   }
 
   .score-board table,
