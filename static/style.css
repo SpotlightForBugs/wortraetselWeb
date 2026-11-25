@@ -767,6 +767,13 @@ cap-widget {
   width: 100%;
 }
 
+.result-definition {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.4;
+}
+
 .btn.later {
   background: transparent;
   color: var(--text);

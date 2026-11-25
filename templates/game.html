@@ -204,6 +204,7 @@ block content %}
 <div id="result-layer" class="sheet" {% if not result %}hidden{% endif %}>
   <section class="auth-card result-card" role="dialog" aria-modal="true">
     <p id="result-message">{{ result.message if result else '' }}</p>
+    <p id="result-definition" class="result-definition" hidden></p>
     <p id="result-worth" {% if not result or not result.offer %}hidden{% endif %}>
       {{ result.worth if result else '' }}
     </p>
@@ -839,6 +840,39 @@ block content %}
     }
   }
 
+  function paintDefinition(word) {
+    var node = document.getElementById("result-definition");
+    if (!node) return;
+    node.hidden = true;
+    node.textContent = "";
+    if (!word) return;
+    var lang = document.documentElement.getAttribute("data-lang") || "en";
+    fetch(
+      "/define?lang=" +
+        encodeURIComponent(lang) +
+        "&word=" +
+        encodeURIComponent(word),
+      { headers: { Accept: "application/json" }, credentials: "same-origin" },
+    )
+      .then(function (response) {
+        return response.ok ? response.json() : null;
+      })
+      .then(function (data) {
+        var text = data && data.definition ? String(data.definition).trim() : "";
+        if (!text) {
+          node.hidden = true;
+          node.textContent = "";
+          return;
+        }
+        node.textContent = text;
+        node.hidden = false;
+      })
+      .catch(function () {
+        node.hidden = true;
+        node.textContent = "";
+      });
+  }
+
   function paintResult(result) {
     var layer = document.getElementById("result-layer");
     clearResultAdvance();
@@ -846,6 +880,7 @@ block content %}
       layer.hidden = true;
       clearDrawingFit();
       syncScrollLock();
+      paintDefinition("");
       return;
     }
     document.getElementById("result-message").textContent = result.message;
@@ -859,6 +894,7 @@ block content %}
     fitDrawing();
     syncScrollLock();
     armResultAdvance();
+    paintDefinition(result.word || "");
   }
 
   function applyState(data) {
@@ -1303,6 +1339,10 @@ block content %}
   });
   if (!document.getElementById("result-layer").hidden) {
     fitDrawing();
+    var bootState = JSON.parse(document.getElementById("boot").textContent);
+    if (bootState.result && bootState.result.word) {
+      paintDefinition(bootState.result.word);
+    }
   }
   syncScrollLock();
 

@@ -9,6 +9,7 @@ import game as play_logic
 import i18n
 import firebaseDB
 import multiplayer
+import wiktionary
 
 sentry_sdk.init(
     dsn="https://36685b77d489f469c5f64a85d1839aa3@o4509985277018112.ingest.de.sentry.io/4512480802177104",
@@ -442,6 +443,17 @@ def continue_round():
     if _wants_json():
         return jsonify(_payload())
     return redirect(url_for("game"))
+
+
+@app.route("/define", methods=["GET"])
+def define_word():
+    """Wiktionary gloss for the result screen; empty when nothing useful exists."""
+    language = play_logic.coerce_language(
+        request.args.get("lang") or session.get("language") or "en"
+    )
+    word = request.args.get("word") or ""
+    gloss = wiktionary.define(word, language)
+    return jsonify({"definition": gloss})
 
 
 @app.route("/login", methods=["GET", "POST"])

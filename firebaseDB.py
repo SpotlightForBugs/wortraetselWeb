@@ -194,6 +194,49 @@ def set_site_config(fields):
     return True
 
 
+def _gloss_doc_id(language, word):
+    """Stable Firestore id for a language+word gloss cache entry."""
+    import hashlib
+    import re
+
+    language = (language or "en").strip().lower()
+    word = (word or "").strip().lower()
+    slug = re.sub(r"[^a-z0-9]+", "-", f"{language}-{word}").strip("-")[:80]
+    digest = hashlib.sha1(f"{language}\0{word}".encode("utf-8")).hexdigest()[:12]
+    return f"{slug}-{digest}" if slug else digest
+
+
+def get_word_gloss(language, word):
+    """Return cached gloss dict or None when this pair was never looked up.
+
+    Cached misses use definition=None so Wiktionary is not hit again.
+    """
+    doc_id = _gloss_doc_id(language, word)
+    snapshot = getDB().collection("word_glosses").document(doc_id).get()
+    if not snapshot.exists:
+        return None
+    return snapshot.to_dict() or {}
+
+
+def set_word_gloss(language, word, definition):
+    """Store a gloss or a negative cache miss for language+word."""
+    import time
+
+    language = (language or "en").strip().lower()
+    word = (word or "").strip().lower()
+    doc_id = _gloss_doc_id(language, word)
+    getDB().collection("word_glosses").document(doc_id).set(
+        {
+            "language": language,
+            "word": word,
+            "definition": definition,
+            "missing": definition is None,
+            "updated_at": time.time(),
+        }
+    )
+    return True
+
+
 def get_room(code):
     snapshot = getDB().collection("rooms").document(code).get()
     return snapshot.to_dict() if snapshot.exists else None

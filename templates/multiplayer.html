@@ -26,6 +26,7 @@
         <span id="turn-text"></span>
         <span class="mp-timer" id="turn-timer" hidden></span>
       </div>
+      <p class="result-definition" id="mp-definition" hidden></p>
       <div class="mp-lobby" id="lobby">
         <p>{{ copy.mp_invite }}</p>
         <span class="mp-code mp-code-big" translate="no">{{ room_code }}</span>
@@ -173,24 +174,57 @@
       });
     }
 
+    function paintDefinition(word) {
+      var node = $("mp-definition");
+      if (!node) return;
+      node.hidden = true;
+      node.textContent = "";
+      if (!word) return;
+      var lang = current.language || document.documentElement.getAttribute("data-lang") || "en";
+      fetch(
+        "/define?lang=" + encodeURIComponent(lang) + "&word=" + encodeURIComponent(word),
+        { headers: { Accept: "application/json" }, credentials: "same-origin" }
+      )
+        .then(function (response) {
+          return response.ok ? response.json() : null;
+        })
+        .then(function (data) {
+          var text = data && data.definition ? String(data.definition).trim() : "";
+          if (!text) {
+            node.hidden = true;
+            node.textContent = "";
+            return;
+          }
+          node.textContent = text;
+          node.hidden = false;
+        })
+        .catch(function () {
+          node.hidden = true;
+          node.textContent = "";
+        });
+    }
+
     function renderTurn(state) {
       var turn = $("turn-text");
       var mine = state.state === "playing" && state.turn === boot.me;
       $("turn").className = "mp-turn";
       if (state.state === "waiting") {
         turn.textContent = state.host === boot.me ? copy.mp_ready : copy.mp_waiting;
+        paintDefinition("");
       } else if (state.state === "playing") {
         turn.textContent = mine ? copy.mp_your_turn : fill(copy.mp_turn_of, { name: nameOf(state.turn) });
         if (mine) $("turn").classList.add("mine");
+        paintDefinition("");
       } else if (state.result) {
-        var word = state.result.word.toUpperCase();
+        var word = state.result.word;
         var won = state.result.status === "won";
         $("turn").classList.add(won ? "won" : "lost");
-        turn.textContent = fill(won ? copy.mp_won : copy.mp_lost, { word: word });
+        turn.textContent = fill(won ? copy.mp_won : copy.mp_lost, { word: String(word || "").toUpperCase() });
         if (state.result.winner) {
           turn.textContent += " " + fill(copy.mp_winner, { name: nameOf(state.result.winner) });
         }
         if (state.host !== boot.me) turn.textContent += " " + copy.mp_waiting_next;
+        paintDefinition(word || "");
       }
     }
 
