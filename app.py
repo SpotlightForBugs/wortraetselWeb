@@ -233,7 +233,7 @@ def _kramli_state(language=None):
     show = i18n.kramli_supported(language) and not session.get("kramli_ad_hidden")
     return {
         "show": show,
-        "href": f"https://kramli.de/?lang={i18n.kramli_site_lang(language)}",
+        "href": f"https://kramli.de/?lang={i18n.kramli_site_lang(language)}&via=hm",
     }
 
 
