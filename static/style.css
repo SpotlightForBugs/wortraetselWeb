@@ -826,7 +826,10 @@ cap-widget {
 
 .result-source-icon {
   flex: none;
-  opacity: 0.85;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+  border-radius: 3px;
 }
 
 .result-source-label {

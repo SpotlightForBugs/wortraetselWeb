@@ -29,19 +29,15 @@
       <div class="result-gloss" id="mp-gloss" hidden>
         <p class="result-definition" id="mp-definition"></p>
         <p class="result-source" id="mp-source" hidden>
-          <svg
+          <img
+            id="mp-source-icon"
             class="result-source-icon"
-            viewBox="0 0 24 24"
-            width="14"
-            height="14"
-            aria-hidden="true"
-            focusable="false"
-          >
-            <path
-              fill="currentColor"
-              d="M6 4.5A2.5 2.5 0 0 1 8.5 2H19a1 1 0 0 1 1 1v16.5a.5.5 0 0 1-.8.4L16 17.5l-3.2 2.4a.5.5 0 0 1-.8-.4V4.5A.5.5 0 0 0 11.5 4H8.5A.5.5 0 0 0 8 4.5v13A1.5 1.5 0 0 1 6.5 19H5a1 1 0 0 1-1-1V7a2.5 2.5 0 0 1 2-2.45V4.5Z"
-            />
-          </svg>
+            src=""
+            alt=""
+            width="18"
+            height="18"
+            hidden
+          />
           <span class="result-source-label" data-i18n="gloss_source"
             >{{ copy.gloss_source }}</span
           >
@@ -196,16 +192,53 @@
       });
     }
 
+    var GLOSS_SOURCE_ICONS = {
+      Wiktionary: "{{ url_for('static', filename='assets/gloss/wiktionary.png') }}",
+      Dexonline: "{{ url_for('static', filename='assets/gloss/dexonline.png') }}",
+      DWDS: "{{ url_for('static', filename='assets/gloss/dwds.png') }}",
+      RAE: "{{ url_for('static', filename='assets/gloss/rae.png') }}",
+      Priberam: "{{ url_for('static', filename='assets/gloss/priberam.png') }}",
+      TDK: "{{ url_for('static', filename='assets/gloss/tdk.png') }}",
+    };
+
+    function paintSourceAttribution(source, sourceName, sourceIcon, name) {
+      if (!source || !sourceName) return;
+      if (!name) {
+        source.hidden = true;
+        sourceName.textContent = "";
+        if (sourceIcon) {
+          sourceIcon.hidden = true;
+          sourceIcon.removeAttribute("src");
+          sourceIcon.alt = "";
+        }
+        return;
+      }
+      sourceName.textContent = name;
+      if (sourceIcon) {
+        var icon = GLOSS_SOURCE_ICONS[name] || "";
+        if (icon) {
+          sourceIcon.src = icon;
+          sourceIcon.alt = name;
+          sourceIcon.hidden = false;
+        } else {
+          sourceIcon.hidden = true;
+          sourceIcon.removeAttribute("src");
+          sourceIcon.alt = "";
+        }
+      }
+      source.hidden = false;
+    }
+
     function paintDefinition(word) {
       var wrap = $("mp-gloss");
       var node = $("mp-definition");
       var source = $("mp-source");
       var sourceName = $("mp-source-name");
+      var sourceIcon = $("mp-source-icon");
       if (!wrap || !node) return;
       wrap.hidden = true;
       node.textContent = "";
-      if (source) source.hidden = true;
-      if (sourceName) sourceName.textContent = "";
+      paintSourceAttribution(source, sourceName, sourceIcon, "");
       if (!word) return;
       var lang = current.language || document.documentElement.getAttribute("data-lang") || "en";
       fetch(
@@ -220,26 +253,22 @@
           if (!text) {
             wrap.hidden = true;
             node.textContent = "";
-            if (source) source.hidden = true;
-            if (sourceName) sourceName.textContent = "";
+            paintSourceAttribution(source, sourceName, sourceIcon, "");
             return;
           }
           node.textContent = text;
-          var name = data && data.source ? String(data.source).trim() : "";
-          if (source && sourceName && name) {
-            sourceName.textContent = name;
-            source.hidden = false;
-          } else if (source) {
-            source.hidden = true;
-            if (sourceName) sourceName.textContent = "";
-          }
+          paintSourceAttribution(
+            source,
+            sourceName,
+            sourceIcon,
+            data && data.source ? String(data.source).trim() : ""
+          );
           wrap.hidden = false;
         })
         .catch(function () {
           wrap.hidden = true;
           node.textContent = "";
-          if (source) source.hidden = true;
-          if (sourceName) sourceName.textContent = "";
+          paintSourceAttribution(source, sourceName, sourceIcon, "");
         });
     }
 
