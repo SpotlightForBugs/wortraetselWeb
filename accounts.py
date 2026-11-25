@@ -48,6 +48,8 @@ def login(email, password):
     :return: The email of the user if they are logged in
     :doc-author: @Spotlightforbugs
     """
+    if firebaseDB.is_banned(email):
+        return False
     sign_in = sign_in_with_email_and_password(email, password)
     if "error" in sign_in:
         return False

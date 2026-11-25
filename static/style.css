@@ -1403,3 +1403,108 @@ body.dark .kramli-ad-badge {
     backdrop-filter: blur(4px);
   }
 }
+
+.site-announcement {
+  width: min(1100px, calc(100% - 24px));
+  margin: 0 auto 12px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--primary) 28%, var(--line));
+  background: color-mix(in srgb, var(--primary) 10%, var(--card));
+  color: var(--text);
+}
+
+.site-announcement p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.auth-card--admin {
+  width: min(720px, 100%);
+}
+
+.admin-search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.admin-search input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  background: var(--card);
+  color: var(--text);
+}
+
+.admin-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-card {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.admin-card-title {
+  font-weight: 700;
+  word-break: break-word;
+}
+
+.admin-card-meta {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  word-break: break-word;
+}
+
+.admin-inline {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-inline input {
+  flex: 1;
+  min-width: 7rem;
+  margin: 0 !important;
+}
+
+.admin-inline .btn,
+.admin-row .btn {
+  width: auto !important;
+  margin-top: 0 !important;
+}
+
+.admin-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.admin-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+#admin-announcement-input {
+  width: 100%;
+  margin-top: 6px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  font: inherit;
+  background: var(--card);
+  color: var(--text);
+  resize: vertical;
+}

@@ -3,6 +3,7 @@ from sentry_sdk import last_event_id
 from sentry_sdk.integrations.flask import FlaskIntegration
 from sentry_sdk.integrations.pure_eval import PureEvalIntegration
 import accounts
+import admin_ops
 import cap
 import game as play_logic
 import i18n
@@ -225,6 +226,8 @@ def _payload(leaderboard=None):
         i18n.text(language, "guest") if guest else (session.get("display_name") or "")
     )
     state["kramli"] = _kramli_state(language)
+    state["is_admin"] = bool(session.get("is_admin"))
+    state["announcement"] = admin_ops.get_announcement()
     return state
 
 
@@ -235,6 +238,26 @@ def _kramli_state(language=None):
         "show": show,
         "href": f"https://kramli.de/?lang={i18n.kramli_site_lang(language)}&via=hm",
     }
+
+
+def _require_admin():
+    if "username" not in session or not session.get("is_admin"):
+        return False
+    # Re-check so a revoked admin loses access without waiting for logout.
+    if not admin_ops.is_admin_email(session["username"]):
+        session["is_admin"] = False
+        return False
+    return True
+
+
+def _admin_reply(ok, error=None, **extra):
+    language = session.get("language") or "en"
+    payload = {"ok": ok}
+    payload.update(extra)
+    if error:
+        payload["error"] = i18n.text(language, error)
+        payload["error_key"] = error
+    return jsonify(payload)
 
 
 def _page_context(auth=None, auth_error=None):
@@ -248,6 +271,10 @@ def _page_context(auth=None, auth_error=None):
             ]
         except Exception:
             session["display_name"] = session.get("display_name") or session["username"]
+        admin_ops.ensure_bootstrap_admin(session["username"])
+        session["is_admin"] = admin_ops.is_admin_email(session["username"])
+    else:
+        session.pop("is_admin", None)
     try:
         leaderboard = firebaseDB.get_leaderboard() or []
     except Exception:
@@ -280,11 +307,15 @@ def _page_context(auth=None, auth_error=None):
         auth_error=auth_error,
         state_json=state,
         kramli=state["kramli"],
+        is_admin=bool(session.get("is_admin")),
+        announcement=state.get("announcement") or "",
     )
 
 
 def _remember_player(email, display_name=None):
     session["username"] = email
+    admin_ops.ensure_bootstrap_admin(email)
+    session["is_admin"] = admin_ops.is_admin_email(email)
     if display_name:
         session["display_name"] = display_name
         return
@@ -424,6 +455,8 @@ def login():
         return _auth_reply(False, "login", "bad_login")
     if not user:
         return _auth_reply(False, "login", "bad_login")
+    if getattr(user, "disabled", False) or firebaseDB.is_banned(email):
+        return _auth_reply(False, "login", "admin_banned")
     auth_user = accounts.login(email, password)
     if not auth_user:
         return _auth_reply(False, "login", "session_expired")
@@ -497,6 +530,7 @@ def dismiss_save():
 def logout():
     session.pop("username", None)
     session.pop("display_name", None)
+    session.pop("is_admin", None)
     session.pop("shown_score", None)
     if _wants_json():
         _ensure_round()
@@ -563,6 +597,96 @@ def kramli_dismiss():
         language = session.get("language") or "en"
         return jsonify({"ok": True, "kramli": _kramli_state(language)})
     return redirect(request.referrer or url_for("game"))
+
+
+@app.route("/admin/overview", methods=["GET"])
+def admin_overview():
+    if not _require_admin():
+        return _admin_reply(False, "admin_forbidden"), 403
+    return _admin_reply(
+        True,
+        users=admin_ops.list_users(request.args.get("q", "")),
+        rooms=admin_ops.list_rooms(),
+        announcement=admin_ops.get_announcement(),
+    )
+
+
+@app.route("/admin/users/score", methods=["POST"])
+def admin_set_score():
+    if not _require_admin():
+        return _admin_reply(False, "admin_forbidden"), 403
+    ok, result = admin_ops.set_score(request.form.get("email"), request.form.get("score"))
+    if not ok:
+        return _admin_reply(False, result)
+    return _admin_reply(True, score=result, users=admin_ops.list_users(request.form.get("q", "")))
+
+
+@app.route("/admin/users/rename", methods=["POST"])
+def admin_rename_user():
+    if not _require_admin():
+        return _admin_reply(False, "admin_forbidden"), 403
+    ok, result = admin_ops.rename_user(
+        request.form.get("email"), request.form.get("username")
+    )
+    if not ok:
+        return _admin_reply(False, result)
+    return _admin_reply(True, username=result, users=admin_ops.list_users(request.form.get("q", "")))
+
+
+@app.route("/admin/users/ban", methods=["POST"])
+def admin_ban_user():
+    if not _require_admin():
+        return _admin_reply(False, "admin_forbidden"), 403
+    banned = request.form.get("banned", "1") in ("1", "true", "on", "yes")
+    ok, result = admin_ops.set_banned(request.form.get("email"), banned)
+    if not ok:
+        return _admin_reply(False, result)
+    return _admin_reply(True, banned=result, users=admin_ops.list_users(request.form.get("q", "")))
+
+
+@app.route("/admin/users/delete", methods=["POST"])
+def admin_delete_user():
+    if not _require_admin():
+        return _admin_reply(False, "admin_forbidden"), 403
+    ok, error = admin_ops.delete_user(request.form.get("email"), session["username"])
+    if not ok:
+        return _admin_reply(False, error)
+    return _admin_reply(True, users=admin_ops.list_users(request.form.get("q", "")))
+
+
+@app.route("/admin/users/admin", methods=["POST"])
+def admin_set_admin():
+    if not _require_admin():
+        return _admin_reply(False, "admin_forbidden"), 403
+    make_admin = request.form.get("admin", "1") in ("1", "true", "on", "yes")
+    ok, result = admin_ops.set_admin_flag(
+        request.form.get("email"), make_admin, session["username"]
+    )
+    if not ok:
+        return _admin_reply(False, result)
+    return _admin_reply(True, admin=result, users=admin_ops.list_users(request.form.get("q", "")))
+
+
+@app.route("/admin/rooms/close", methods=["POST"])
+def admin_close_room():
+    if not _require_admin():
+        return _admin_reply(False, "admin_forbidden"), 403
+    ok, result = admin_ops.close_room(request.form.get("code"))
+    if not ok:
+        return _admin_reply(False, result)
+    return _admin_reply(True, code=result, rooms=admin_ops.list_rooms())
+
+
+@app.route("/admin/announcement", methods=["POST"])
+def admin_announcement():
+    if not _require_admin():
+        return _admin_reply(False, "admin_forbidden"), 403
+    ok, result = admin_ops.set_announcement(
+        request.form.get("message"), session["username"]
+    )
+    if not ok:
+        return _admin_reply(False, result)
+    return _admin_reply(True, announcement=result)
 
 
 def _player_id():

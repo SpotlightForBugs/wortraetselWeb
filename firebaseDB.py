@@ -119,7 +119,15 @@ def add_user_to_db(email, username):
     for user in users:
         if user["email"] == email:
             return False
-    db.collection("users").add({"email": email, "score": 0, "username": username})
+    db.collection("users").add(
+        {
+            "email": email,
+            "score": 0,
+            "username": username,
+            "admin": False,
+            "banned": False,
+        }
+    )
     return True
 
 
@@ -133,8 +141,56 @@ def ensure_user_doc(email, username):
         if user.get("email") == email:
             return False
     db.collection("users").add(
-        {"email": email, "score": 0, "username": username, "legacy": False}
+        {
+            "email": email,
+            "score": 0,
+            "username": username,
+            "legacy": False,
+            "admin": False,
+            "banned": False,
+        }
     )
+    return True
+
+
+def _user_flags(email):
+    document = getDocumentFor(email)
+    if not document:
+        return {}
+    return document.get().to_dict() or {}
+
+
+def is_admin(email):
+    return bool(_user_flags(email).get("admin"))
+
+
+def is_banned(email):
+    return bool(_user_flags(email).get("banned"))
+
+
+def set_admin(email, admin):
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    document.update({"admin": bool(admin)})
+    return True
+
+
+def set_banned(email, banned):
+    document = getDocumentFor(email)
+    if not document:
+        return False
+    document.update({"banned": bool(banned)})
+    return True
+
+
+def get_site_config():
+    snapshot = getDB().collection("config").document("site").get()
+    return snapshot.to_dict() if snapshot.exists else {}
+
+
+def set_site_config(fields):
+    getDB().collection("config").document("site").set(fields or {}, merge=True)
     return True
 
 
