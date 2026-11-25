@@ -45,7 +45,8 @@ def list_users(query="", limit=40):
         rows.append(
             {
                 "email": user.get("email") or "",
-                "username": user.get("username") or (email.split("@")[0] if email else ""),
+                "username": user.get("username")
+                or (email.split("@")[0] if email else ""),
                 "score": int(user.get("score") or 0),
                 "admin": bool(user.get("admin")),
                 "banned": bool(user.get("banned")),
@@ -121,7 +122,11 @@ def list_rooms():
                 "language": room.get("language"),
                 "host": room.get("host"),
                 "players": [
-                    {"id": p.get("id"), "name": p.get("name"), "score": p.get("score", 0)}
+                    {
+                        "id": p.get("id"),
+                        "name": p.get("name"),
+                        "score": p.get("score", 0),
+                    }
                     for p in room.get("players") or []
                 ],
                 "word": room.get("word") or "",

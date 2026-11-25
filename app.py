@@ -615,10 +615,14 @@ def admin_overview():
 def admin_set_score():
     if not _require_admin():
         return _admin_reply(False, "admin_forbidden"), 403
-    ok, result = admin_ops.set_score(request.form.get("email"), request.form.get("score"))
+    ok, result = admin_ops.set_score(
+        request.form.get("email"), request.form.get("score")
+    )
     if not ok:
         return _admin_reply(False, result)
-    return _admin_reply(True, score=result, users=admin_ops.list_users(request.form.get("q", "")))
+    return _admin_reply(
+        True, score=result, users=admin_ops.list_users(request.form.get("q", ""))
+    )
 
 
 @app.route("/admin/users/rename", methods=["POST"])
@@ -630,7 +634,9 @@ def admin_rename_user():
     )
     if not ok:
         return _admin_reply(False, result)
-    return _admin_reply(True, username=result, users=admin_ops.list_users(request.form.get("q", "")))
+    return _admin_reply(
+        True, username=result, users=admin_ops.list_users(request.form.get("q", ""))
+    )
 
 
 @app.route("/admin/users/ban", methods=["POST"])
@@ -641,7 +647,9 @@ def admin_ban_user():
     ok, result = admin_ops.set_banned(request.form.get("email"), banned)
     if not ok:
         return _admin_reply(False, result)
-    return _admin_reply(True, banned=result, users=admin_ops.list_users(request.form.get("q", "")))
+    return _admin_reply(
+        True, banned=result, users=admin_ops.list_users(request.form.get("q", ""))
+    )
 
 
 @app.route("/admin/users/delete", methods=["POST"])
@@ -664,7 +672,9 @@ def admin_set_admin():
     )
     if not ok:
         return _admin_reply(False, result)
-    return _admin_reply(True, admin=result, users=admin_ops.list_users(request.form.get("q", "")))
+    return _admin_reply(
+        True, admin=result, users=admin_ops.list_users(request.form.get("q", ""))
+    )
 
 
 @app.route("/admin/rooms/close", methods=["POST"])
