@@ -5,26 +5,28 @@
   data-supported="{{ '1' if kramli.show else '0' }}"
   aria-label="Kramli"
 >
-  <a
-    class="kramli-ad-media"
-    href="{{ kramli.href }}"
-    target="_blank"
-    rel="noopener noreferrer"
-  >
-    <img
-      src="{{ url_for('static', filename='assets/kramli-og.jpg') }}"
-      width="120"
-      height="80"
-      alt="{{ copy.kramli_alt }}"
-      loading="lazy"
-      decoding="async"
-    />
-  </a>
-  <div class="kramli-ad-body">
+  <div class="kramli-ad-visual">
     <p class="kramli-ad-pitch">
       <span class="kramli-ad-badge" data-i18n="kramli_ad_label">{{ copy.kramli_ad_label }}</span>
       <span data-i18n="kramli_pitch">{{ copy.kramli_pitch }}</span>
     </p>
+    <a
+      class="kramli-ad-media"
+      href="{{ kramli.href }}"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      <img
+        src="{{ url_for('static', filename='assets/kramli-og.jpg') }}"
+        width="120"
+        height="80"
+        alt="{{ copy.kramli_alt }}"
+        loading="lazy"
+        decoding="async"
+      />
+    </a>
+  </div>
+  <div class="kramli-ad-body">
     <div class="kramli-ad-brand">
       <img
         class="kramli-ad-mark"
