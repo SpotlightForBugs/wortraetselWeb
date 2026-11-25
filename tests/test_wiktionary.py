@@ -19,9 +19,7 @@ class WiktionaryTests(unittest.TestCase):
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch(
             "wiktionary._native_lookup", return_value="house, building"
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertEqual(wiktionary.define("Haus", "de"), "house, building")
         set_cache.assert_called_once()
         args = set_cache.call_args[0]
@@ -34,9 +32,7 @@ class WiktionaryTests(unittest.TestCase):
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch("wiktionary._en_rest_gloss", return_value=None), mock.patch(
             "wiktionary._native_lookup", return_value=None
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertIsNone(wiktionary.define("xyzzyqq", "en"))
         set_cache.assert_called_once()
         self.assertIsNone(set_cache.call_args[0][2])
@@ -90,9 +86,7 @@ class WiktionaryTests(unittest.TestCase):
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch("wiktionary._fetch_en", side_effect=fake_fetch), mock.patch(
             "wiktionary._native_lookup", return_value=None
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ):
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss"):
             self.assertEqual(
                 wiktionary.define("labrum", "en"),
                 "The uppermost of the mouthparts.",
@@ -104,9 +98,7 @@ class WiktionaryTests(unittest.TestCase):
         ), mock.patch(
             "wiktionary._native_lookup",
             return_value="Grammatik: Synonym zu Akkusativ, 4. Fall",
-        ), mock.patch(
-            "wiktionary._en_rest_gloss"
-        ) as en_rest, mock.patch(
+        ), mock.patch("wiktionary._en_rest_gloss") as en_rest, mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ):
             self.assertEqual(
@@ -119,12 +111,11 @@ class WiktionaryTests(unittest.TestCase):
         with mock.patch(
             "wiktionary._search_titles", return_value=["casa", "casă"]
         ), mock.patch("wiktionary._titles", return_value=["Casa", "casa"]):
-            self.assertEqual(
-                wiktionary._native_candidates("casa", "ro")[:2],
-                ["casă", "casa"],
-            )
+            cands = wiktionary._native_candidates("casa", "ro")
+            self.assertEqual(cands[0], "casă")
+            self.assertIn("casa", cands)
 
-    def test_german_falls_back_to_dwds_after_wiktionary_miss(self):
+    def test_local_fallback_after_wiktionary_miss(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch(
@@ -132,18 +123,74 @@ class WiktionaryTests(unittest.TestCase):
         ), mock.patch(
             "wiktionary._native_wiktionary_gloss", return_value=None
         ), mock.patch(
-            "wiktionary._dwds_gloss",
-            side_effect=lambda term: (
-                "Sitz in geschlossener Kniebeuge" if term == "Hocksitz" else None
+            "wiktionary._local_gloss",
+            side_effect=lambda language, term: (
+                "Sitz in geschlossener Kniebeuge"
+                if language == "de" and term == "Hocksitz"
+                else None
             ),
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertEqual(
                 wiktionary.define("hocksitz", "de"),
                 "Sitz in geschlossener Kniebeuge",
             )
         self.assertEqual(set_cache.call_args[0][2], "Sitz in geschlossener Kniebeuge")
+
+    def test_dexonline_parses_sense(self):
+        payload = {
+            "definitions": [
+                {
+                    "internalRep": (
+                        "@CASĂ^1,@ $case,$ #s. f.# @1.@ "
+                        "Clădire care servește drept locuință. * #Loc.#"
+                    )
+                }
+            ]
+        }
+        with mock.patch("wiktionary._request_json", return_value=payload):
+            self.assertEqual(
+                wiktionary._dexonline_gloss("casă"),
+                "Clădire care servește drept locuință",
+            )
+
+    def test_tdk_parses_sense(self):
+        payload = [
+            {
+                "anlamlarListe": [
+                    {"anlam": "► aile"},
+                    {
+                        "anlam": "Bir kimsenin veya ailenin içinde yaşadığı yer"
+                    },
+                ]
+            }
+        ]
+        with mock.patch("wiktionary._request_json", return_value=payload):
+            self.assertEqual(
+                wiktionary._tdk_gloss("ev"),
+                "Bir kimsenin veya ailenin içinde yaşadığı yer",
+            )
+
+    def test_rae_parses_description(self):
+        payload = {
+            "data": {
+                "meanings": [
+                    {"senses": [{"description": "Edificio para habitar", "raw": "1."}]}
+                ]
+            }
+        }
+        with mock.patch("wiktionary._request_json", return_value=payload):
+            self.assertEqual(wiktionary._rae_gloss("casa"), "Edificio para habitar")
+
+    def test_priberam_parses_meta(self):
+        page = (
+            '<meta name="description" content="Significado de casa, nome feminino: '
+            "Nome genérico de construções destinadas a habitação — Dicionário Priberam\">"
+        )
+        with mock.patch("wiktionary._request_text", return_value=page):
+            self.assertEqual(
+                wiktionary._priberam_gloss("casa"),
+                "Nome genérico de construções destinadas a habitação",
+            )
 
     def test_extract_de_bedeutungen(self):
         body = (

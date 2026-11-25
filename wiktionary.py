@@ -1,12 +1,14 @@
 """Short glosses for the reveal screen. Missing entries stay silent.
 
 English uses en.wiktionary REST, then en.wiktionary wikitext. Every other
-hangman language uses only that language's own Wiktionary (MediaWiki
-wikitext), with a DWDS scrape as a final German fallback. en.wiktionary is
-never used for non-English rounds so glosses stay in-language.
+hangman language uses that language's own Wiktionary first, then a local
+dictionary when one is available:
 
-Accent-folded word lists are bridged via MediaWiki search (casa → casă).
-Weak surname/given-name glosses and REDIRECT stubs are skipped.
+  de → DWDS, es → RAE (rae-api), pt-br → Priberam, ro → Dexonline, tr → TDK
+
+en.wiktionary is never used for non-English rounds so glosses stay
+in-language. Accent-folded word lists are bridged via MediaWiki search
+(casa → casă). Weak surname/given-name glosses and REDIRECT stubs are skipped.
 
 Lookups are cached in Firestore (including negative misses). The first
 guess of a round can warm the cache server-side via warm() without sending
@@ -39,6 +41,10 @@ _OPENSEARCH = (
     "?action=opensearch&search={term}&limit=8&redirects=resolve&format=json"
 )
 _DWDS = "https://www.dwds.de/wb/{term}"
+_DEXONLINE = "https://dexonline.ro/definitie/{term}/json"
+_TDK = "https://sozluk.gov.tr/gts?ara={term}"
+_RAE = "https://rae-api.com/api/words/{term}"
+_PRIBERAM = "https://dicionario.priberam.org/{term}"
 
 _TAG = re.compile(r"<[^>]+>")
 _SPACE = re.compile(r"\s+")
@@ -47,9 +53,23 @@ _BOLD = re.compile(r"'{2,}")
 _WIKI_LINK = re.compile(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]")
 _WIKI_TEMPLATE = re.compile(r"\{\{[^{}]*\}\}")
 _DE_SENSE = re.compile(r"^:\[(\d+)\]\s*(.+)$")
-_DE_BEDEUTUNGEN = re.compile(r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S)
+_DE_BEDEUTUNGEN = re.compile(
+    r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S
+)
 _ES_SENSE = re.compile(r"^;(\d+)\s*(?:\{\{[^{}]*\}\})?\s*:\s*(.+)$")
-_DWDS_DEF = re.compile(r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I)
+_DWDS_DEF = re.compile(
+    r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I
+)
+_DEX_MARK = re.compile(r"[@$#]([^@$#]*)[@$#]")
+_META_DESC = re.compile(
+    r'<meta\s+name="description"\s+content="([^"]+)"', re.I
+)
+_PRIBERAM_GLOSS = re.compile(
+    r":\s*(.+?)\s*(?:—|-)\s*Dicion", re.S
+)
+_RAE_PREFIX = re.compile(
+    r"^\d+\.?[a-z]?\.?\s*(?:[fma]\.|[a-z]+\.)*\s*", re.I
+)
 _WEAK_GLOSS = re.compile(
     r"^(?:a |an |eine? )?"
     r"(?:surname|given name|family name|male given name|female given name|"
@@ -59,6 +79,8 @@ _WEAK_GLOSS = re.compile(
     re.I,
 )
 _REDIRECT = re.compile(r"^REDIRECT\b", re.I)
+# Acute/grave stress marks alone (casa → casá) are not real lemma restorations.
+_STRESS_MARKS = set("áéíóúàèìòùÁÉÍÓÚÀÈÌÒÙ")
 
 # Hangman language -> en.wiktionary REST language key / native wiki host.
 _LANG_KEY = {
@@ -155,6 +177,16 @@ def _title_fits_language(title, language, key):
         if ch not in allowed:
             return False
     return True
+
+
+def _only_stress_marks(title, shown):
+    """True for stress-only variants like casa → casá (not casă / enseñanza)."""
+    if not title or title.casefold() == (shown or "").casefold():
+        return False
+    if _ascii_fold(title) != _ascii_fold(shown):
+        return False
+    extras = [ch for ch in title if ord(ch) >= 128]
+    return bool(extras) and all(ch in _STRESS_MARKS for ch in extras)
 
 
 def _titles(word, language):
@@ -295,9 +327,17 @@ def _native_candidates(word, language):
                 continue
             if title not in found:
                 found.append(title)
-    preferred = [title for title in found if title.casefold() != shown.casefold()]
+    preferred = [
+        title
+        for title in found
+        if title.casefold() != shown.casefold()
+        and not _only_stress_marks(title, shown)
+    ]
+    # Bare hangman spelling before stress-only lookalikes (casá).
     ordered = []
-    for title in preferred + found + base:
+    for title in preferred + base + found:
+        if _only_stress_marks(title, shown):
+            continue
         if title not in ordered:
             ordered.append(title)
     return ordered
@@ -380,18 +420,107 @@ def _dwds_gloss(term):
     return None
 
 
+def _dexonline_gloss(term):
+    """First Dexonline sense for a Romanian lemma, or None."""
+    payload = _request_json(_DEXONLINE.format(term=urllib.parse.quote(term)))
+    if not payload:
+        return None
+    for entry in payload.get("definitions") or []:
+        rep = entry.get("internalRep") or ""
+        text = _DEX_MARK.sub(r"\1", rep)
+        text = html.unescape(text)
+        match = re.search(
+            r"(?:^|[.])\s*1\.\s*(.+?)(?:\s*\*\s*|\s*2\.|\s*$)", text
+        )
+        if match:
+            text = match.group(1)
+        text = _SPACE.sub(" ", text).strip(" .;")
+        if _usable(text, term):
+            return text
+    return None
+
+
+def _tdk_gloss(term):
+    """First TDK (sozluk.gov.tr) sense for a Turkish lemma, or None."""
+    payload = _request_json(_TDK.format(term=urllib.parse.quote(term)))
+    if not payload or isinstance(payload, dict):
+        return None
+    for entry in payload:
+        for sense in entry.get("anlamlarListe") or []:
+            text = _SPACE.sub(" ", (sense.get("anlam") or "")).strip()
+            # Skip cross-reference stubs like "► aile".
+            if text.startswith("►") or text.startswith("→"):
+                continue
+            if _usable(text, term):
+                return text
+    return None
+
+
+def _rae_gloss(term):
+    """First RAE sense via rae-api.com, or None."""
+    payload = _request_json(_RAE.format(term=urllib.parse.quote(term)))
+    if not payload:
+        return None
+    data = payload.get("data") or {}
+    for meaning in data.get("meanings") or []:
+        for sense in meaning.get("senses") or []:
+            text = (sense.get("description") or "").strip()
+            if not text:
+                text = _RAE_PREFIX.sub("", sense.get("raw") or "").strip()
+                # Drop trailing example sentence when description was empty.
+                if ". " in text:
+                    text = text.split(". ", 1)[0].strip()
+            if _usable(text, term):
+                return text
+    return None
+
+
+def _priberam_gloss(term):
+    """Priberam meta-description gloss for Portuguese, or None."""
+    page = _request_text(_PRIBERAM.format(term=urllib.parse.quote(term)))
+    if not page:
+        return None
+    match = _META_DESC.search(page)
+    if not match:
+        return None
+    desc = html.unescape(match.group(1))
+    gloss = _PRIBERAM_GLOSS.search(desc)
+    text = gloss.group(1) if gloss else desc
+    text = re.sub(r"^Significado de [^:]+:\s*", "", text, flags=re.I)
+    text = text.split("—")[0].split(" - Dicion")[0]
+    text = _SPACE.sub(" ", text).strip(" .…;")
+    if _usable(text, term):
+        return text
+    return None
+
+
+def _local_gloss(language, term):
+    """Language-specific national dictionary fallback after Wiktionary."""
+    if language == "de":
+        return _dwds_gloss(term)
+    if language == "ro":
+        return _dexonline_gloss(term)
+    if language == "tr":
+        return _tdk_gloss(term)
+    if language == "es":
+        return _rae_gloss(term)
+    if language == "pt-br":
+        return _priberam_gloss(term)
+    return None
+
+
 def _native_lookup(word, language):
     shown = game.display_word(language, word) or word
-    for term in _native_candidates(word, language):
+    candidates = _native_candidates(word, language)
+    for term in candidates:
         gloss = _native_wiktionary_gloss(language, term)
         # Reject circular stubs even when the page title differs (maîson → Maison).
         if gloss and _usable(gloss, shown) and _usable(gloss, term):
             return gloss
-    if language == "de":
-        for term in _titles(shown, "de"):
-            gloss = _dwds_gloss(term)
-            if gloss and _usable(gloss, shown):
-                return gloss
+    for term in candidates:
+        gloss = _local_gloss(language, term)
+        if gloss and _usable(gloss, shown):
+            return gloss
     return None
 
 
