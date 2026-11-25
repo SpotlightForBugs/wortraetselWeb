@@ -34,10 +34,24 @@ class GuestSaveTests(unittest.TestCase):
         board = game.place_player([{"username": "Ada", "score": 1200}], "Ada", 1500)
         self.assertEqual(board, [{"username": "Ada", "score": 1500}])
         board = game.place_player([{"username": "Ada", "score": 1200}], "Bea", 900)
-        self.assertEqual(board[0]["username"], "Ada")
-        self.assertEqual(board[1], {"username": "Bea", "score": 900})
+        self.assertEqual([row["username"] for row in board], ["Ada", "Bea"])
         board = game.place_player([{"username": "Ada", "score": 1200}], "Bea", 2000)
         self.assertEqual(board[0], {"username": "Bea", "score": 2000})
+        board = game.place_player(
+            [
+                {"username": "SFB", "score": 23388},
+                {"username": "Adri", "score": 92224},
+                {"username": "SFB", "score": 100},
+                {"username": "  SFB  ", "score": "nope"},
+            ],
+            "SFB",
+            23388,
+        )
+        self.assertEqual([row["username"] for row in board], ["Adri", "SFB"])
+        self.assertEqual(board[0]["score"], 92224)
+        self.assertEqual(board[1]["score"], 23388)
+        self.assertEqual(game.score_number("Kategorie: 62532"), 0)
+        self.assertEqual(game.score_number(" 92224 "), 92224)
 
 
 if __name__ == "__main__":

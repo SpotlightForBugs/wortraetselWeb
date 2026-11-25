@@ -26,9 +26,13 @@ def get_leaderboard():
         else:
             display_name = user.to_dict()["email"].split("@")[0]
 
-        leaderboard.append({"username": display_name, "score": user.to_dict()["score"]})
+        leaderboard.append(
+            {"username": display_name, "score": user.to_dict().get("score")}
+        )
 
-    return leaderboard
+    import game
+
+    return game.place_player(leaderboard, None, None)
 
 
 def getDocumentFor(username_or_email):
@@ -100,4 +104,19 @@ def add_user_to_db(email, username):
         if user["email"] == email:
             return False
     db.collection("users").add({"email": email, "score": 0, "username": username})
+    return True
+
+
+def ensure_user_doc(email, username):
+    """Create a users document for an account that only exists in Firebase Auth.
+
+    Returns True if a document was created, False if one already existed.
+    """
+    db = getDB()
+    for user in getUsers():
+        if user.get("email") == email:
+            return False
+    db.collection("users").add(
+        {"email": email, "score": 0, "username": username, "legacy": False}
+    )
     return True
