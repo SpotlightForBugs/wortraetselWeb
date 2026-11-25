@@ -13,7 +13,9 @@ class LetterScoringTests(unittest.TestCase):
         self.assertNotEqual(game.letter_value("en", "k"), game.letter_value("tr", "k"))
 
     def test_hit_and_miss_use_the_same_table(self):
-        self.assertEqual(game.score_guess("en", "cat", "c"), game.letter_value("en", "c"))
+        self.assertEqual(
+            game.score_guess("en", "cat", "c"), game.letter_value("en", "c")
+        )
         miss = game.score_guess("en", "cat", "z")
         self.assertLess(miss, 0)
         self.assertEqual(miss, -max(5, game.letter_value("en", "z") // 4))

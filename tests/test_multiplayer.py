@@ -14,9 +14,7 @@ def _room():
 
 
 def _start(room, word="cat"):
-    room, error = multiplayer.start_room(
-        room, "host", word=word, rng=random.Random(0)
-    )
+    room, error = multiplayer.start_room(room, "host", word=word, rng=random.Random(0))
     assert error is None
     room["turn"] = 0
     room["starter"] = 0
@@ -120,9 +118,7 @@ class CopyTests(unittest.TestCase):
 class LeaveTests(unittest.TestCase):
     def test_host_and_turn_move_on_when_a_player_leaves(self):
         room, _ = multiplayer.add_player(_room(), "p3", "Cem")
-        room, _ = multiplayer.start_room(
-            room, "host", word="cat", rng=random.Random(0)
-        )
+        room, _ = multiplayer.start_room(room, "host", word="cat", rng=random.Random(0))
         room["turn"] = 0
         room["starter"] = 0
         room, _ = multiplayer.guess(room, "host", "z")
@@ -138,9 +134,7 @@ class LeaveTests(unittest.TestCase):
 
     def test_leaving_before_the_current_player_keeps_their_turn(self):
         room, _ = multiplayer.add_player(_room(), "p3", "Cem")
-        room, _ = multiplayer.start_room(
-            room, "host", word="cat", rng=random.Random(0)
-        )
+        room, _ = multiplayer.start_room(room, "host", word="cat", rng=random.Random(0))
         room["turn"] = 0
         room["starter"] = 0
         room, _ = multiplayer.guess(room, "host", "z")

@@ -677,7 +677,9 @@ def on_join(data):
         emit("room_error", {"error": "mp_room_missing"})
         return
     language = play_logic.coerce_language(session.get("language"))
-    name = _player_name(language, data.get("name") if "username" not in session else None)
+    name = _player_name(
+        language, data.get("name") if "username" not in session else None
+    )
     left = firebaseDB.leave_other_rooms(player_id, keep_code=code)
     for left_code, left_room in left:
         if left_room:

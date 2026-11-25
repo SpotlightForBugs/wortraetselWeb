@@ -77,9 +77,13 @@ class AccountSettingsTests(unittest.TestCase):
 
     def test_change_password_checks_current_then_updates(self):
         user = types.SimpleNamespace(uid="uid1")
-        with patch.object(accounts, "login", return_value="a@example.com"), patch.object(
+        with patch.object(
+            accounts, "login", return_value="a@example.com"
+        ), patch.object(
             accounts.auth, "get_user_by_email", return_value=user
-        ), patch.object(accounts.auth, "update_user") as update:
+        ), patch.object(
+            accounts.auth, "update_user"
+        ) as update:
             ok, error = accounts.change_password("a@example.com", "old", "newpass")
             self.assertTrue(ok)
             self.assertIsNone(error)
@@ -98,9 +102,13 @@ class AccountSettingsTests(unittest.TestCase):
 
     def test_delete_account_removes_auth_and_doc(self):
         user = types.SimpleNamespace(uid="uid1")
-        with patch.object(accounts, "login", return_value="a@example.com"), patch.object(
+        with patch.object(
+            accounts, "login", return_value="a@example.com"
+        ), patch.object(
             accounts.auth, "get_user_by_email", return_value=user
-        ), patch.object(accounts.auth, "delete_user") as delete, patch.object(
+        ), patch.object(
+            accounts.auth, "delete_user"
+        ) as delete, patch.object(
             accounts.firebaseDB, "delete_user_doc"
         ) as delete_doc:
             ok, error = accounts.delete_account("a@example.com", "secret")

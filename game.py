@@ -132,7 +132,8 @@ def letter_rates(language):
             _LETTER_RATES[language] = {ch: 1 / 26 for ch in counts}
         else:
             _LETTER_RATES[language] = {
-                ch: (counts[ch] / total) if counts[ch] else (0.5 / total) for ch in counts
+                ch: (counts[ch] / total) if counts[ch] else (0.5 / total)
+                for ch in counts
             }
     return _LETTER_RATES[language]
 

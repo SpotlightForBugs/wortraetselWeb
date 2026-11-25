@@ -149,9 +149,7 @@ def start_room(room, player_id, word=None, now=None, rng=None):
         last_guess=None,
         updated_at=stamp,
     )
-    room["players"] = [
-        dict(p, hits=0, misses=0, round=0, strikes=0) for p in players
-    ]
+    room["players"] = [dict(p, hits=0, misses=0, round=0, strikes=0) for p in players]
     return room, None
 
 
