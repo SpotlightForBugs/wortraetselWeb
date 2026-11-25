@@ -55,34 +55,25 @@ _BOLD = re.compile(r"'{2,}")
 _WIKI_LINK = re.compile(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]")
 _WIKI_TEMPLATE = re.compile(r"\{\{[^{}]*\}\}")
 _DE_SENSE = re.compile(r"^:\[(\d+)\]\s*(.+)$")
-_DE_BEDEUTUNGEN = re.compile(
-    r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S
-)
+_DE_BEDEUTUNGEN = re.compile(r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S)
 _ES_SENSE = re.compile(r"^;(\d+)\s*(?:\{\{[^{}]*\}\})?\s*:\s*(.+)$")
-_DWDS_DEF = re.compile(
-    r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I
-)
+_DWDS_DEF = re.compile(r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I)
 # Dexonline HTML synthesis rows (cheerio selectors from vxern/dexonline-scraper).
 _DEX_MEANING_ROW = re.compile(
     r'<div class="meaning-row">(.*?)</div>\s*'
     r'(?=<div class="meaning-relations"|</div>)',
     re.S,
 )
-_DEX_TREE_DEF = re.compile(
-    r'class="[^"]*tree-def[^"]*"[^>]*>(.*?)</span>', re.S | re.I
-)
+_DEX_TREE_DEF = re.compile(r'class="[^"]*tree-def[^"]*"[^>]*>(.*?)</span>', re.S | re.I)
 _DEX_ROW_SOURCES = re.compile(
     r'class="[^"]*meaning-sources[^"]*"[^>]*>(.*?)</span>', re.S | re.I
 )
 # Literary examples usually end with AUTHOR, PAGE (CARAGIALE, O. III 92).
 _DEX_EXAMPLE = re.compile(
-    r"\b[A-ZĂÂÎȘŢ]{2,}(?:\s+[A-ZĂÂÎȘŢ]\.?)*,\s*"
-    r"(?:[A-Z][A-Z0-9.\s]*)?\d+"
+    r"\b[A-ZĂÂÎȘŢ]{2,}(?:\s+[A-ZĂÂÎȘŢ]\.?)*,\s*" r"(?:[A-Z][A-Z0-9.\s]*)?\d+"
 )
 # Composition / bare cognate rows live beside real senses in the tree.
-_DEX_ETYM_ROW = re.compile(
-    r"(?:^\S+\s*\+\s*\S+$)|(^[A-Za-zÀ-ÿĂÂÎȘȚăâîșț''\-.]{2,40}$)"
-)
+_DEX_ETYM_ROW = re.compile(r"(?:^\S+\s*\+\s*\S+$)|(^[A-Za-zÀ-ÿĂÂÎȘȚăâîșț''\-.]{2,40}$)")
 # Mirror of vxern/dexonline-scraper copyrightedDictionaries (non-exhaustive).
 _DEX_COPYRIGHTED = frozenset(
     {
@@ -115,15 +106,9 @@ _SOURCE_LOCAL = {
     "es": "RAE",
     "pt-br": "Priberam",
 }
-_META_DESC = re.compile(
-    r'<meta\s+name="description"\s+content="([^"]+)"', re.I
-)
-_PRIBERAM_GLOSS = re.compile(
-    r":\s*(.+?)\s*(?:—|-)\s*Dicion", re.S
-)
-_RAE_PREFIX = re.compile(
-    r"^\d+\.?[a-z]?\.?\s*(?:[fma]\.|[a-z]+\.)*\s*", re.I
-)
+_META_DESC = re.compile(r'<meta\s+name="description"\s+content="([^"]+)"', re.I)
+_PRIBERAM_GLOSS = re.compile(r":\s*(.+?)\s*(?:—|-)\s*Dicion", re.S)
+_RAE_PREFIX = re.compile(r"^\d+\.?[a-z]?\.?\s*(?:[fma]\.|[a-z]+\.)*\s*", re.I)
 _WEAK_GLOSS = re.compile(
     r"^(?:a |an |eine? )?"
     r"(?:surname|given name|family name|male given name|female given name|"
