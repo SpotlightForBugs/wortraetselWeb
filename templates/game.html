@@ -113,9 +113,17 @@ block content %}
   <section class="panel mp-entry">
     <h2 data-i18n="mp_title">{{ copy.mp_title }}</h2>
     <p data-i18n="mp_pitch">{{ copy.mp_pitch }}</p>
+    <p class="mp-entry-guest" id="mp-guest-hint" data-i18n="mp_host_login" {% if not guest %}hidden{% endif %}>
+      {{ copy.mp_host_login }}
+    </p>
     <div class="mp-entry-actions">
       <form method="post" action="{{ url_for('multiplayer_create') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <select name="language" aria-label="{{ copy.mp_language }}">
+          {% for code in all_languages %}
+          <option value="{{ code }}" {% if code == user_language %}selected{% endif %}>{{ language_names[code] }}</option>
+          {% endfor %}
+        </select>
         <button type="submit" class="btn btn-success" data-i18n="mp_create">{{ copy.mp_create }}</button>
       </form>
       <span class="mp-entry-or" data-i18n="mp_or">{{ copy.mp_or }}</span>
@@ -308,6 +316,7 @@ block content %}
   function paintGuest(guest) {
     document.getElementById("save-score").hidden = !guest;
     document.getElementById("log-out").hidden = !!guest;
+    document.getElementById("mp-guest-hint").hidden = !guest;
   }
 
   function paintScore(data) {

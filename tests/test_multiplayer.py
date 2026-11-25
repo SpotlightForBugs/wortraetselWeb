@@ -126,5 +126,84 @@ class LeaveTests(unittest.TestCase):
         self.assertEqual(multiplayer.current_player(room), "p3")
 
 
+class RulesTests(unittest.TestCase):
+    def test_a_room_needs_two_players_to_start(self):
+        solo = multiplayer.new_room("ABCDE", "host", "Ana", "en", account="a@x.io")
+        _, error = multiplayer.start_room(solo, "host", word="cat")
+        self.assertEqual(error, "mp_need_players")
+
+    def test_only_the_host_changes_language_between_rounds(self):
+        room = _room()
+        _, error = multiplayer.set_language(room, "p2", "de")
+        self.assertEqual(error, "mp_host_only")
+        _, error = multiplayer.set_language(room, "host", "xx")
+        self.assertEqual(error, "mp_bad_language")
+        room, error = multiplayer.set_language(room, "host", "de")
+        self.assertIsNone(error)
+        self.assertEqual(room["language"], "de")
+        started, _ = multiplayer.start_room(room, "host", word="cat")
+        _, error = multiplayer.set_language(started, "host", "fr")
+        self.assertEqual(error, "mp_room_started")
+
+    def test_points_are_split_by_contribution(self):
+        room, _ = multiplayer.start_room(_room(), "host", word="cab")
+        room, _ = multiplayer.guess(room, "host", "c")
+        room, _ = multiplayer.guess(room, "host", "z")
+        room, _ = multiplayer.guess(room, "p2", "a")
+        room, _ = multiplayer.guess(room, "p2", "b")
+        shares = room["result"]["shares"]
+        self.assertEqual(room["result"]["points"], 900)
+        self.assertEqual(shares, {"host": 300, "p2": 600})
+        self.assertEqual([p["score"] for p in room["players"]], [300, 600])
+
+    def test_a_lost_word_charges_whoever_missed(self):
+        self.assertEqual(
+            multiplayer.round_shares(
+                [{"id": "a", "misses": 3}, {"id": "b", "misses": 0}], -60, "lost"
+            ),
+            {"a": -60, "b": 0},
+        )
+
+    def test_host_role_prefers_a_signed_in_player(self):
+        room, _ = multiplayer.add_player(_room(), "p3", "Cem", account="c@x.io")
+        room, _ = multiplayer.remove_player(room, "host")
+        self.assertEqual(room["host"], "p3")
+
+
+class AfkTests(unittest.TestCase):
+    def setUp(self):
+        self.room, _ = multiplayer.start_room(_room(), "host", word="cat", now=1000)
+
+    def test_a_turn_cannot_be_skipped_early(self):
+        _, error = multiplayer.skip_turn(self.room, "p2", now=1010)
+        self.assertEqual(error, "mp_too_early")
+
+    def test_strangers_cannot_skip(self):
+        _, error = multiplayer.skip_turn(self.room, "nobody", now=2000)
+        self.assertEqual(error, "mp_room_missing")
+
+    def test_timeout_passes_the_turn_then_removes_an_idle_player(self):
+        t = 1000 + multiplayer.TURN_SECONDS
+        room, error = multiplayer.skip_turn(self.room, "p2", now=t)
+        self.assertIsNone(error)
+        self.assertEqual(multiplayer.current_player(room), "p2")
+        self.assertEqual(room["notice"]["type"], "timeout")
+        room, _ = multiplayer.guess(room, "p2", "z", now=t + 1)
+        self.assertEqual(multiplayer.current_player(room), "host")
+        room, _ = multiplayer.skip_turn(
+            room, "p2", now=t + 1 + multiplayer.TURN_SECONDS
+        )
+        self.assertEqual(room["notice"]["type"], "removed")
+        self.assertEqual([p["id"] for p in room["players"]], ["p2"])
+        self.assertEqual(room["host"], "p2")
+
+    def test_guessing_clears_strikes(self):
+        t = 1000 + multiplayer.TURN_SECONDS
+        room, _ = multiplayer.skip_turn(self.room, "p2", now=t)
+        room, _ = multiplayer.guess(room, "p2", "z", now=t)
+        room, _ = multiplayer.guess(room, "host", "c", now=t)
+        self.assertEqual(room["players"][0]["strikes"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()

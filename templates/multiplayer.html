@@ -22,10 +22,21 @@
   {% else %}
   <section class="game-area">
     <div class="panel">
-      <div class="mp-turn" id="turn" role="status" aria-live="polite"></div>
+      <div class="mp-turn" id="turn" role="status" aria-live="polite">
+        <span id="turn-text"></span>
+        <span class="mp-timer" id="turn-timer" hidden></span>
+      </div>
       <div class="mp-lobby" id="lobby">
         <p>{{ copy.mp_invite }}</p>
         <span class="mp-code mp-code-big" translate="no">{{ room_code }}</span>
+        <label class="mp-language" for="room-language">
+          <span>{{ copy.mp_language }}</span>
+          <select id="room-language">
+            {% for code, name in language_names.items() %}
+            <option value="{{ code }}">{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
       </div>
       <div id="board">
         <div class="stage">
@@ -40,6 +51,7 @@
       <ul class="mp-players" id="players" translate="no"></ul>
       <div class="mp-actions">
         <button type="button" class="btn btn-success mp-start" id="start-game" hidden>{{ copy.mp_start }}</button>
+        <p class="mp-hint" id="start-hint" hidden>{{ copy.mp_need_players }}</p>
       </div>
       <div class="mp-letters" id="letters" translate="no">
         {% for letter in letters %}
@@ -65,6 +77,9 @@
     var current = boot.state;
     var pending = false;
     var toastTimer = null;
+    var clockOffset = 0;
+    var lastNotice = null;
+    var lastSkip = 0;
     var socket = io({ transports: ["websocket", "polling"] });
     var $ = function (id) {
       return document.getElementById(id);
@@ -131,27 +146,32 @@
           item.appendChild(tag);
         });
 
-        var hits = document.createElement("span");
-        hits.className = "mp-hits";
-        hits.textContent = fill(copy.mp_hits, { n: p.hits });
-        item.appendChild(hits);
+        var stats = document.createElement("span");
+        stats.className = "mp-hits";
+        var share = state.result && state.result.shares ? state.result.shares[p.id] : null;
+        var line = fill(copy.mp_score, { n: p.score });
+        if (state.state === "playing") line = fill(copy.mp_hits, { n: p.hits }) + " · " + line;
+        if (share) line = (share > 0 ? "+" : "") + share + " · " + line;
+        stats.textContent = line;
+        if (share) stats.classList.add(share > 0 ? "gain" : "loss");
+        item.appendChild(stats);
         list.appendChild(item);
       });
     }
 
     function renderTurn(state) {
-      var turn = $("turn");
+      var turn = $("turn-text");
       var mine = state.state === "playing" && state.turn === boot.me;
-      turn.className = "mp-turn";
+      $("turn").className = "mp-turn";
       if (state.state === "waiting") {
         turn.textContent = state.host === boot.me ? copy.mp_ready : copy.mp_waiting;
       } else if (state.state === "playing") {
         turn.textContent = mine ? copy.mp_your_turn : fill(copy.mp_turn_of, { name: nameOf(state.turn) });
-        if (mine) turn.classList.add("mine");
+        if (mine) $("turn").classList.add("mine");
       } else if (state.result) {
         var word = state.result.word.toUpperCase();
         var won = state.result.status === "won";
-        turn.classList.add(won ? "won" : "lost");
+        $("turn").classList.add(won ? "won" : "lost");
         turn.textContent = fill(won ? copy.mp_won : copy.mp_lost, { word: word });
         if (state.result.winner) {
           turn.textContent += " " + fill(copy.mp_winner, { name: nameOf(state.result.winner) });
@@ -189,17 +209,51 @@
       });
     }
 
+    function renderLobby(state) {
+      var isHost = state.host === boot.me;
+      var select = $("room-language");
+      select.value = state.language;
+      select.disabled = !isHost;
+      var enough = state.players.length >= state.min_players;
+      var start = $("start-game");
+      start.hidden = !isHost || state.state === "playing";
+      start.textContent = state.state === "finished" ? copy.mp_again : copy.mp_start;
+      start.disabled = !enough;
+      $("start-hint").hidden = enough || state.state === "playing";
+    }
+
+    function tick() {
+      var timer = $("turn-timer");
+      if (current.state !== "playing" || !current.turn_deadline) {
+        timer.hidden = true;
+        return;
+      }
+      var left = Math.max(0, Math.ceil(current.turn_deadline - (Date.now() / 1000 + clockOffset)));
+      timer.hidden = false;
+      timer.textContent = fill(copy.mp_seconds, { n: left });
+      timer.classList.toggle("urgent", left <= 5);
+      // Anyone still here may move an idle player along; the server checks the clock.
+      if (left === 0 && Date.now() - lastSkip > 2000) {
+        lastSkip = Date.now();
+        socket.emit("skip_turn", { code: boot.code });
+      }
+    }
+
     function render(state) {
       current = state;
       pending = false;
-      var start = $("start-game");
-      start.hidden = state.host !== boot.me || state.state === "playing";
-      start.textContent = state.state === "finished" ? copy.mp_again : copy.mp_start;
-      start.disabled = false;
+      clockOffset = state.server_now - Date.now() / 1000;
+      var notice = state.notice ? JSON.stringify(state.notice) + state.turn_deadline : null;
+      if (state.notice && notice !== lastNotice) {
+        toast(fill(state.notice.type === "removed" ? copy.mp_afk_removed : copy.mp_afk, { name: state.notice.name }));
+      }
+      lastNotice = notice;
+      renderLobby(state);
       renderTurn(state);
       renderPlayers(state);
       renderBoard(state);
       renderLetters(state);
+      tick();
     }
 
     function guess(letter) {
@@ -220,7 +274,7 @@
     socket.on("room_state", render);
     socket.on("room_error", function (data) {
       pending = false;
-      $("start-game").disabled = false;
+      renderLobby(current);
       renderLetters(current);
       toast(copy[data.error] || copy.try_again);
     });
@@ -264,6 +318,11 @@
       socket.emit("leave", { code: boot.code }, go);
     });
 
+    $("room-language").addEventListener("change", function () {
+      socket.emit("set_language", { code: boot.code, language: this.value });
+    });
+
+    setInterval(tick, 500);
     render(current);
   })();
 </script>

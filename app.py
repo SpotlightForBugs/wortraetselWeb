@@ -505,7 +505,12 @@ def _player_name(language):
 @app.route("/multiplayer/create", methods=["POST"])
 def multiplayer_create():
     _ensure_round()
-    language = session["language"]
+    if "username" not in session:
+        # Hosting needs an account; guests can still join with a code.
+        return redirect(url_for("game", auth="login"))
+    language = request.form.get("language")
+    if not play_logic.isValidLanguage(language):
+        language = session["language"]
     room = firebaseDB.create_room(
         _player_id(), _player_name(language), language, session.get("username")
     )
@@ -539,6 +544,7 @@ def multiplayer_room(code):
         dark_mode=bool(session.get("dark_mode", False)),
         room_code=code,
         player_id=session.get("mp_id"),
+        language_names=play_logic.language_names(),
         error=error,
         state=state,
         letters=[chr(i) for i in range(65, 91)],
@@ -565,18 +571,14 @@ def _broadcast(room):
 
 
 def _award_room(room):
-    """Logged-in players get the round on the leaderboard like a solo round."""
+    """Signed-in players' share of the round goes to the global leaderboard."""
+    shares = room["result"].get("shares") or {}
     for player in room.get("players") or []:
-        if not player.get("account"):
+        points = shares.get(player["id"], 0)
+        if not player.get("account") or not points:
             continue
         try:
-            play_logic.finish_game(
-                player["account"],
-                word=room["word"],
-                wrong_guesses=room["wrong_guesses"],
-                success=room["result"]["status"] == "won",
-                all_guesses=room["letters"],
-            )
+            firebaseDB.setScore(player["account"], points)
         except Exception as error:
             sentry_sdk.capture_exception(error)
 
@@ -617,6 +619,33 @@ def on_guess(data):
     _broadcast(room)
     if room["state"] == "finished":
         _award_room(room)
+
+
+@socketio.on("skip_turn")
+@_room_event
+def on_skip_turn(data):
+    code = multiplayer.normalize_code(data.get("code"))
+    room, error = firebaseDB.skip_turn_db(code, session.get("mp_id"))
+    if error == "mp_too_early":
+        # Clocks drift a little between browsers; the next timer tick retries.
+        return
+    if error:
+        emit("room_error", {"error": error})
+        return
+    _broadcast(room)
+
+
+@socketio.on("set_language")
+@_room_event
+def on_set_language(data):
+    code = multiplayer.normalize_code(data.get("code"))
+    room, error = firebaseDB.set_room_language_db(
+        code, session.get("mp_id"), data.get("language")
+    )
+    if error:
+        emit("room_error", {"error": error})
+        return
+    _broadcast(room)
 
 
 @socketio.on("leave")

@@ -186,3 +186,17 @@ def leave_room_db(code, player_id):
     import multiplayer
 
     return update_room(code, lambda room: multiplayer.remove_player(room, player_id))
+
+
+def skip_turn_db(code, player_id):
+    import multiplayer
+
+    return update_room(code, lambda room: multiplayer.skip_turn(room, player_id))
+
+
+def set_room_language_db(code, player_id, language):
+    import multiplayer
+
+    return update_room(
+        code, lambda room: multiplayer.set_language(room, player_id, language)
+    )
