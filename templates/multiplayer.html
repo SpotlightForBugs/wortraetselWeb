@@ -26,7 +26,10 @@
         <span id="turn-text"></span>
         <span class="mp-timer" id="turn-timer" hidden></span>
       </div>
-      <p class="result-definition" id="mp-definition" hidden></p>
+      <div class="result-gloss" id="mp-gloss" hidden>
+        <p class="result-definition" id="mp-definition"></p>
+        <span class="result-source" id="mp-source" hidden></span>
+      </div>
       <div class="mp-lobby" id="lobby">
         <p>{{ copy.mp_invite }}</p>
         <span class="mp-code mp-code-big" translate="no">{{ room_code }}</span>
@@ -175,10 +178,16 @@
     }
 
     function paintDefinition(word) {
+      var wrap = $("mp-gloss");
       var node = $("mp-definition");
-      if (!node) return;
-      node.hidden = true;
+      var source = $("mp-source");
+      if (!wrap || !node) return;
+      wrap.hidden = true;
       node.textContent = "";
+      if (source) {
+        source.hidden = true;
+        source.textContent = "";
+      }
       if (!word) return;
       var lang = current.language || document.documentElement.getAttribute("data-lang") || "en";
       fetch(
@@ -191,16 +200,35 @@
         .then(function (data) {
           var text = data && data.definition ? String(data.definition).trim() : "";
           if (!text) {
-            node.hidden = true;
+            wrap.hidden = true;
             node.textContent = "";
+            if (source) {
+              source.hidden = true;
+              source.textContent = "";
+            }
             return;
           }
           node.textContent = text;
-          node.hidden = false;
+          if (source) {
+            var name = data && data.source ? String(data.source).trim() : "";
+            if (name) {
+              var template = (copy && copy.gloss_from) || "from {source}";
+              source.textContent = template.replace("{source}", name);
+              source.hidden = false;
+            } else {
+              source.hidden = true;
+              source.textContent = "";
+            }
+          }
+          wrap.hidden = false;
         })
         .catch(function () {
-          node.hidden = true;
+          wrap.hidden = true;
           node.textContent = "";
+          if (source) {
+            source.hidden = true;
+            source.textContent = "";
+          }
         });
     }
 

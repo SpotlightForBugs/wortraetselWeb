@@ -204,7 +204,10 @@ block content %}
 <div id="result-layer" class="sheet" {% if not result %}hidden{% endif %}>
   <section class="auth-card result-card" role="dialog" aria-modal="true">
     <p id="result-message">{{ result.message if result else '' }}</p>
-    <p id="result-definition" class="result-definition" hidden></p>
+    <div id="result-gloss" class="result-gloss" hidden>
+      <p id="result-definition" class="result-definition"></p>
+      <span id="result-source" class="result-source" hidden></span>
+    </div>
     <p id="result-worth" {% if not result or not result.offer %}hidden{% endif %}>
       {{ result.worth if result else '' }}
     </p>
@@ -783,7 +786,7 @@ block content %}
   var resultAdvanceStarted = 0;
   var resultAdvanceRemaining = 0;
   var resultAdvancePaused = false;
-  var RESULT_ADVANCE_MS = 6500;
+  var RESULT_ADVANCE_MS = 10000;
 
   function resultNextButton() {
     return document.getElementById("result-next");
@@ -867,10 +870,16 @@ block content %}
   }
 
   function paintDefinition(word) {
+    var wrap = document.getElementById("result-gloss");
     var node = document.getElementById("result-definition");
-    if (!node) return;
-    node.hidden = true;
+    var source = document.getElementById("result-source");
+    if (!wrap || !node) return;
+    wrap.hidden = true;
     node.textContent = "";
+    if (source) {
+      source.hidden = true;
+      source.textContent = "";
+    }
     if (!word) {
       fitDrawing();
       return;
@@ -889,18 +898,37 @@ block content %}
       .then(function (data) {
         var text = data && data.definition ? String(data.definition).trim() : "";
         if (!text) {
-          node.hidden = true;
+          wrap.hidden = true;
           node.textContent = "";
+          if (source) {
+            source.hidden = true;
+            source.textContent = "";
+          }
           fitDrawing();
           return;
         }
         node.textContent = text;
-        node.hidden = false;
+        if (source) {
+          var name = data && data.source ? String(data.source).trim() : "";
+          if (name) {
+            var template = (copy && copy.gloss_from) || "from {source}";
+            source.textContent = template.replace("{source}", name);
+            source.hidden = false;
+          } else {
+            source.hidden = true;
+            source.textContent = "";
+          }
+        }
+        wrap.hidden = false;
         fitDrawing();
       })
       .catch(function () {
-        node.hidden = true;
+        wrap.hidden = true;
         node.textContent = "";
+        if (source) {
+          source.hidden = true;
+          source.textContent = "";
+        }
         fitDrawing();
       });
   }

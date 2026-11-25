@@ -195,7 +195,7 @@ def set_site_config(fields):
 
 
 # Bump when gloss sources change so stale negative misses are refetched.
-_GLOSS_CACHE_VERSION = "5"
+_GLOSS_CACHE_VERSION = "7"
 
 
 def _gloss_doc_id(language, word):
@@ -226,22 +226,23 @@ def get_word_gloss(language, word):
     return snapshot.to_dict() or {}
 
 
-def set_word_gloss(language, word, definition):
+def set_word_gloss(language, word, definition, source=None):
     """Store a gloss or a negative cache miss for language+word."""
     import time
 
     language = (language or "en").strip().lower()
     word = (word or "").strip().lower()
     doc_id = _gloss_doc_id(language, word)
-    getDB().collection("word_glosses").document(doc_id).set(
-        {
-            "language": language,
-            "word": word,
-            "definition": definition,
-            "missing": definition is None,
-            "updated_at": time.time(),
-        }
-    )
+    payload = {
+        "language": language,
+        "word": word,
+        "definition": definition,
+        "missing": definition is None,
+        "updated_at": time.time(),
+    }
+    if source:
+        payload["source"] = source
+    getDB().collection("word_glosses").document(doc_id).set(payload)
     return True
 
 

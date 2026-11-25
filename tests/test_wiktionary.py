@@ -18,25 +18,23 @@ class WiktionaryTests(unittest.TestCase):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch(
-            "wiktionary._native_lookup", return_value="house, building"
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+            "wiktionary._native_lookup",
+            return_value=("house, building", "Wiktionary"),
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertEqual(wiktionary.define("Haus", "de"), "house, building")
         set_cache.assert_called_once()
         args = set_cache.call_args[0]
         self.assertEqual(args[0], "de")
         self.assertEqual(args[1], "haus")
         self.assertEqual(args[2], "house, building")
+        self.assertEqual(set_cache.call_args[1].get("source"), "Wiktionary")
 
     def test_define_caches_misses(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch("wiktionary._en_rest_gloss", return_value=None), mock.patch(
-            "wiktionary._native_lookup", return_value=None
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+            "wiktionary._native_lookup", return_value=(None, None)
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertIsNone(wiktionary.define("xyzzyqq", "en"))
         set_cache.assert_called_once()
         self.assertIsNone(set_cache.call_args[0][2])
@@ -57,12 +55,14 @@ class WiktionaryTests(unittest.TestCase):
         self.assertEqual(wiktionary._titles("hocksitz", "de"), ["Hocksitz", "hocksitz"])
 
     def test_warm_fills_cache_quietly(self):
-        with mock.patch("wiktionary.define") as define:
+        with mock.patch("wiktionary.define_entry") as define_entry:
             wiktionary.warm("haus", "de")
-        define.assert_called_once_with("haus", "de")
+        define_entry.assert_called_once_with("haus", "de")
 
     def test_warm_swallows_lookup_errors(self):
-        with mock.patch("wiktionary.define", side_effect=RuntimeError("offline")):
+        with mock.patch(
+            "wiktionary.define_entry", side_effect=RuntimeError("offline")
+        ):
             wiktionary.warm("haus", "de")
 
     def test_english_lookup_skips_surname_page(self):
@@ -89,10 +89,8 @@ class WiktionaryTests(unittest.TestCase):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch("wiktionary._fetch_en", side_effect=fake_fetch), mock.patch(
-            "wiktionary._native_lookup", return_value=None
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ):
+            "wiktionary._native_lookup", return_value=(None, None)
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss"):
             self.assertEqual(
                 wiktionary.define("labrum", "en"),
                 "The uppermost of the mouthparts.",
@@ -103,10 +101,11 @@ class WiktionaryTests(unittest.TestCase):
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
         ), mock.patch(
             "wiktionary._native_lookup",
-            return_value="Grammatik: Synonym zu Akkusativ, 4. Fall",
-        ), mock.patch(
-            "wiktionary._en_rest_gloss"
-        ) as en_rest, mock.patch(
+            return_value=(
+                "Grammatik: Synonym zu Akkusativ, 4. Fall",
+                "Wiktionary",
+            ),
+        ), mock.patch("wiktionary._en_rest_gloss") as en_rest, mock.patch(
             "wiktionary.firebaseDB.set_word_gloss"
         ):
             self.assertEqual(
@@ -137,38 +136,102 @@ class WiktionaryTests(unittest.TestCase):
                 if language == "de" and term == "Hocksitz"
                 else None
             ),
-        ), mock.patch(
-            "wiktionary.firebaseDB.set_word_gloss"
-        ) as set_cache:
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
             self.assertEqual(
                 wiktionary.define("hocksitz", "de"),
                 "Sitz in geschlossener Kniebeuge",
             )
         self.assertEqual(set_cache.call_args[0][2], "Sitz in geschlossener Kniebeuge")
 
-    def test_dexonline_parses_sense(self):
-        payload = {
-            "definitions": [
-                {
-                    "internalRep": (
-                        "@CASĂ^1,@ $case,$ #s. f.# @1.@ "
-                        "Clădire care servește drept locuință. * #Loc.#"
-                    )
-                }
-            ]
-        }
-        with mock.patch("wiktionary._request_json", return_value=payload):
+    def _dex_page(self, rows):
+        """Minimal Dexonline synthesis HTML (vxern meaning-row shape)."""
+        parts = []
+        for text, source in rows:
+            parts.append(
+                '<div class="meaning-row">'
+                '<div class="meaningContainer">'
+                f'<span class="tree-def html">{text}</span>'
+                f'<span class="meaning-sources tag-group">{source}</span>'
+                "</div></div>"
+                '<div class="meaning-relations"></div>'
+            )
+        return "".join(parts)
+
+    def test_dexonline_scrapes_html_definition(self):
+        page = self._dex_page(
+            [("Clădire care servește drept locuință.", "DEX '09")]
+        )
+        with mock.patch("wiktionary._request_text", return_value=page):
             self.assertEqual(
                 wiktionary._dexonline_gloss("casă"),
                 "Clădire care servește drept locuință",
             )
+
+    def test_dexonline_skips_examples_and_etymology(self):
+        page = self._dex_page(
+            [
+                (
+                    "Viteazul voievod ni s-a închinat... CARAGIALE, O. III 92.",
+                    "DLRLC",
+                ),
+                ("Agro- + terasă", "DEX '09"),
+                (
+                    "Formă de relief cu aspect de treaptă.",
+                    "DEX '09",
+                ),
+            ]
+        )
+        with mock.patch("wiktionary._request_text", return_value=page):
+            self.assertEqual(
+                wiktionary._dexonline_gloss("agroterasa"),
+                "Formă de relief cu aspect de treaptă",
+            )
+
+    def test_dexonline_prefers_non_copyrighted_source(self):
+        page = self._dex_page(
+            [
+                ("Definiție din MDA2 care ar trebui să piardă.", "MDA2"),
+                ("Acțiunea de a aplica și rezultatul ei.", "DEX '09"),
+            ]
+        )
+        with mock.patch("wiktionary._request_text", return_value=page):
+            self.assertEqual(
+                wiktionary._dexonline_gloss("aplicarile"),
+                "Acțiunea de a aplica și rezultatul ei",
+            )
+
+    def test_dexonline_falls_back_to_copyrighted_when_needed(self):
+        page = self._dex_page(
+            [("Prezența bacililor în urină.", "DN")]
+        )
+        with mock.patch("wiktionary._request_text", return_value=page):
+            self.assertEqual(
+                wiktionary._dexonline_gloss("bacilurie"),
+                "Prezența bacililor în urină",
+            )
+
+    def test_define_entry_includes_source(self):
+        with mock.patch(
+            "wiktionary.firebaseDB.get_word_gloss", return_value=None
+        ), mock.patch(
+            "wiktionary._native_lookup",
+            return_value=("house", "Dexonline"),
+        ), mock.patch("wiktionary.firebaseDB.set_word_gloss") as set_cache:
+            entry = wiktionary.define_entry("casa", "ro")
+        self.assertEqual(
+            entry, {"definition": "house", "source": "Dexonline"}
+        )
+        self.assertEqual(set_cache.call_args[0][:3], ("ro", "casa", "house"))
+        self.assertEqual(set_cache.call_args[1].get("source"), "Dexonline")
 
     def test_tdk_parses_sense(self):
         payload = [
             {
                 "anlamlarListe": [
                     {"anlam": "► aile"},
-                    {"anlam": "Bir kimsenin veya ailenin içinde yaşadığı yer"},
+                    {
+                        "anlam": "Bir kimsenin veya ailenin içinde yaşadığı yer"
+                    },
                 ]
             }
         ]
@@ -192,7 +255,7 @@ class WiktionaryTests(unittest.TestCase):
     def test_priberam_parses_meta(self):
         page = (
             '<meta name="description" content="Significado de casa, nome feminino: '
-            'Nome genérico de construções destinadas a habitação — Dicionário Priberam">'
+            "Nome genérico de construções destinadas a habitação — Dicionário Priberam\">"
         )
         with mock.patch("wiktionary._request_text", return_value=page):
             self.assertEqual(

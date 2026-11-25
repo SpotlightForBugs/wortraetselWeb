@@ -4,7 +4,8 @@ English uses en.wiktionary REST, then en.wiktionary wikitext. Every other
 hangman language uses that language's own Wiktionary first, then a local
 dictionary when one is available:
 
-  de → DWDS, es → RAE (rae-api), pt-br → Priberam, ro → Dexonline, tr → TDK
+  de → DWDS, es → RAE (rae-api), pt-br → Priberam,
+  ro → Dexonline HTML synthesis (vxern/dexonline-scraper shape), tr → TDK
 
 en.wiktionary is never used for non-English rounds so glosses stay
 in-language. Accent-folded word lists are bridged via MediaWiki search
@@ -41,7 +42,8 @@ _OPENSEARCH = (
     "?action=opensearch&search={term}&limit=8&redirects=resolve&format=json"
 )
 _DWDS = "https://www.dwds.de/wb/{term}"
-_DEXONLINE = "https://dexonline.ro/definitie/{term}/json"
+# HTML synthesis tab (same page vxern/dexonline-scraper scrapes), not /json.
+_DEXONLINE = "https://dexonline.ro/definitie/{term}"
 _TDK = "https://sozluk.gov.tr/gts?ara={term}"
 _RAE = "https://rae-api.com/api/words/{term}"
 _PRIBERAM = "https://dicionario.priberam.org/{term}"
@@ -53,13 +55,75 @@ _BOLD = re.compile(r"'{2,}")
 _WIKI_LINK = re.compile(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]")
 _WIKI_TEMPLATE = re.compile(r"\{\{[^{}]*\}\}")
 _DE_SENSE = re.compile(r"^:\[(\d+)\]\s*(.+)$")
-_DE_BEDEUTUNGEN = re.compile(r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S)
+_DE_BEDEUTUNGEN = re.compile(
+    r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S
+)
 _ES_SENSE = re.compile(r"^;(\d+)\s*(?:\{\{[^{}]*\}\})?\s*:\s*(.+)$")
-_DWDS_DEF = re.compile(r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I)
-_DEX_MARK = re.compile(r"[@$#]([^@$#]*)[@$#]")
-_META_DESC = re.compile(r'<meta\s+name="description"\s+content="([^"]+)"', re.I)
-_PRIBERAM_GLOSS = re.compile(r":\s*(.+?)\s*(?:—|-)\s*Dicion", re.S)
-_RAE_PREFIX = re.compile(r"^\d+\.?[a-z]?\.?\s*(?:[fma]\.|[a-z]+\.)*\s*", re.I)
+_DWDS_DEF = re.compile(
+    r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I
+)
+# Dexonline HTML synthesis rows (cheerio selectors from vxern/dexonline-scraper).
+_DEX_MEANING_ROW = re.compile(
+    r'<div class="meaning-row">(.*?)</div>\s*'
+    r'(?=<div class="meaning-relations"|</div>)',
+    re.S,
+)
+_DEX_TREE_DEF = re.compile(
+    r'class="[^"]*tree-def[^"]*"[^>]*>(.*?)</span>', re.S | re.I
+)
+_DEX_ROW_SOURCES = re.compile(
+    r'class="[^"]*meaning-sources[^"]*"[^>]*>(.*?)</span>', re.S | re.I
+)
+# Literary examples usually end with AUTHOR, PAGE (CARAGIALE, O. III 92).
+_DEX_EXAMPLE = re.compile(
+    r"\b[A-ZĂÂÎȘŢ]{2,}(?:\s+[A-ZĂÂÎȘŢ]\.?)*,\s*"
+    r"(?:[A-Z][A-Z0-9.\s]*)?\d+"
+)
+# Composition / bare cognate rows live beside real senses in the tree.
+_DEX_ETYM_ROW = re.compile(
+    r"(?:^\S+\s*\+\s*\S+$)|(^[A-Za-zÀ-ÿĂÂÎȘȚăâîșț''\-.]{2,40}$)"
+)
+# Mirror of vxern/dexonline-scraper copyrightedDictionaries (non-exhaustive).
+_DEX_COPYRIGHTED = frozenset(
+    {
+        "MDA",
+        "MDA2",
+        "MDN '00",
+        "MDN '08",
+        "DOOM 2",
+        "DOOM 3",
+        "DLR",
+        "DLRLC",
+        "DEXI",
+        "NODEX",
+        "Scriban",
+        "Sinonime",
+        "Antonime",
+        "Argou",
+        "DER",
+        "DA",
+        "DN",
+    }
+)
+
+# Display names cached with the gloss and shown as a "from …" badge.
+_SOURCE_WIKTIONARY = "Wiktionary"
+_SOURCE_LOCAL = {
+    "de": "DWDS",
+    "ro": "Dexonline",
+    "tr": "TDK",
+    "es": "RAE",
+    "pt-br": "Priberam",
+}
+_META_DESC = re.compile(
+    r'<meta\s+name="description"\s+content="([^"]+)"', re.I
+)
+_PRIBERAM_GLOSS = re.compile(
+    r":\s*(.+?)\s*(?:—|-)\s*Dicion", re.S
+)
+_RAE_PREFIX = re.compile(
+    r"^\d+\.?[a-z]?\.?\s*(?:[fma]\.|[a-z]+\.)*\s*", re.I
+)
 _WEAK_GLOSS = re.compile(
     r"^(?:a |an |eine? )?"
     r"(?:surname|given name|family name|male given name|female given name|"
@@ -294,6 +358,50 @@ def _search_titles(host, term):
     return seen
 
 
+def _ro_stem_forms(shown):
+    """Likely dictionary lemmas for articulated/plural Romanian hangman words."""
+    text = (shown or "").casefold()
+    stems = []
+    if len(text) < 5:
+        return stems
+
+    def add(form):
+        if form and form != text and len(form) >= 3 and form not in stems:
+            stems.append(form)
+
+    if text.endswith(("ului", "ilor")):
+        add(text[:-4])
+    elif text.endswith("elor") and len(text) > 6:
+        add(text[:-4])
+        add(text[:-4] + "e")
+    elif text.endswith("ile") and len(text) > 5:
+        add(text[:-3])
+        add(text[:-2])
+    elif text.endswith("lor") and len(text) > 5:
+        add(text[:-3])
+    elif text.endswith("lui") and len(text) > 5:
+        add(text[:-3])
+    elif text.endswith("ul") and len(text) > 4:
+        add(text[:-2])
+    elif text.endswith("le") and len(text) > 5:
+        add(text[:-2])
+    elif text.endswith("ia") and len(text) > 4:
+        # baciluria (def.) → bacilurie
+        add(text[:-2] + "ie")
+        add(text[:-1])
+    elif text.endswith("ii") and len(text) > 4:
+        add(text[:-1])
+    elif text.endswith("i") and len(text) > 4:
+        # ostatici → ostatic
+        add(text[:-1])
+    if text.endswith("a") and len(text) > 4:
+        # agroterasa → agroterasă / agroterase
+        add(text[:-1] + "ă")
+        add(text[:-1] + "e")
+        add(text[:-1])
+    return stems
+
+
 def _native_candidates(word, language):
     """Page titles to try: accented search hits first, then casing variants.
 
@@ -307,20 +415,40 @@ def _native_candidates(word, language):
     for candidate in _titles(shown, language):
         if candidate not in base:
             base.append(candidate)
+    if language == "ro":
+        for stem in _ro_stem_forms(shown):
+            for candidate in _titles(stem, language):
+                if candidate not in base:
+                    base.append(candidate)
     if not host:
         return base
     key = _ascii_fold(shown)
     found = []
-    for seed in _search_seeds(shown, language):
+    search_seeds = list(_search_seeds(shown, language))
+    if language == "ro":
+        for stem in _ro_stem_forms(shown):
+            if stem not in search_seeds:
+                search_seeds.append(stem)
+    for seed in search_seeds:
+        seed_key = _ascii_fold(seed)
         for title in _search_titles(host, seed):
-            if not _title_fits_language(title, language, key):
+            # Accept fold-match to the hangman word or to a stemmed lemma.
+            if not (
+                _title_fits_language(title, language, key)
+                or _title_fits_language(title, language, seed_key)
+            ):
                 continue
             if title not in found:
                 found.append(title)
+    # Prefer titles that *add* diacritics (casa → casă), never ones that
+    # strip them (casă → casa), so the verb "casa" cannot beat the noun.
+    shown_marks = sum(1 for ch in shown if ord(ch) >= 128)
     preferred = [
         title
         for title in found
-        if title.casefold() != shown.casefold() and not _only_stress_marks(title, shown)
+        if title.casefold() != shown.casefold()
+        and not _only_stress_marks(title, shown)
+        and sum(1 for ch in title if ord(ch) >= 128) > shown_marks
     ]
     # Bare hangman spelling before stress-only lookalikes (casá).
     ordered = []
@@ -409,21 +537,65 @@ def _dwds_gloss(term):
     return None
 
 
-def _dexonline_gloss(term):
-    """First Dexonline sense for a Romanian lemma, or None."""
-    payload = _request_json(_DEXONLINE.format(term=urllib.parse.quote(term)))
-    if not payload:
+def _dex_row_sources(chunk):
+    """Source labels attached to one Dexonline meaning-row."""
+    match = _DEX_ROW_SOURCES.search(chunk or "")
+    if not match:
+        return []
+    raw = _plain(match.group(1))
+    return [part.strip() for part in re.split(r"[,;/]", raw) if part.strip()]
+
+
+def _dex_row_text(chunk):
+    match = _DEX_TREE_DEF.search(chunk or "")
+    if not match:
         return None
-    for entry in payload.get("definitions") or []:
-        rep = entry.get("internalRep") or ""
-        text = _DEX_MARK.sub(r"\1", rep)
-        text = html.unescape(text)
-        match = re.search(r"(?:^|[.])\s*1\.\s*(.+?)(?:\s*\*\s*|\s*2\.|\s*$)", text)
-        if match:
-            text = match.group(1)
-        text = _SPACE.sub(" ", text).strip(" .;")
-        if _usable(text, term):
-            return text
+    return _SPACE.sub(" ", _plain(match.group(1))).strip(" .;")
+
+
+def _dex_is_example(text):
+    return bool(_DEX_EXAMPLE.search(text or ""))
+
+
+def _dex_is_etymology(text):
+    return bool(_DEX_ETYM_ROW.match((text or "").strip().rstrip(".")))
+
+
+def _dex_sources_ok(sources, allow_copyrighted):
+    if not sources:
+        return True
+    if allow_copyrighted:
+        return True
+    return any(source not in _DEX_COPYRIGHTED for source in sources)
+
+
+def _dexonline_gloss(term):
+    """First usable Dexonline definition from the HTML synthesis tab.
+
+    Matches the approach in vxern/dexonline-scraper: scrape
+    ``div.meaning-row`` / ``span.tree-def``, skip literary examples and
+    etymology crumbs, and prefer non-copyrighted dictionary sources.
+    """
+    page = _request_text(_DEXONLINE.format(term=urllib.parse.quote(term)))
+    if not page:
+        return None
+    rows = _DEX_MEANING_ROW.findall(page)
+    if not rows:
+        # Fallback: any tree-def span if markup shifted.
+        rows = [
+            f'<span class="tree-def html">{chunk}</span>'
+            for chunk in _DEX_TREE_DEF.findall(page)
+        ]
+    for allow_copyrighted in (False, True):
+        for chunk in rows:
+            text = _dex_row_text(chunk)
+            if not text or _dex_is_example(text) or _dex_is_etymology(text):
+                continue
+            sources = _dex_row_sources(chunk)
+            if not _dex_sources_ok(sources, allow_copyrighted):
+                continue
+            if _usable(text, term):
+                return text
     return None
 
 
@@ -497,18 +669,20 @@ def _local_gloss(language, term):
 
 
 def _native_lookup(word, language):
+    """Return (gloss, source) from native Wiktionary then a local dictionary."""
     shown = game.display_word(language, word) or word
     candidates = _native_candidates(word, language)
     for term in candidates:
         gloss = _native_wiktionary_gloss(language, term)
         # Reject circular stubs even when the page title differs (maîson → Maison).
         if gloss and _usable(gloss, shown) and _usable(gloss, term):
-            return gloss
+            return gloss, _SOURCE_WIKTIONARY
+    local_name = _SOURCE_LOCAL.get(language)
     for term in candidates:
         gloss = _local_gloss(language, term)
         if gloss and _usable(gloss, shown):
-            return gloss
-    return None
+            return gloss, local_name or _SOURCE_WIKTIONARY
+    return None, None
 
 
 def _en_rest_gloss(word):
@@ -524,18 +698,22 @@ def _en_rest_gloss(word):
 
 
 def _lookup(word, language):
+    """Return (gloss, source) or (None, None)."""
     if language not in _LANG_KEY:
-        return None
+        return None, None
     if language == "en":
-        return _en_rest_gloss(word) or _native_lookup(word, "en")
+        gloss = _en_rest_gloss(word)
+        if gloss:
+            return gloss, _SOURCE_WIKTIONARY
+        return _native_lookup(word, "en")
     # Never fall back to English Wiktionary for other languages.
     return _native_lookup(word, language)
 
 
-def define(word, language):
-    """Return one short gloss for this hangman language, or None.
+def define_entry(word, language):
+    """Return ``{definition, source}`` or None for a miss / empty gloss.
 
-    Firestore caches hits and misses under word_glosses.
+    Firestore caches hits and misses (with source) under word_glosses.
     """
     language = game.coerce_language(language)
     shown = (game.display_word(language, word) or word or "").strip().lower()
@@ -547,13 +725,26 @@ def define(word, language):
         cached = None
     if cached is not None:
         text = cached.get("definition")
-        return text if text else None
-    gloss = _lookup(shown, language)
+        if not text:
+            return None
+        return {
+            "definition": text,
+            "source": cached.get("source") or _SOURCE_WIKTIONARY,
+        }
+    gloss, source = _lookup(shown, language)
     try:
-        firebaseDB.set_word_gloss(language, shown, gloss)
+        firebaseDB.set_word_gloss(language, shown, gloss, source=source)
     except Exception:
         pass
-    return gloss
+    if not gloss:
+        return None
+    return {"definition": gloss, "source": source or _SOURCE_WIKTIONARY}
+
+
+def define(word, language):
+    """Return one short gloss for this hangman language, or None."""
+    entry = define_entry(word, language)
+    return entry["definition"] if entry else None
 
 
 def warm(word, language):
@@ -562,6 +753,6 @@ def warm(word, language):
     Safe to run on a background thread after the first guess of a round.
     """
     try:
-        define(word, language)
+        define_entry(word, language)
     except Exception:
         pass

@@ -456,13 +456,17 @@ def continue_round():
 
 @app.route("/define", methods=["GET"])
 def define_word():
-    """Wiktionary gloss for the result screen; empty when nothing useful exists."""
+    """Gloss for the result screen; empty when nothing useful exists."""
     language = play_logic.coerce_language(
         request.args.get("lang") or session.get("language") or "en"
     )
     word = request.args.get("word") or ""
-    gloss = wiktionary.define(word, language)
-    return jsonify({"definition": gloss})
+    entry = wiktionary.define_entry(word, language)
+    if not entry:
+        return jsonify({"definition": None, "source": None})
+    return jsonify(
+        {"definition": entry.get("definition"), "source": entry.get("source")}
+    )
 
 
 @app.route("/login", methods=["GET", "POST"])
