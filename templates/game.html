@@ -421,7 +421,7 @@ block content %}
   </section>
 </div>
 
-<div id="admin-layer" class="sheet auth-sheet" hidden>
+<div id="admin-layer" class="sheet auth-sheet admin-sheet" hidden>
   <section class="auth-card auth-card--admin" role="dialog" aria-modal="true" aria-labelledby="admin-title">
     <button
       type="button"
@@ -432,37 +432,41 @@ block content %}
     >
       <span aria-hidden="true">&times;</span>
     </button>
-    <header class="auth-card-head">
+    <header class="auth-card-head admin-head">
       <p class="auth-kicker">Hangman</p>
       <h2 id="admin-title" data-i18n="admin">{{ copy.admin }}</h2>
     </header>
     <p id="admin-error" class="error" hidden></p>
     <p id="admin-ok" class="account-ok" hidden></p>
 
-    <section class="auth-section">
+    <section class="auth-section admin-section">
       <h3 data-i18n="admin_announcement">{{ copy.admin_announcement }}</h3>
-      <form id="admin-announcement-form">
+      <form id="admin-announcement-form" class="admin-announce">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="auth-field">
-          <textarea id="admin-announcement-input" name="message" maxlength="280" rows="2">{{ announcement }}</textarea>
-        </div>
-        <div class="admin-row">
+        <label class="admin-field">
+          <span class="admin-field-label" data-i18n="admin_announcement">{{ copy.admin_announcement }}</span>
+          <textarea id="admin-announcement-input" name="message" maxlength="280" rows="3">{{ announcement }}</textarea>
+        </label>
+        <div class="admin-actions">
           <button type="submit" class="btn btn-primary" data-i18n="admin_save_announcement">{{ copy.admin_save_announcement }}</button>
           <button type="button" class="btn later" id="admin-announcement-clear" data-i18n="admin_clear_announcement">{{ copy.admin_clear_announcement }}</button>
         </div>
       </form>
     </section>
 
-    <section class="auth-section">
+    <section class="auth-section admin-section">
       <h3 data-i18n="admin_users">{{ copy.admin_users }}</h3>
       <form id="admin-search-form" class="admin-search">
-        <input type="search" id="admin-search" name="q" placeholder="{{ copy.admin_search }}" aria-label="{{ copy.admin_search }}" />
-        <button type="submit" class="btn" data-i18n="admin_refresh">{{ copy.admin_refresh }}</button>
+        <label class="admin-field admin-field--grow">
+          <span class="admin-field-label" data-i18n="admin_search">{{ copy.admin_search }}</span>
+          <input type="search" id="admin-search" name="q" placeholder="{{ copy.admin_search }}" aria-label="{{ copy.admin_search }}" />
+        </label>
+        <button type="submit" class="btn btn-primary admin-search-btn" data-i18n="admin_refresh">{{ copy.admin_refresh }}</button>
       </form>
       <div id="admin-users" class="admin-list"></div>
     </section>
 
-    <section class="auth-section">
+    <section class="auth-section admin-section">
       <h3 data-i18n="admin_rooms">{{ copy.admin_rooms }}</h3>
       <div id="admin-rooms" class="admin-list"></div>
     </section>
@@ -961,97 +965,132 @@ block content %}
     error.textContent = text || copy.try_again;
   }
 
+  function adminEl(tag, className, text) {
+    var node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text != null) node.textContent = text;
+    return node;
+  }
+
+  function adminChip(text, kind) {
+    return adminEl("span", "admin-chip" + (kind ? " admin-chip--" + kind : ""), text);
+  }
+
+  function adminHidden(name, value) {
+    var input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    return input;
+  }
+
+  function adminField(labelText, input) {
+    var label = adminEl("label", "admin-field");
+    label.appendChild(adminEl("span", "admin-field-label", labelText));
+    label.appendChild(input);
+    return label;
+  }
+
+  function adminAction(label, className, handler) {
+    var button = adminEl("button", className || "btn later", label);
+    button.type = "button";
+    button.addEventListener("click", handler);
+    return button;
+  }
+
   function renderAdminUsers(users) {
     var box = document.getElementById("admin-users");
     box.replaceChildren();
     if (!users || !users.length) {
-      var empty = document.createElement("p");
-      empty.className = "admin-empty";
-      empty.textContent = copy.admin_no_users;
-      box.appendChild(empty);
+      box.appendChild(adminEl("p", "admin-empty", copy.admin_no_users));
       return;
     }
     users.forEach(function (user) {
-      var card = document.createElement("article");
-      card.className = "admin-card";
-      var title = document.createElement("div");
-      title.className = "admin-card-title";
-      title.textContent = user.username + " · " + user.email;
-      var meta = document.createElement("div");
-      meta.className = "admin-card-meta";
-      meta.textContent =
-        copy.score_col +
-        ": " +
-        user.score +
-        (user.admin ? " · admin" : "") +
-        (user.banned ? " · banned" : "");
-      var scoreForm = document.createElement("form");
-      scoreForm.className = "admin-inline";
-      scoreForm.innerHTML =
-        '<input type="hidden" name="email" value="' +
-        user.email.replace(/"/g, "&quot;") +
-        '" />' +
-        '<input type="number" name="score" min="0" value="' +
-        user.score +
-        '" aria-label="' +
-        copy.admin_score +
-        '" />' +
-        '<button type="submit" class="btn">' +
-        copy.admin_score +
-        "</button>";
+      var card = adminEl("article", "admin-card");
+      var head = adminEl("div", "admin-card-head");
+      var avatar = adminEl(
+        "div",
+        "admin-avatar",
+        (user.username || "?").slice(0, 1).toUpperCase(),
+      );
+      var identity = adminEl("div", "admin-identity");
+      identity.appendChild(adminEl("div", "admin-card-title", user.username || user.email));
+      identity.appendChild(adminEl("div", "admin-card-email", user.email));
+      var chips = adminEl("div", "admin-chips");
+      chips.appendChild(adminChip(copy.score_col + " " + user.score, "score"));
+      if (user.admin) chips.appendChild(adminChip(copy.admin, "admin"));
+      if (user.banned) chips.appendChild(adminChip(copy.admin_ban, "danger"));
+      head.appendChild(avatar);
+      head.appendChild(identity);
+      head.appendChild(chips);
+
+      var scoreInput = document.createElement("input");
+      scoreInput.type = "number";
+      scoreInput.name = "score";
+      scoreInput.min = "0";
+      scoreInput.value = String(user.score);
+      scoreInput.setAttribute("aria-label", copy.admin_score);
+      var scoreForm = adminEl("form", "admin-form-row");
+      scoreForm.appendChild(adminHidden("email", user.email));
+      scoreForm.appendChild(adminField(copy.admin_score, scoreInput));
+      var scoreBtn = adminEl("button", "btn btn-primary", copy.admin_score);
+      scoreBtn.type = "submit";
+      scoreForm.appendChild(scoreBtn);
       scoreForm.addEventListener("submit", function (event) {
         event.preventDefault();
         adminPost("/admin/users/score", new FormData(scoreForm));
       });
-      var renameForm = document.createElement("form");
-      renameForm.className = "admin-inline";
-      renameForm.innerHTML =
-        '<input type="hidden" name="email" value="' +
-        user.email.replace(/"/g, "&quot;") +
-        '" />' +
-        '<input type="text" name="username" maxlength="20" minlength="2" value="' +
-        String(user.username).replace(/"/g, "&quot;") +
-        '" aria-label="' +
-        copy.admin_rename +
-        '" />' +
-        '<button type="submit" class="btn">' +
-        copy.admin_rename +
-        "</button>";
+
+      var nameInput = document.createElement("input");
+      nameInput.type = "text";
+      nameInput.name = "username";
+      nameInput.maxLength = 20;
+      nameInput.minLength = 2;
+      nameInput.value = user.username || "";
+      nameInput.setAttribute("aria-label", copy.admin_rename);
+      var renameForm = adminEl("form", "admin-form-row");
+      renameForm.appendChild(adminHidden("email", user.email));
+      renameForm.appendChild(adminField(copy.admin_rename, nameInput));
+      var renameBtn = adminEl("button", "btn btn-primary", copy.admin_rename);
+      renameBtn.type = "submit";
+      renameForm.appendChild(renameBtn);
       renameForm.addEventListener("submit", function (event) {
         event.preventDefault();
         adminPost("/admin/users/rename", new FormData(renameForm));
       });
-      var actions = document.createElement("div");
-      actions.className = "admin-row";
-      function actionButton(label, handler) {
-        var button = document.createElement("button");
-        button.type = "button";
-        button.className = "btn later";
-        button.textContent = label;
-        button.addEventListener("click", handler);
-        actions.appendChild(button);
-      }
-      actionButton(user.banned ? copy.admin_unban : copy.admin_ban, function () {
-        if (!user.banned && !window.confirm(copy.admin_confirm_ban)) return;
-        var body = new FormData();
-        body.append("email", user.email);
-        body.append("banned", user.banned ? "0" : "1");
-        adminPost("/admin/users/ban", body);
-      });
-      actionButton(user.admin ? copy.admin_revoke_admin : copy.admin_make_admin, function () {
-        var body = new FormData();
-        body.append("email", user.email);
-        body.append("admin", user.admin ? "0" : "1");
-        adminPost("/admin/users/admin", body);
-      });
-      actionButton(copy.admin_delete, function () {
-        if (!window.confirm(copy.admin_confirm_delete)) return;
-        var body = new FormData();
-        body.append("email", user.email);
-        adminPost("/admin/users/delete", body);
-      });
-      card.appendChild(title);
-      card.appendChild(meta);
+
+      var actions = adminEl("div", "admin-actions");
+      actions.appendChild(
+        adminAction(user.banned ? copy.admin_unban : copy.admin_ban, "btn later", function () {
+          if (!user.banned && !window.confirm(copy.admin_confirm_ban)) return;
+          var body = new FormData();
+          body.append("email", user.email);
+          body.append("banned", user.banned ? "0" : "1");
+          adminPost("/admin/users/ban", body);
+        }),
+      );
+      actions.appendChild(
+        adminAction(
+          user.admin ? copy.admin_revoke_admin : copy.admin_make_admin,
+          "btn later",
+          function () {
+            var body = new FormData();
+            body.append("email", user.email);
+            body.append("admin", user.admin ? "0" : "1");
+            adminPost("/admin/users/admin", body);
+          },
+        ),
+      );
+      actions.appendChild(
+        adminAction(copy.admin_delete, "btn admin-btn-danger", function () {
+          if (!window.confirm(copy.admin_confirm_delete)) return;
+          var body = new FormData();
+          body.append("email", user.email);
+          adminPost("/admin/users/delete", body);
+        }),
+      );
+
+      card.appendChild(head);
       card.appendChild(scoreForm);
       card.appendChild(renameForm);
       card.appendChild(actions);
@@ -1063,42 +1102,51 @@ block content %}
     var box = document.getElementById("admin-rooms");
     box.replaceChildren();
     if (!rooms || !rooms.length) {
-      var empty = document.createElement("p");
-      empty.className = "admin-empty";
-      empty.textContent = copy.admin_no_rooms;
-      box.appendChild(empty);
+      box.appendChild(adminEl("p", "admin-empty", copy.admin_no_rooms));
       return;
     }
     rooms.forEach(function (room) {
-      var card = document.createElement("article");
-      card.className = "admin-card";
-      var title = document.createElement("div");
-      title.className = "admin-card-title";
-      title.textContent = room.code + " · " + (room.state || "");
-      var meta = document.createElement("div");
-      meta.className = "admin-card-meta";
+      var card = adminEl("article", "admin-card admin-card--room");
+      var head = adminEl("div", "admin-card-head");
+      var identity = adminEl("div", "admin-identity");
+      identity.appendChild(adminEl("div", "admin-card-title admin-code", room.code));
+      var chips = adminEl("div", "admin-chips");
+      if (room.state) chips.appendChild(adminChip(room.state, "state"));
+      if (room.language) chips.appendChild(adminChip(room.language));
+      chips.appendChild(
+        adminChip(((room.players || []).length || 0) + " " + copy.admin_users.toLowerCase()),
+      );
+      head.appendChild(identity);
+      head.appendChild(chips);
+      card.appendChild(head);
+
       var names = (room.players || [])
         .map(function (player) {
           return player.name;
         })
+        .filter(Boolean)
         .join(", ");
-      meta.textContent =
-        (room.language || "") +
-        (names ? " · " + names : "") +
-        (room.word ? " · " + copy.admin_word + ": " + room.word : "");
-      var close = document.createElement("button");
-      close.type = "button";
-      close.className = "btn later";
-      close.textContent = copy.admin_close_room;
-      close.addEventListener("click", function () {
-        if (!window.confirm(copy.admin_confirm_close)) return;
-        var body = new FormData();
-        body.append("code", room.code);
-        adminPost("/admin/rooms/close", body);
-      });
-      card.appendChild(title);
-      card.appendChild(meta);
-      card.appendChild(close);
+      if (names) {
+        card.appendChild(adminEl("p", "admin-card-meta", names));
+      }
+      if (room.word) {
+        var word = adminEl("p", "admin-word");
+        word.appendChild(adminEl("span", "admin-field-label", copy.admin_word));
+        word.appendChild(document.createTextNode(" "));
+        word.appendChild(adminEl("code", "", room.word));
+        card.appendChild(word);
+      }
+
+      var actions = adminEl("div", "admin-actions");
+      actions.appendChild(
+        adminAction(copy.admin_close_room, "btn admin-btn-danger", function () {
+          if (!window.confirm(copy.admin_confirm_close)) return;
+          var body = new FormData();
+          body.append("code", room.code);
+          adminPost("/admin/rooms/close", body);
+        }),
+      );
+      card.appendChild(actions);
       box.appendChild(card);
     });
   }
