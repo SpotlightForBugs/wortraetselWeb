@@ -37,14 +37,24 @@ def _plain(text):
     return _SPACE.sub(" ", text).strip()
 
 
-def _titles(word):
+def _titles(word, language):
+    """Candidate Wiktionary page titles for a hangman word.
+
+    English stays lowercase so Proper-noun surname pages (Labrum) do not
+    beat the common-noun entry (labrum). Other languages still try the
+    titled form first (German nouns, etc.).
+    """
     raw = (word or "").strip()
     if not raw:
         return []
     lower = raw.lower()
-    titled = lower[:1].upper() + lower[1:] if lower else ""
     seen = []
-    for candidate in (titled, lower, raw):
+    if language == "en":
+        candidates = (lower, raw)
+    else:
+        titled = lower[:1].upper() + lower[1:] if lower else ""
+        candidates = (titled, lower, raw)
+    for candidate in candidates:
         if candidate and candidate not in seen:
             seen.append(candidate)
     return seen
@@ -78,7 +88,7 @@ def _lookup(word, language):
     if not lang_key:
         return None
     shown = game.display_word(language, word) or word
-    for term in _titles(shown):
+    for term in _titles(shown, language):
         payload = _fetch(term)
         if not payload:
             continue
