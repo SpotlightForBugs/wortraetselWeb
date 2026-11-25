@@ -152,7 +152,7 @@ def _request_json(url):
         headers={"User-Agent": _UA, "Accept": "application/json"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=4) as response:
+        with urllib.request.urlopen(request, timeout=2.5) as response:
             return json.load(response)
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError):
         return None
@@ -164,7 +164,7 @@ def _request_text(url):
         headers={"User-Agent": _UA, "Accept": "text/html"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=4) as response:
+        with urllib.request.urlopen(request, timeout=2.5) as response:
             return response.read().decode("utf-8", "replace")
     except (urllib.error.HTTPError, urllib.error.URLError, TimeoutError, ValueError):
         return None
