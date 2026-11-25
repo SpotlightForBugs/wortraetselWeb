@@ -53,23 +53,13 @@ _BOLD = re.compile(r"'{2,}")
 _WIKI_LINK = re.compile(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]")
 _WIKI_TEMPLATE = re.compile(r"\{\{[^{}]*\}\}")
 _DE_SENSE = re.compile(r"^:\[(\d+)\]\s*(.+)$")
-_DE_BEDEUTUNGEN = re.compile(
-    r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S
-)
+_DE_BEDEUTUNGEN = re.compile(r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S)
 _ES_SENSE = re.compile(r"^;(\d+)\s*(?:\{\{[^{}]*\}\})?\s*:\s*(.+)$")
-_DWDS_DEF = re.compile(
-    r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I
-)
+_DWDS_DEF = re.compile(r'class="dwdswb-definition"[^>]*>(.*?)</span>', re.S | re.I)
 _DEX_MARK = re.compile(r"[@$#]([^@$#]*)[@$#]")
-_META_DESC = re.compile(
-    r'<meta\s+name="description"\s+content="([^"]+)"', re.I
-)
-_PRIBERAM_GLOSS = re.compile(
-    r":\s*(.+?)\s*(?:—|-)\s*Dicion", re.S
-)
-_RAE_PREFIX = re.compile(
-    r"^\d+\.?[a-z]?\.?\s*(?:[fma]\.|[a-z]+\.)*\s*", re.I
-)
+_META_DESC = re.compile(r'<meta\s+name="description"\s+content="([^"]+)"', re.I)
+_PRIBERAM_GLOSS = re.compile(r":\s*(.+?)\s*(?:—|-)\s*Dicion", re.S)
+_RAE_PREFIX = re.compile(r"^\d+\.?[a-z]?\.?\s*(?:[fma]\.|[a-z]+\.)*\s*", re.I)
 _WEAK_GLOSS = re.compile(
     r"^(?:a |an |eine? )?"
     r"(?:surname|given name|family name|male given name|female given name|"
@@ -330,8 +320,7 @@ def _native_candidates(word, language):
     preferred = [
         title
         for title in found
-        if title.casefold() != shown.casefold()
-        and not _only_stress_marks(title, shown)
+        if title.casefold() != shown.casefold() and not _only_stress_marks(title, shown)
     ]
     # Bare hangman spelling before stress-only lookalikes (casá).
     ordered = []
@@ -429,9 +418,7 @@ def _dexonline_gloss(term):
         rep = entry.get("internalRep") or ""
         text = _DEX_MARK.sub(r"\1", rep)
         text = html.unescape(text)
-        match = re.search(
-            r"(?:^|[.])\s*1\.\s*(.+?)(?:\s*\*\s*|\s*2\.|\s*$)", text
-        )
+        match = re.search(r"(?:^|[.])\s*1\.\s*(.+?)(?:\s*\*\s*|\s*2\.|\s*$)", text)
         if match:
             text = match.group(1)
         text = _SPACE.sub(" ", text).strip(" .;")
