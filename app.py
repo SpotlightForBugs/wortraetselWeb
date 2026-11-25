@@ -530,11 +530,12 @@ def multiplayer_room(code):
     _ensure_round()
     language = session["language"]
     code = multiplayer.normalize_code(code)
+    _player_id()
     room, error = None, "mp_room_missing"
+    # Opening the link only shows the room; the visitor joins with the Join button.
     if multiplayer.valid_code(code):
-        room, error = firebaseDB.join_room_db(
-            code, _player_id(), _player_name(language), session.get("username")
-        )
+        room = firebaseDB.get_room(code)
+        error = None if room else "mp_room_missing"
     state = multiplayer.public_state(room) if room and not error else None
     page = render_template(
         "multiplayer.html",
@@ -583,13 +584,38 @@ def _award_room(room):
             sentry_sdk.capture_exception(error)
 
 
+@socketio.on("watch")
+@_room_event
+def on_watch(data):
+    """Subscribe to live updates. Visitors see the lobby before deciding to join."""
+    code = multiplayer.normalize_code(data.get("code"))
+    room = firebaseDB.get_room(code) if multiplayer.valid_code(code) else None
+    if not room:
+        emit("room_error", {"error": "mp_room_missing"})
+        return
+    join_room(code)
+    emit("room_state", multiplayer.public_state(room))
+
+
 @socketio.on("join")
 @_room_event
 def on_join(data):
+    """Take a seat in the room. Everyone watching sees the new player at once."""
     code = multiplayer.normalize_code(data.get("code"))
-    room = firebaseDB.get_room(code) if multiplayer.valid_code(code) else None
-    if not room or not multiplayer.is_member(room, session.get("mp_id")):
+    player_id = session.get("mp_id")
+    if not player_id or not multiplayer.valid_code(code):
         emit("room_error", {"error": "mp_room_missing"})
+        return
+    language = play_logic.coerce_language(session.get("language"))
+    if "username" in session:
+        name = session.get("display_name") or session["username"].split("@")[0]
+    else:
+        name = f"{i18n.text(language, 'guest')} {player_id[:4].upper()}"
+    room, error = firebaseDB.join_room_db(
+        code, player_id, name, session.get("username")
+    )
+    if error:
+        emit("room_error", {"error": error})
         return
     join_room(code)
     _broadcast(room)

@@ -264,6 +264,7 @@ def public_state(room, now=None):
         "language": room.get("language"),
         "host": room.get("host"),
         "min_players": MIN_PLAYERS,
+        "max_players": MAX_PLAYERS,
         "players": [
             {
                 "id": p["id"],
