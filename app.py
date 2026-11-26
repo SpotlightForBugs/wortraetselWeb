@@ -382,11 +382,7 @@ def game():
             )
             session["letters"] = letters
             session["wrong_guesses"] = wrong
-            if (
-                len(incoming) == 1
-                and incoming.isalpha()
-                and incoming not in before
-            ):
+            if len(incoming) == 1 and incoming.isalpha() and incoming not in before:
                 last_guess = {
                     "letter": incoming.upper(),
                     "points": play_logic.score_guess(language, word, incoming),

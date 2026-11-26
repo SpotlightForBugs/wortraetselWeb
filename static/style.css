@@ -625,7 +625,9 @@ tr.me {
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.03em;
   line-height: 1;
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 18px rgba(20, 30, 40, 0.18);
+  text-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.35),
+    0 6px 18px rgba(20, 30, 40, 0.18);
   opacity: 0;
   transform: translate(-50%, 8px) scale(0.55);
   will-change: transform, opacity;
@@ -663,7 +665,9 @@ tr.me {
 }
 
 body.dark .points-pop {
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.35), 0 8px 22px rgba(0, 0, 0, 0.45);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.35),
+    0 8px 22px rgba(0, 0, 0, 0.45);
 }
 
 body.dark .points-pop.is-gain {
