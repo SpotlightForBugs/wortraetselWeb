@@ -90,9 +90,7 @@ class WordListTests(unittest.TestCase):
         self.assertEqual(
             lost, ["a", "a", "l", "r", "ä", "u", "c", "h", "e", "r", "e", "i"]
         )
-        won = game.reveal(
-            "mueller", ["m", "u", "e", "l", "r"], "won", "de"
-        )
+        won = game.reveal("mueller", ["m", "u", "e", "l", "r"], "won", "de")
         self.assertEqual(won, ["m", "ü", "l", "l", "e", "r"])
 
     def test_eszett_collapses_only_on_result(self):
