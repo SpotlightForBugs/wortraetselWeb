@@ -54,6 +54,11 @@ _REF = re.compile(r"<ref\b[^>]*>.*?</ref>|<ref\b[^|]*/\s*>", re.S | re.I)
 _BOLD = re.compile(r"'{2,}")
 _WIKI_LINK = re.compile(r"\[\[(?:[^|\]]+\|)?([^\]]+)\]\]")
 _WIKI_TEMPLATE = re.compile(r"\{\{[^{}]*\}\}")
+_HTML_SUB = re.compile(r"<sub\b[^>]*>(.*?)</sub>", re.S | re.I)
+_HTML_SUP = re.compile(r"<sup\b[^>]*>(.*?)</sup>", re.S | re.I)
+# Digits/signs commonly used in chemical formulas and exponents.
+_SUB_CHARS = str.maketrans("0123456789+-()aehklmnpst", "₀₁₂₃₄₅₆₇₈₉₊₋₍₎ₐₑₕₖₗₘₙₚₛₜ")
+_SUP_CHARS = str.maketrans("0123456789+-()ni", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁽⁾ⁿⁱ")
 _DE_SENSE = re.compile(r"^:\[(\d+)\]\s*(.+)$")
 _DE_BEDEUTUNGEN = re.compile(r"\{\{Bedeutungen\}\}\s*(.*?)(?=\n\{\{[^\n]+\}|\Z)", re.S)
 _ES_SENSE = re.compile(r"^;(\d+)\s*(?:\{\{[^{}]*\}\})?\s*:\s*(.+)$")
@@ -162,6 +167,19 @@ def _plain(text):
     return _SPACE.sub(" ", text).strip()
 
 
+def _script_plain(text, table):
+    """Map digits/signs in a sub/sup fragment; leave unknown chars as-is."""
+    inner = _TAG.sub("", html.unescape(text or ""))
+    return inner.translate(table)
+
+
+def _html_scripts(text):
+    """Turn <sub>/<sup> into Unicode, then drop any leftover HTML tags."""
+    text = _HTML_SUB.sub(lambda m: _script_plain(m.group(1), _SUB_CHARS), text or "")
+    text = _HTML_SUP.sub(lambda m: _script_plain(m.group(1), _SUP_CHARS), text)
+    return _plain(text)
+
+
 # Single-arg templates whose argument is the visible word (es.wiktionary plm).
 _KEEP_TEMPLATE_ARG = re.compile(
     r"\{\{(?:plm|diminutivo|aumentativo)\|([^{}|]+)\}\}",
@@ -180,7 +198,9 @@ def _wiki_plain(text):
         if cleaned == text:
             break
         text = cleaned
-    return _SPACE.sub(" ", text).strip(" :;.,")
+    # de.wiktionary uses raw HTML for formulas (C<sub>2</sub>H<sub>2</sub>).
+    # The reveal UI sets textContent, so tags must become Unicode here.
+    return _html_scripts(text).strip(" :;.,")
 
 
 def _usable(text, word=None):
@@ -741,12 +761,15 @@ def define_entry(word, language):
             return None
         source = cached.get("source") or _SOURCE_WIKTIONARY
         url = cached.get("source_url") or _source_url(source, language, shown)
+        # Re-sanitize so older cache rows with raw <sub>/<sup> still display.
         return {
-            "definition": text,
+            "definition": _html_scripts(text),
             "source": source,
             "source_url": url,
         }
     gloss, source, page = _lookup(shown, language)
+    if gloss:
+        gloss = _html_scripts(gloss)
     source = source or (_SOURCE_WIKTIONARY if gloss else None)
     url = _source_url(source, language, page or shown) if gloss else None
     try:

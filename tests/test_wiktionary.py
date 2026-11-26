@@ -14,6 +14,20 @@ class WiktionaryTests(unittest.TestCase):
         get_cache.assert_called_once()
         fetch.assert_not_called()
 
+    def test_cached_html_subscripts_become_unicode(self):
+        with mock.patch(
+            "wiktionary.firebaseDB.get_word_gloss",
+            return_value={
+                "definition": "Chemie: Summenformel C<sub>2</sub>H<sub>2</sub>",
+                "source": "Wiktionary",
+            },
+        ), mock.patch("wiktionary._fetch_en") as fetch:
+            self.assertEqual(
+                wiktionary.define("Azetylen", "de"),
+                "Chemie: Summenformel C₂H₂",
+            )
+        fetch.assert_not_called()
+
     def test_define_caches_api_result(self):
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss", return_value=None
@@ -313,6 +327,29 @@ class WiktionaryTests(unittest.TestCase):
         self.assertEqual(
             wiktionary._extract_de(body),
             "weibliche Person, die sich (beruflich) mit Melken beschäftigt",
+        )
+
+    def test_extract_de_html_subscripts(self):
+        # de.wiktionary Azetylen: raw HTML subscripts must become Unicode
+        # because the reveal UI uses textContent (tags would show literally).
+        body = (
+            "== Azetylen ({{Sprache|Deutsch}}) ==\n"
+            "{{Bedeutungen}}\n"
+            ":[1] ''[[Chemie]]:'' einfachster Vertreter der [[Alkin]]e "
+            "mit der [[Summenformel]] C<sub>2</sub>H<sub>2</sub>; "
+            "ein [[farblos]]es [[Gas]]\n"
+            "{{Herkunft}}\n"
+        )
+        self.assertEqual(
+            wiktionary._extract_de(body),
+            "Chemie: einfachster Vertreter der Alkine "
+            "mit der Summenformel C₂H₂; ein farbloses Gas",
+        )
+
+    def test_wiki_plain_superscripts(self):
+        self.assertEqual(
+            wiktionary._wiki_plain("x<sup>2</sup> + y<sup>10</sup>"),
+            "x² + y¹⁰",
         )
 
     def test_extract_es_numbered_senses(self):
