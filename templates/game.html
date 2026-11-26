@@ -647,7 +647,12 @@ block content %}
     button.classList.toggle("btn-dark", !dark);
     var img = document.getElementById("drawing");
     if (img && img.getAttribute("src")) {
-      img.setAttribute("src", themedDrawingSrc(img.getAttribute("src")));
+      var nextTheme = themedDrawingSrc(img.getAttribute("src"));
+      if (window.HangmanStage) {
+        HangmanStage.setDrawing(img, nextTheme, { immediate: true });
+      } else {
+        img.setAttribute("src", nextTheme);
+      }
     }
   }
 
@@ -757,7 +762,9 @@ block content %}
     }
     var img = document.getElementById("drawing");
     var nextDrawing = themedDrawingSrc(data.drawing);
-    if (img.getAttribute("src") !== nextDrawing) {
+    if (window.HangmanStage) {
+      HangmanStage.setDrawing(img, nextDrawing);
+    } else if (img.getAttribute("src") !== nextDrawing) {
       img.setAttribute("src", nextDrawing);
     }
     Object.keys(data.letter_states).forEach(function (letter) {
@@ -813,7 +820,6 @@ block content %}
     var layer = document.getElementById("result-layer");
     var stack = document.querySelector("#result-layer .result-stack");
     var card = document.querySelector("#result-layer .result-card");
-    var image = document.getElementById("drawing");
     var page = document.querySelector(".page");
     var overlay = stack || card;
     if (!stage || !overlay || !layer || layer.hidden) {
@@ -830,14 +836,14 @@ block content %}
     stage.style.aspectRatio = "";
     stage.style.width = "";
     if (page) page.style.paddingBottom = "";
-    if (image) {
-      image.style.maxHeight = "";
-      image.style.height = "";
-      image.style.width = "";
-      image.style.maxWidth = "";
-      image.style.marginInline = "";
-      image.style.objectFit = "";
-    }
+    stage.querySelectorAll(".hangman-image").forEach(function (node) {
+      node.style.maxHeight = "";
+      node.style.height = "";
+      node.style.width = "";
+      node.style.maxWidth = "";
+      node.style.marginInline = "";
+      node.style.objectFit = "";
+    });
     // Reserve the full bottom stack (gloss + result), so the word stays clear.
     var overlayBox = overlay.getBoundingClientRect();
     var gap = 16;
@@ -863,32 +869,31 @@ block content %}
     stage.style.aspectRatio = "auto";
     stage.style.width = width + "px";
     stage.style.maxHeight = height + "px";
-    if (image) {
-      image.style.width = width + "px";
-      image.style.height = height + "px";
-      image.style.maxWidth = "100%";
-      image.style.maxHeight = height + "px";
-      image.style.objectFit = "contain";
-    }
+    stage.querySelectorAll(".hangman-image").forEach(function (node) {
+      node.style.width = width + "px";
+      node.style.height = height + "px";
+      node.style.maxWidth = "100%";
+      node.style.maxHeight = height + "px";
+      node.style.objectFit = "contain";
+    });
   }
 
   function clearDrawingFit() {
     var stage = document.querySelector(".stage");
-    var image = document.getElementById("drawing");
     var page = document.querySelector(".page");
     if (page) page.style.paddingBottom = "";
     if (stage) {
       stage.style.maxHeight = "";
       stage.style.aspectRatio = "";
       stage.style.width = "";
-    }
-    if (image) {
-      image.style.maxHeight = "";
-      image.style.height = "";
-      image.style.width = "";
-      image.style.maxWidth = "";
-      image.style.marginInline = "";
-      image.style.objectFit = "";
+      stage.querySelectorAll(".hangman-image").forEach(function (node) {
+        node.style.maxHeight = "";
+        node.style.height = "";
+        node.style.width = "";
+        node.style.maxWidth = "";
+        node.style.marginInline = "";
+        node.style.objectFit = "";
+      });
     }
   }
 
@@ -1810,6 +1815,17 @@ block content %}
         localStorage.setItem(key, fold.open ? "1" : "0");
       } catch (err) {}
     });
+  })();
+
+  (function hydrateHangman() {
+    var img = document.getElementById("drawing");
+    if (!img || !window.HangmanStage) {
+      return;
+    }
+    var src = themedDrawingSrc(img.getAttribute("src"));
+    if (src) {
+      HangmanStage.setDrawing(img, src, { immediate: true });
+    }
   })();
 
   if (!document.getElementById("result-layer").hidden) {

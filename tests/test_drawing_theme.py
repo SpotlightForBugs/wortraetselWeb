@@ -38,6 +38,35 @@ class DrawingThemeTests(unittest.TestCase):
         path = game.hangman_svg_path("base")
         self.assertTrue(path.is_file())
 
+    def test_miss_frames_are_path_additive(self):
+        """Later miss frames must keep earlier path geometry for in-place wipe."""
+        import re
+        from pathlib import Path
+
+        root = Path(__file__).resolve().parents[1] / "static" / "assets"
+
+        def path_ds(name):
+            return set(
+                re.findall(r'\bd="([^"]+)"', (root / name).read_text(encoding="utf-8"))
+            )
+
+        sequence = [
+            "base.svg",
+            "Hangman1_01_Zeichenflache_1.svg",
+            "Hangman2_01_Zeichenflache_1.svg",
+            "Hangman3_01_Zeichenflache_1.svg",
+            "Hangman4_01_Zeichenflache_1.svg",
+            "Hangman5_01_Zeichenflache_1.svg",
+            "Hangman6_01_Zeichenflache_1.svg",
+            "Hangman7_01_Zeichenflache_1.svg",
+            "Hangman8_01_Zeichenflache_1.svg",
+        ]
+        prev = path_ds(sequence[0])
+        for name in sequence[1:]:
+            cur = path_ds(name)
+            self.assertTrue(prev <= cur, msg=f"{name} should keep prior paths")
+            prev = cur
+
 
 if __name__ == "__main__":
     unittest.main()

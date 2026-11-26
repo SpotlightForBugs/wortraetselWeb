@@ -169,9 +169,11 @@ select {
 }
 
 .stage {
+  position: relative;
   background: #fff;
   border-radius: 12px;
   aspect-ratio: 1728 / 1296;
+  overflow: hidden;
 }
 
 body.dark .stage {
@@ -184,6 +186,56 @@ body.dark .stage {
   aspect-ratio: 1728 / 1296;
   object-fit: contain;
   display: block;
+}
+
+.stage.has-inline-hangman .hangman-image-base.is-svg-backed {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.hangman-stage-svg {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.hangman-stage-svg svg.hangman-base,
+.hangman-stage-svg svg.hangman-ink-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.hangman-stage-svg svg.hangman-ink-overlay {
+  z-index: 2;
+}
+
+.hangman-stage-svg svg.hangman-fade-in {
+  opacity: 0;
+  transition: opacity 0.38s ease;
+  z-index: 2;
+}
+
+.hangman-stage-svg svg.hangman-fade-in.is-shown {
+  opacity: 1;
+}
+
+.hangman-stage-svg svg.hangman-fade-out {
+  transition: opacity 0.38s ease;
+}
+
+.hangman-stage-svg svg.hangman-fade-out.is-hidden {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hangman-stage-svg svg.hangman-fade-in,
+  .hangman-stage-svg svg.hangman-fade-out {
+    transition: none;
+  }
 }
 
 .word {
