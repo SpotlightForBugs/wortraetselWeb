@@ -197,29 +197,43 @@ body.dark .stage {
   position: absolute;
   inset: 0;
   z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   pointer-events: none;
-  transition: opacity 0.16s ease;
 }
 
-.hangman-stage-svg.is-fading {
-  opacity: 0;
-}
-
-.hangman-stage-svg svg {
+.hangman-stage-svg svg.hangman-base,
+.hangman-stage-svg svg.hangman-ink-overlay {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: block;
 }
 
-.hangman-stage-svg path.is-drawing {
-  vector-effect: non-scaling-stroke;
+.hangman-stage-svg svg.hangman-ink-overlay {
+  z-index: 2;
+}
+
+.hangman-stage-svg svg.hangman-fade-in {
+  opacity: 0;
+  transition: opacity 0.38s ease;
+  z-index: 2;
+}
+
+.hangman-stage-svg svg.hangman-fade-in.is-shown {
+  opacity: 1;
+}
+
+.hangman-stage-svg svg.hangman-fade-out {
+  transition: opacity 0.38s ease;
+}
+
+.hangman-stage-svg svg.hangman-fade-out.is-hidden {
+  opacity: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hangman-stage-svg {
+  .hangman-stage-svg svg.hangman-fade-in,
+  .hangman-stage-svg svg.hangman-fade-out {
     transition: none;
   }
 }

@@ -1,11 +1,12 @@
 /**
  * Hangman frame transitions.
  *
- * Consecutive miss frames are additive Illustrator exports (new filled brush
- * paths appear). Those new paths are stroked on with dashoffset, then filled.
- * Non-additive swaps (win / kill / theme) fade the whole drawing.
+ * Miss frames are additive Illustrator exports. Settled art stays mounted; only
+ * newly added filled brush paths wipe in through a clip. Win/kill and other
+ * non-additive swaps crossfade whole drawings — no outline racing.
  */
 (function (global) {
+  const SVG_NS = 'http://www.w3.org/2000/svg'
   let token = 0
   const cache = Object.create(null)
 
@@ -50,14 +51,19 @@
       .filter(Boolean)
   }
 
+  function keySet (keys) {
+    const seen = Object.create(null)
+    keys.forEach(function (key) {
+      seen[key] = true
+    })
+    return seen
+  }
+
   function isAdditive (oldKeys, newKeys) {
     if (!oldKeys.length) {
       return false
     }
-    const seen = Object.create(null)
-    newKeys.forEach(function (key) {
-      seen[key] = true
-    })
+    const seen = keySet(newKeys)
     for (let i = 0; i < oldKeys.length; i += 1) {
       if (!seen[oldKeys[i]]) {
         return false
@@ -83,115 +89,186 @@
       })
   }
 
-  function inkFor (path) {
-    const cls = path.getAttribute('class') || ''
-    const cs = window.getComputedStyle(path)
-    const strokeOnly = cls.indexOf('st3') !== -1 || cs.fill === 'none'
-    let ink = strokeOnly ? cs.stroke : cs.fill
-    if (!ink || ink === 'none' || ink === 'rgba(0, 0, 0, 0)') {
-      ink = strokeOnly ? '#000' : cs.color || '#000'
+  function viewBoxOf (svg) {
+    const raw = svg.getAttribute('viewBox')
+    if (raw) {
+      return raw
     }
-    return { ink, strokeOnly, strokeWidth: cs.strokeWidth || '6px' }
+    const w = svg.getAttribute('width') || '1728'
+    const h = svg.getAttribute('height') || '1296'
+    return '0 0 ' + w + ' ' + h
   }
 
-  function prepareDraw (path) {
-    let len = 1
-    try {
-      len = Math.max(path.getTotalLength(), 1)
-    } catch (err) {
-      len = 400
+  function unionBox (paths) {
+    let minX = Infinity
+    let minY = Infinity
+    let maxX = -Infinity
+    let maxY = -Infinity
+    Array.prototype.forEach.call(paths, function (path) {
+      let box
+      try {
+        box = path.getBBox()
+      } catch (err) {
+        return
+      }
+      if (!box.width && !box.height) {
+        return
+      }
+      minX = Math.min(minX, box.x)
+      minY = Math.min(minY, box.y)
+      maxX = Math.max(maxX, box.x + box.width)
+      maxY = Math.max(maxY, box.y + box.height)
+    })
+    if (!isFinite(minX)) {
+      return null
     }
-    const style = inkFor(path)
-    path.style.stroke = style.ink
-    path.style.strokeWidth = style.strokeOnly ? style.strokeWidth : '2.5px'
-    path.style.strokeLinecap = 'round'
-    path.style.strokeLinejoin = 'round'
-    path.style.fillOpacity = '0'
-    path.style.strokeDasharray = String(len)
-    path.style.strokeDashoffset = String(len)
-    path.style.transition = 'none'
-    path.classList.add('is-drawing')
-    return style.strokeOnly
+    return {
+      x: minX,
+      y: minY,
+      width: Math.max(maxX - minX, 1),
+      height: Math.max(maxY - minY, 1)
+    }
   }
 
-  function runDraw (paths, done) {
-    if (!paths.length) {
+  function clearInkOverlay (host) {
+    const overlay = host.querySelector('svg.hangman-ink-overlay')
+    if (overlay) {
+      overlay.remove()
+    }
+  }
+
+  function mountBase (host, svg) {
+    clearInkOverlay(host)
+    svg.classList.add('hangman-base')
+    const previous = host.querySelector('svg.hangman-base')
+    if (previous) {
+      previous.replaceWith(svg)
+    } else {
+      host.replaceChildren(svg)
+    }
+  }
+
+  function crossfadeTo (host, svg, done) {
+    clearInkOverlay(host)
+    const current = host.querySelector('svg.hangman-base')
+    svg.classList.add('hangman-base', 'hangman-fade-in')
+    host.appendChild(svg)
+    if (!current) {
+      svg.classList.add('is-shown')
       done()
       return
     }
-    paths.forEach(function (path) {
-      prepareDraw(path)
-    })
+    current.classList.add('hangman-fade-out')
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
-        paths.forEach(function (path) {
-          const strokeOnly =
-            (path.getAttribute('class') || '').indexOf('st3') !== -1
-          path.style.transition =
-            'stroke-dashoffset 0.58s ease-out, fill-opacity 0.22s ease ' +
-            (strokeOnly ? '0.05s' : '0.42s') +
-            ', stroke-opacity 0.2s ease 0.5s'
-          path.style.strokeDashoffset = '0'
-          path.style.fillOpacity = strokeOnly ? '0' : '1'
-        })
+        svg.classList.add('is-shown')
+        current.classList.add('is-hidden')
       })
     })
     setTimeout(function () {
-      paths.forEach(function (path) {
-        path.classList.remove('is-drawing')
-        path.style.strokeDasharray = ''
-        path.style.strokeDashoffset = ''
-        path.style.transition = ''
-        // Keep intentional stroke paths; clear temporary brush outline strokes.
-        if ((path.getAttribute('class') || '').indexOf('st3') === -1) {
-          path.style.stroke = ''
-          path.style.strokeWidth = ''
-          path.style.strokeLinecap = ''
-          path.style.strokeLinejoin = ''
-          path.style.strokeOpacity = ''
-        }
-        path.style.fillOpacity = ''
-      })
-      done()
-    }, 820)
-  }
-
-  function mountSvg (host, svg, oldKeys, animate) {
-    let fresh = []
-    if (animate && oldKeys && oldKeys.length) {
-      const seen = Object.create(null)
-      oldKeys.forEach(function (key) {
-        seen[key] = true
-      })
-      Array.prototype.forEach.call(
-        svg.querySelectorAll('path'),
-        function (path) {
-          const key = path.getAttribute('d') || ''
-          if (key && seen[key]) {
-            path.classList.add('is-settled')
-          } else {
-            fresh.push(path)
-          }
-        }
-      )
-    } else if (animate) {
-      fresh = Array.prototype.slice.call(svg.querySelectorAll('path'))
-    }
-    host.replaceChildren(svg)
-    return fresh
-  }
-
-  function fadeSwap (host, svg, animatePaths, done) {
-    host.classList.add('is-fading')
-    setTimeout(function () {
-      const fresh = mountSvg(host, svg, null, animatePaths)
-      host.classList.remove('is-fading')
-      if (animatePaths) {
-        runDraw(fresh, done)
-      } else {
-        done()
+      if (current.parentNode === host) {
+        current.remove()
       }
-    }, 160)
+      svg.classList.remove('hangman-fade-in', 'is-shown')
+      done()
+    }, 420)
+  }
+
+  /**
+   * Keep the settled drawing mounted. Wipe in clones of only the new paths,
+   * then swap the base to the full next frame once the ink is visible.
+   */
+  function wipeInFresh (host, nextSvg, oldKeys, done) {
+    const seen = keySet(oldKeys)
+    const fresh = []
+    Array.prototype.forEach.call(nextSvg.querySelectorAll('path'), function (path) {
+      const key = path.getAttribute('d') || ''
+      if (key && !seen[key]) {
+        fresh.push(path)
+      }
+    })
+
+    if (!fresh.length) {
+      mountBase(host, nextSvg)
+      done()
+      return
+    }
+
+    clearInkOverlay(host)
+
+    const overlay = document.createElementNS(SVG_NS, 'svg')
+    overlay.classList.add('hangman-ink-overlay')
+    overlay.setAttribute('viewBox', viewBoxOf(nextSvg))
+    overlay.setAttribute('aria-hidden', 'true')
+
+    const style = nextSvg.querySelector('style')
+    if (style) {
+      overlay.appendChild(style.cloneNode(true))
+    }
+
+    const defs = document.createElementNS(SVG_NS, 'defs')
+    const clipId = 'hangman-ink-clip-' + String(token)
+    const clip = document.createElementNS(SVG_NS, 'clipPath')
+    clip.setAttribute('id', clipId)
+    clip.setAttribute('clipPathUnits', 'userSpaceOnUse')
+    defs.appendChild(clip)
+    overlay.appendChild(defs)
+
+    const layer = document.createElementNS(SVG_NS, 'g')
+    layer.setAttribute('clip-path', 'url(#' + clipId + ')')
+    fresh.forEach(function (path) {
+      layer.appendChild(path.cloneNode(true))
+    })
+    overlay.appendChild(layer)
+    host.appendChild(overlay)
+
+    const box = unionBox(layer.querySelectorAll('path'))
+    if (!box) {
+      mountBase(host, nextSvg)
+      done()
+      return
+    }
+
+    const pad = Math.max(box.width, box.height) * 0.1
+    const vertical = box.height >= box.width * 0.85
+    const rect = document.createElementNS(SVG_NS, 'rect')
+    const x = box.x - pad
+    const y = box.y - pad
+    const w = box.width + pad * 2
+    const h = box.height + pad * 2
+    rect.setAttribute('x', String(x))
+    rect.setAttribute('y', String(y))
+    if (vertical) {
+      rect.setAttribute('width', String(w))
+      rect.setAttribute('height', '0')
+      rect.style.height = '0px'
+    } else {
+      rect.setAttribute('width', '0')
+      rect.setAttribute('height', String(h))
+      rect.style.width = '0px'
+    }
+    clip.appendChild(rect)
+
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        if (vertical) {
+          rect.style.transition =
+            'height 0.65s cubic-bezier(0.22, 1, 0.36, 1)'
+          rect.style.height = h + 'px'
+          rect.setAttribute('height', String(h))
+        } else {
+          rect.style.transition =
+            'width 0.65s cubic-bezier(0.22, 1, 0.36, 1)'
+          rect.style.width = w + 'px'
+          rect.setAttribute('width', String(w))
+        }
+      })
+    })
+
+    setTimeout(function () {
+      mountBase(host, nextSvg)
+      done()
+    }, 700)
   }
 
   function snapImg (front, src) {
@@ -214,7 +291,7 @@
     if (
       current === src &&
       stage &&
-      stage.querySelector('.hangman-stage-svg svg')
+      stage.querySelector('.hangman-stage-svg svg.hangman-base')
     ) {
       return
     }
@@ -227,7 +304,7 @@
     token += 1
     const mine = token
     const immediate = opts.immediate || prefersReducedMotion()
-    const oldSvg = host.querySelector('svg')
+    const oldSvg = host.querySelector('svg.hangman-base')
     const oldKeys = oldSvg ? pathKeys(oldSvg) : []
 
     function fail () {
@@ -255,6 +332,7 @@
           return
         }
         const svg = parseSvg(text)
+        svg.setAttribute('viewBox', viewBoxOf(svg))
         const newKeys = pathKeys(svg)
         const additive = !immediate && isAdditive(oldKeys, newKeys)
 
@@ -263,19 +341,17 @@
         }
 
         if (immediate || !oldSvg) {
-          mountSvg(host, svg, null, false)
+          mountBase(host, svg)
           done()
           return
         }
 
         if (additive) {
-          const fresh = mountSvg(host, svg, oldKeys, true)
-          runDraw(fresh, done)
+          wipeInFresh(host, svg, oldKeys, done)
           return
         }
 
-        // Win / kill / language reset: soft fade, optionally draw the new art.
-        fadeSwap(host, svg, newKeys.length > 0 && newKeys.length < 60, done)
+        crossfadeTo(host, svg, done)
       })
       .catch(fail)
   }
