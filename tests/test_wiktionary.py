@@ -15,6 +15,7 @@ class WiktionaryTests(unittest.TestCase):
         fetch.assert_not_called()
 
     def test_cached_html_subscripts_become_unicode(self):
+        """Old Firestore glosses with raw <sub> tags must still display as Unicode."""
         with mock.patch(
             "wiktionary.firebaseDB.get_word_gloss",
             return_value={
@@ -330,8 +331,7 @@ class WiktionaryTests(unittest.TestCase):
         )
 
     def test_extract_de_html_subscripts(self):
-        # de.wiktionary Azetylen: raw HTML subscripts must become Unicode
-        # because the reveal UI uses textContent (tags would show literally).
+        """de.wiktionary HTML formulas become Unicode for textContent UIs."""
         body = (
             "== Azetylen ({{Sprache|Deutsch}}) ==\n"
             "{{Bedeutungen}}\n"
@@ -347,6 +347,7 @@ class WiktionaryTests(unittest.TestCase):
         )
 
     def test_wiki_plain_superscripts(self):
+        """<sup> digits map to Unicode superscripts in plain gloss text."""
         self.assertEqual(
             wiktionary._wiki_plain("x<sup>2</sup> + y<sup>10</sup>"),
             "x² + y¹⁰",

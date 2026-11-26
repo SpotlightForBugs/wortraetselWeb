@@ -174,10 +174,24 @@ def _script_plain(text, table):
 
 
 def _html_scripts(text):
-    """Turn <sub>/<sup> into Unicode, then drop any leftover HTML tags."""
-    text = _HTML_SUB.sub(lambda m: _script_plain(m.group(1), _SUB_CHARS), text or "")
+    """Turn <sub>/<sup> into Unicode, then drop any leftover HTML tags.
+
+    Empty/None input is returned unchanged so callers can sanitize in place.
+    """
+    if not text:
+        return text
+    text = _HTML_SUB.sub(lambda m: _script_plain(m.group(1), _SUB_CHARS), text)
     text = _HTML_SUP.sub(lambda m: _script_plain(m.group(1), _SUP_CHARS), text)
     return _plain(text)
+
+
+def _gloss_entry(definition, source, source_url):
+    """Build the public ``{definition, source, source_url}`` payload."""
+    return {
+        "definition": _html_scripts(definition),
+        "source": source or _SOURCE_WIKTIONARY,
+        "source_url": source_url,
+    }
 
 
 # Single-arg templates whose argument is the visible word (es.wiktionary plm).
@@ -742,6 +756,17 @@ def _lookup(word, language):
     return _native_lookup(word, language)
 
 
+def _cached_gloss_entry(cached, language, shown):
+    """Turn a Firestore word_glosses row into a public entry, or None."""
+    text = cached.get("definition")
+    if not text:
+        return None
+    source = cached.get("source") or _SOURCE_WIKTIONARY
+    url = cached.get("source_url") or _source_url(source, language, shown)
+    # Re-sanitize so older cache rows with raw <sub>/<sup> still display.
+    return _gloss_entry(text, source, url)
+
+
 def define_entry(word, language):
     """Return ``{definition, source, source_url}`` or None for a miss / empty gloss.
 
@@ -756,20 +781,9 @@ def define_entry(word, language):
     except Exception:
         cached = None
     if cached is not None:
-        text = cached.get("definition")
-        if not text:
-            return None
-        source = cached.get("source") or _SOURCE_WIKTIONARY
-        url = cached.get("source_url") or _source_url(source, language, shown)
-        # Re-sanitize so older cache rows with raw <sub>/<sup> still display.
-        return {
-            "definition": _html_scripts(text),
-            "source": source,
-            "source_url": url,
-        }
+        return _cached_gloss_entry(cached, language, shown)
     gloss, source, page = _lookup(shown, language)
-    if gloss:
-        gloss = _html_scripts(gloss)
+    gloss = _html_scripts(gloss)
     source = source or (_SOURCE_WIKTIONARY if gloss else None)
     url = _source_url(source, language, page or shown) if gloss else None
     try:
@@ -778,11 +792,7 @@ def define_entry(word, language):
         pass
     if not gloss:
         return None
-    return {
-        "definition": gloss,
-        "source": source or _SOURCE_WIKTIONARY,
-        "source_url": url,
-    }
+    return _gloss_entry(gloss, source, url)
 
 
 def define(word, language):
