@@ -26,7 +26,10 @@ class LetterScoringTests(unittest.TestCase):
         self.assertGreater(long, short)
         self.assertEqual(short, game.letter_value("en", "c"))
         self.assertEqual(
-            long, round(game.letter_value("en", "c") * game.word_length_factor("caterpillar"))
+            long,
+            round(
+                game.letter_value("en", "c") * game.word_length_factor("caterpillar")
+            ),
         )
 
     def test_combo_boosts_consecutive_hits(self):
@@ -54,7 +57,9 @@ class LetterScoringTests(unittest.TestCase):
             expected += game.score_guess("en", "cat", letter, streak=streak)
         expected += game.clear_bonus(1, True)
         self.assertEqual(points, expected)
-        without_clear = game.calculate_points(1, "cat", letters, True, "en", clear=False)
+        without_clear = game.calculate_points(
+            1, "cat", letters, True, "en", clear=False
+        )
         self.assertEqual(without_clear, expected - game.clear_bonus(1, True))
 
 

@@ -78,7 +78,9 @@ class GuessTests(unittest.TestCase):
         room, _ = multiplayer.guess(room, "p2", "t")
         self.assertEqual(room["state"], "finished")
         self.assertEqual(room["result"]["status"], "won")
-        expected = game.calculate_points(1, "cat", list("zcat"), True, "en", clear=False)
+        expected = game.calculate_points(
+            1, "cat", list("zcat"), True, "en", clear=False
+        )
         self.assertEqual(room["result"]["points"], expected)
         self.assertEqual(room["result"]["winner"], "p2")
         self.assertEqual(room["result"]["shares"]["p2"], room["players"][1]["round"])
