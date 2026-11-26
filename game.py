@@ -501,15 +501,3 @@ def score_after_round(saved, points, board_score):
         return saved + points
     return int(board_score)
 
-
-def finish_game(
-    username: str,
-    word: str,
-    all_guesses: list,
-    wrong_guesses: int,
-    success: bool,
-    legacy_account=False,
-    language="en",
-):
-    """Return round points. Persistence stays in the caller to avoid import cycles."""
-    return calculate_points(wrong_guesses, word, all_guesses, success, language)
