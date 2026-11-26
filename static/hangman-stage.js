@@ -32,7 +32,11 @@
   function parseSvg (text) {
     const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
     const svg = doc.documentElement
-    if (!svg || svg.nodeName.toLowerCase() !== 'svg' || doc.querySelector('parsererror')) {
+    if (
+      !svg ||
+      svg.nodeName.toLowerCase() !== 'svg' ||
+      doc.querySelector('parsererror')
+    ) {
       throw new Error('bad svg')
     }
     return document.importNode(svg, true)
@@ -121,7 +125,8 @@
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         paths.forEach(function (path) {
-          const strokeOnly = (path.getAttribute('class') || '').indexOf('st3') !== -1
+          const strokeOnly =
+            (path.getAttribute('class') || '').indexOf('st3') !== -1
           path.style.transition =
             'stroke-dashoffset 0.58s ease-out, fill-opacity 0.22s ease ' +
             (strokeOnly ? '0.05s' : '0.42s') +
@@ -158,14 +163,17 @@
       oldKeys.forEach(function (key) {
         seen[key] = true
       })
-      Array.prototype.forEach.call(svg.querySelectorAll('path'), function (path) {
-        const key = path.getAttribute('d') || ''
-        if (key && seen[key]) {
-          path.classList.add('is-settled')
-        } else {
-          fresh.push(path)
+      Array.prototype.forEach.call(
+        svg.querySelectorAll('path'),
+        function (path) {
+          const key = path.getAttribute('d') || ''
+          if (key && seen[key]) {
+            path.classList.add('is-settled')
+          } else {
+            fresh.push(path)
+          }
         }
-      })
+      )
     } else if (animate) {
       fresh = Array.prototype.slice.call(svg.querySelectorAll('path'))
     }
@@ -201,8 +209,13 @@
       return
     }
     const stage = front.closest ? front.closest('.stage') : null
-    const current = front.getAttribute('data-hangman-src') || front.getAttribute('src') || ''
-    if (current === src && stage && stage.querySelector('.hangman-stage-svg svg')) {
+    const current =
+      front.getAttribute('data-hangman-src') || front.getAttribute('src') || ''
+    if (
+      current === src &&
+      stage &&
+      stage.querySelector('.hangman-stage-svg svg')
+    ) {
       return
     }
     if (!stage) {
