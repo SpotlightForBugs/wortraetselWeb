@@ -1,13 +1,15 @@
 /**
  * Hangman frame transitions.
  *
- * Miss frames are additive Illustrator exports. Settled art stays put. New
- * stroke paths (e.g. the head) draw with dashoffset. New filled brush paths
- * wipe in through an in-place user-unit brush mask — no end remount that
- * suddenly fattens the ink.
+ * Miss frames are additive Illustrator exports. Settled art stays put.
+ * Stroke paths (head) draw with dashoffset along their own geometry.
+ * Filled brush paths each wipe along that path's long axis, staggered so
+ * the ink feels per-stroke rather than one fat slab.
  */
 (function (global) {
   const SVG_NS = 'http://www.w3.org/2000/svg'
+  const FILL_STROKE_MS = 380
+  const FILL_STAGGER_MS = 26
   let token = 0
   const cache = Object.create(null)
 
@@ -100,19 +102,26 @@
     return '0 0 ' + w + ' ' + h
   }
 
+  function pathBox (path) {
+    try {
+      const box = path.getBBox()
+      if (!box.width && !box.height) {
+        return null
+      }
+      return box
+    } catch (err) {
+      return null
+    }
+  }
+
   function unionBox (paths) {
     let minX = Infinity
     let minY = Infinity
     let maxX = -Infinity
     let maxY = -Infinity
     Array.prototype.forEach.call(paths, function (path) {
-      let box
-      try {
-        box = path.getBBox()
-      } catch (err) {
-        return
-      }
-      if (!box.width && !box.height) {
+      const box = pathBox(path)
+      if (!box) {
         return
       }
       minX = Math.min(minX, box.x)
@@ -217,7 +226,7 @@
       return
     }
     let remaining = paths.length
-    paths.forEach(function (path) {
+    paths.forEach(function (path, index) {
       let length = 1
       try {
         length = Math.max(path.getTotalLength(), 1)
@@ -226,31 +235,60 @@
       }
       path.setAttribute('stroke-dasharray', String(length))
       path.setAttribute('stroke-dashoffset', String(length))
-      animateDash(path, length, 0, 700, mine, function () {
-        path.removeAttribute('stroke-dasharray')
-        path.removeAttribute('stroke-dashoffset')
-        remaining -= 1
-        if (remaining <= 0) {
-          done()
+      setTimeout(function () {
+        if (mine !== token) {
+          return
         }
-      })
+        animateDash(path, length, 0, 700, mine, function () {
+          path.removeAttribute('stroke-dasharray')
+          path.removeAttribute('stroke-dashoffset')
+          remaining -= 1
+          if (remaining <= 0) {
+            done()
+          }
+        })
+      }, index * 40)
     })
   }
 
-  function wipeFillPaths (svg, paths, mine, done) {
-    if (!paths.length) {
-      done()
-      return
-    }
+  function sortPathsForStrokeDirection (paths) {
+    const group = unionBox(paths)
+    const vertical = !group || group.height >= group.width * 0.85
+    return paths.slice().sort(function (a, b) {
+      const ba = pathBox(a)
+      const bb = pathBox(b)
+      if (!ba || !bb) {
+        return 0
+      }
+      if (vertical) {
+        const dy = ba.y - bb.y
+        if (Math.abs(dy) > 3) {
+          return dy
+        }
+        return ba.x - bb.x
+      }
+      const dx = ba.x - bb.x
+      if (Math.abs(dx) > 3) {
+        return dx
+      }
+      return ba.y - bb.y
+    })
+  }
 
-    const box = unionBox(paths)
-    if (!box) {
+  /**
+   * Wipe one filled brush path along its own long axis (stroke direction).
+   */
+  function paintOneFill (svg, path, index, mine, done) {
+    const box = pathBox(path)
+    const parent = path.parentNode
+    if (!box || !parent) {
+      path.style.visibility = ''
       done()
       return
     }
 
     const defs = ensureDefs(svg)
-    const maskId = 'hangman-ink-mask-' + String(mine)
+    const maskId = 'hangman-ink-mask-' + String(mine) + '-' + String(index)
     const mask = document.createElementNS(SVG_NS, 'mask')
     mask.setAttribute('id', maskId)
     mask.setAttribute('maskUnits', 'userSpaceOnUse')
@@ -273,27 +311,22 @@
     mask.appendChild(brush)
     defs.appendChild(mask)
 
-    // Cover every fresh fill path with the same mask while it lives in-tree.
-    const masked = []
-    paths.forEach(function (path) {
-      const parent = path.parentNode
-      if (!parent) {
-        return
-      }
-      const wrap = document.createElementNS(SVG_NS, 'g')
-      wrap.setAttribute('mask', 'url(#' + maskId + ')')
-      wrap.classList.add('hangman-ink-wrap')
-      parent.insertBefore(wrap, path)
-      wrap.appendChild(path)
-      masked.push(wrap)
-    })
+    const wrap = document.createElementNS(SVG_NS, 'g')
+    wrap.setAttribute('mask', 'url(#' + maskId + ')')
+    wrap.classList.add('hangman-ink-wrap')
+    parent.insertBefore(wrap, path)
+    wrap.appendChild(path)
+    // Reveal only after the mask is attached so unfinished strokes stay hidden.
+    path.style.visibility = ''
 
-    const vertical = box.height >= box.width * 0.85
+    const vertical = box.height >= box.width * 0.9
     const cx = box.x + box.width / 2
     const cy = box.y + box.height / 2
-    // Slightly oversize so the final frame matches unmasked ink (no fattening snap).
-    const brushWidth = (vertical ? box.width : box.height) * 1.35
-    const pad = brushWidth * 0.45
+    const brushWidth = Math.max(
+      (vertical ? box.width : box.height) * 1.4,
+      6
+    )
+    const pad = brushWidth * 0.4
     let d
     if (vertical) {
       d =
@@ -317,7 +350,7 @@
         cy
     }
     brush.setAttribute('d', d)
-    brush.setAttribute('stroke-width', String(Math.max(brushWidth, 8)))
+    brush.setAttribute('stroke-width', String(brushWidth))
 
     let length = 1
     try {
@@ -328,11 +361,10 @@
     brush.setAttribute('stroke-dasharray', String(length))
     brush.setAttribute('stroke-dashoffset', String(length))
 
-    animateDash(brush, length, 0, 700, mine, function () {
+    animateDash(brush, length, 0, FILL_STROKE_MS, mine, function () {
       if (mine !== token) {
         return
       }
-      // Finish fully covered, then unwrap in place — same pixels, no remount.
       const cover = document.createElementNS(SVG_NS, 'rect')
       cover.setAttribute('x', String(box.x - pad))
       cover.setAttribute('y', String(box.y - pad))
@@ -345,25 +377,45 @@
         if (mine !== token) {
           return
         }
-        masked.forEach(function (wrap) {
-          const parent = wrap.parentNode
-          if (!parent) {
-            return
-          }
+        const wrapParent = wrap.parentNode
+        if (wrapParent) {
           while (wrap.firstChild) {
-            parent.insertBefore(wrap.firstChild, wrap)
+            wrapParent.insertBefore(wrap.firstChild, wrap)
           }
           wrap.remove()
-        })
+        }
         mask.remove()
         done()
       })
     })
   }
 
+  function wipeFillPaths (svg, paths, mine, done) {
+    if (!paths.length) {
+      done()
+      return
+    }
+
+    const ordered = sortPathsForStrokeDirection(paths)
+    let remaining = ordered.length
+    ordered.forEach(function (path, index) {
+      setTimeout(function () {
+        if (mine !== token) {
+          return
+        }
+        paintOneFill(svg, path, index, mine, function () {
+          remaining -= 1
+          if (remaining <= 0) {
+            done()
+          }
+        })
+      }, index * FILL_STAGGER_MS)
+    })
+  }
+
   /**
-   * Mount the final frame immediately. Stroke parts draw like the head;
-   * filled parts wipe in-place so completion does not fatten the ink.
+   * Mount the final frame immediately. Stroke parts draw along their path;
+   * filled parts each wipe along their own stroke direction, staggered.
    */
   function wipeInFresh (host, nextSvg, oldKeys, mine, done) {
     const seen = keySet(oldKeys)
@@ -390,7 +442,6 @@
       return
     }
 
-    // Hide fresh fills until masked so the mount does not flash full ink.
     fills.forEach(function (path) {
       path.style.visibility = 'hidden'
     })
@@ -430,11 +481,8 @@
       drawStrokePaths(strokes, mine, oneDone)
     }
     if (fills.length) {
-      // Keep fills hidden until the mask wrap is attached, then reveal.
+      // Fills stay hidden until each paintOneFill attaches its mask.
       wipeFillPaths(nextSvg, fills, mine, oneDone)
-      fills.forEach(function (path) {
-        path.style.visibility = ''
-      })
     }
   }
 
