@@ -10,7 +10,12 @@
   const SVG_NS = 'http://www.w3.org/2000/svg'
   const FILL_STROKE_MS = 380
   const FILL_STAGGER_MS = 26
+  const CROSSFADE_MS = 420
   let token = 0
+  let fadeTimer = 0
+  // Last accepted target URL (set when a transition starts, not only on commit).
+  // Stops a late miss frame from cancelling an in-flight win/loss crossfade.
+  let shownSrc = ''
   const cache = Object.create(null)
 
   function prefersReducedMotion () {
@@ -18,6 +23,22 @@
       window.matchMedia &&
       window.matchMedia('(prefers-reduced-motion: reduce)').matches
     )
+  }
+
+  function assetName (src) {
+    return String(src || '')
+      .split('/')
+      .pop()
+      .split('?')[0]
+  }
+
+  function isEndFrame (src) {
+    const name = assetName(src)
+    return name === 'won.svg' || name === 'killed.svg'
+  }
+
+  function isBaseFrame (src) {
+    return assetName(src) === 'base.svg'
   }
 
   function ensureHost (stage, front) {
@@ -31,6 +52,44 @@
     stage.classList.add('has-inline-hangman')
     front.classList.add('hangman-image-base', 'is-svg-backed')
     return host
+  }
+
+  function clearFadeTimer () {
+    if (fadeTimer) {
+      clearTimeout(fadeTimer)
+      fadeTimer = 0
+    }
+  }
+
+  /** Leave exactly one settled base SVG in the host (or empty). */
+  function settleHost (host, keep) {
+    clearInkOverlay(host)
+    Array.prototype.slice
+      .call(host.querySelectorAll('svg'))
+      .forEach(function (node) {
+        if (node !== keep) {
+          node.remove()
+        }
+      })
+    if (!keep) {
+      return
+    }
+    keep.classList.add('hangman-base')
+    keep.classList.remove(
+      'hangman-fade-in',
+      'hangman-fade-out',
+      'is-shown',
+      'is-hidden'
+    )
+    keep.style.opacity = ''
+    if (keep.parentNode !== host) {
+      host.appendChild(keep)
+    }
+  }
+
+  function latestBase (host) {
+    const bases = host.querySelectorAll('svg.hangman-base')
+    return bases.length ? bases[bases.length - 1] : null
   }
 
   function parseSvg (text) {
@@ -175,40 +234,44 @@
   }
 
   function mountBase (host, svg) {
-    clearInkOverlay(host)
+    // Always replace the whole host. replaceWith on the first base left
+    // fade-in siblings behind during overlapping win/miss transitions.
     svg.classList.add('hangman-base')
-    const previous = host.querySelector('svg.hangman-base')
-    if (previous) {
-      previous.replaceWith(svg)
-    } else {
-      host.replaceChildren(svg)
-    }
+    settleHost(host, svg)
   }
 
-  function crossfadeTo (host, svg, done) {
+  function crossfadeTo (host, svg, mine, done) {
     clearInkOverlay(host)
-    const current = host.querySelector('svg.hangman-base')
+    // Collapse any unfinished multi-SVG stack to one from-frame.
+    const current = latestBase(host)
+    settleHost(host, current)
     svg.classList.add('hangman-base', 'hangman-fade-in')
     host.appendChild(svg)
     if (!current) {
       svg.classList.add('is-shown')
+      settleHost(host, svg)
       done()
       return
     }
     current.classList.add('hangman-fade-out')
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
+        if (mine !== token) {
+          return
+        }
         svg.classList.add('is-shown')
         current.classList.add('is-hidden')
       })
     })
-    setTimeout(function () {
-      if (current.parentNode === host) {
-        current.remove()
+    clearFadeTimer()
+    fadeTimer = setTimeout(function () {
+      fadeTimer = 0
+      if (mine !== token) {
+        return
       }
-      svg.classList.remove('hangman-fade-in', 'is-shown')
+      settleHost(host, svg)
       done()
-    }, 420)
+    }, CROSSFADE_MS)
   }
 
   function ensureDefs (svg) {
@@ -499,11 +562,27 @@
     }
     const stage = front.closest ? front.closest('.stage') : null
     const current =
-      front.getAttribute('data-hangman-src') || front.getAttribute('src') || ''
+      shownSrc ||
+      front.getAttribute('data-hangman-src') ||
+      front.getAttribute('src') ||
+      ''
+    const hostExisting = stage
+      ? stage.querySelector('.hangman-stage-svg')
+      : null
+    const baseCount = hostExisting
+      ? hostExisting.querySelectorAll('svg.hangman-base').length
+      : 0
+    // Only skip when settled on this frame. A lone early-return while
+    // multiple bases are stacked is what left the gallows on the win screen.
+    if (current === src && baseCount === 1) {
+      return
+    }
+    // Ignore late miss frames after a round already ended / win started.
     if (
-      current === src &&
-      stage &&
-      stage.querySelector('.hangman-stage-svg svg.hangman-base')
+      current &&
+      isEndFrame(current) &&
+      !isEndFrame(src) &&
+      !isBaseFrame(src)
     ) {
       return
     }
@@ -513,21 +592,29 @@
     }
 
     const host = ensureHost(stage, front)
+    clearFadeTimer()
     token += 1
     const mine = token
+    shownSrc = src
     const immediate = opts.immediate || prefersReducedMotion()
-    const oldSvg = host.querySelector('svg.hangman-base')
+    // If a prior crossfade left several bases, keep the newest as from-frame.
+    if (host.querySelectorAll('svg.hangman-base').length > 1) {
+      settleHost(host, latestBase(host))
+    }
+    const oldSvg = latestBase(host)
     const oldKeys = oldSvg ? pathKeys(oldSvg) : []
 
     function fail () {
       if (mine !== token) {
         return
       }
+      clearFadeTimer()
       host.replaceChildren()
       stage.classList.remove('has-inline-hangman')
       front.classList.remove('is-svg-backed')
       snapImg(front, src)
       front.removeAttribute('data-hangman-src')
+      shownSrc = src
     }
 
     function commit (srcDone) {
@@ -536,6 +623,7 @@
       }
       front.setAttribute('data-hangman-src', srcDone)
       snapImg(front, srcDone)
+      shownSrc = srcDone
     }
 
     loadSvg(src)
@@ -563,7 +651,7 @@
           return
         }
 
-        crossfadeTo(host, svg, done)
+        crossfadeTo(host, svg, mine, done)
       })
       .catch(fail)
   }
