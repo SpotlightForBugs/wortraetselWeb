@@ -338,14 +338,15 @@ def round_status(word, letters, wrong_guesses):
 def reveal(word, letters, status, language=None):
     """Tile glyphs for the board.
 
-    When ``language`` is set, digraphs that map to a real umlaut/eszett in
-    the word list collapse to one tile (and one blank) so e.g. ``ue``
-    becomes ``ü`` once both letters are known.
+    Mid-game tiles stay in play form (``ue`` as two letters). On win/lose,
+    digraphs that map to a real umlaut/eszett in the word list collapse so
+    e.g. ``ue`` becomes ``ü``.
     """
     show = set(letters or [])
     if status == "lost":
         show.update(word or "")
-    if not language:
+    # Keep A-Z digraphs intact while guessing; umlauts only on the result board.
+    if not language or status == "playing":
         return [ch if ch in show else "" for ch in (word or "")]
     tiles = []
     for span, glyph in display_segments(language, word):

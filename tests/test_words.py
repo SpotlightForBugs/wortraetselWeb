@@ -62,38 +62,47 @@ class WordListTests(unittest.TestCase):
         self.assertEqual(game.normalize_word("Aalräucherei"), "aalraeucherei")
         self.assertEqual(game.normalize_word("Straße"), "strasse")
 
-    def test_german_board_collapses_umlaut_digraphs(self):
-        # Play form is longer; tiles match the real spelling length.
+    def test_german_board_keeps_digraphs_while_playing(self):
+        # Mid-game stays in play form; umlauts only appear on win/lose.
         self.assertEqual(len("aalraeucherei"), 13)
         self.assertEqual(len(game.display_word("de", "aalraeucherei")), 12)
         blank = game.reveal("aalraeucherei", [], "playing", "de")
-        self.assertEqual(len(blank), 12)
-        self.assertEqual(blank, [""] * 12)
+        self.assertEqual(len(blank), 13)
+        self.assertEqual(blank, [""] * 13)
 
-        # ä needs both a and e from the digraph before that tile fills.
         partial = game.reveal("aalraeucherei", ["a", "l", "r"], "playing", "de")
-        self.assertEqual(partial, ["a", "a", "l", "r", "", "", "", "", "", "r", "", ""])
+        self.assertEqual(
+            partial, ["a", "a", "l", "r", "a", "", "", "", "", "", "r", "", ""]
+        )
 
         both = game.reveal(
             "aalraeucherei", ["a", "e", "l", "r", "u", "c", "h", "i"], "playing", "de"
         )
         self.assertEqual(
-            both, ["a", "a", "l", "r", "ä", "u", "c", "h", "e", "r", "e", "i"]
+            both, ["a", "a", "l", "r", "a", "e", "u", "c", "h", "e", "r", "e", "i"]
         )
         self.assertEqual(
             game.reveal("mueller", ["m", "u", "e", "l", "r"], "playing", "de"),
-            ["m", "ü", "l", "l", "e", "r"],
+            ["m", "u", "e", "l", "l", "e", "r"],
         )
 
         lost = game.reveal("aalraeucherei", [], "lost", "de")
         self.assertEqual(
             lost, ["a", "a", "l", "r", "ä", "u", "c", "h", "e", "r", "e", "i"]
         )
+        won = game.reveal(
+            "mueller", ["m", "u", "e", "l", "r"], "won", "de"
+        )
+        self.assertEqual(won, ["m", "ü", "l", "l", "e", "r"])
 
-    def test_eszett_collapses_ss_once_s_is_known(self):
+    def test_eszett_collapses_only_on_result(self):
         self.assertEqual(game.display_word("de", "strasse"), "Straße")
         self.assertEqual(
             game.reveal("strasse", ["s", "t", "r", "a", "e"], "playing", "de"),
+            ["s", "t", "r", "a", "s", "s", "e"],
+        )
+        self.assertEqual(
+            game.reveal("strasse", ["s", "t", "r", "a", "e"], "won", "de"),
             ["s", "t", "r", "a", "ß", "e"],
         )
 
