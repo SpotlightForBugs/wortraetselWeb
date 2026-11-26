@@ -46,6 +46,7 @@ class DrawingThemeTests(unittest.TestCase):
         root = Path(__file__).resolve().parents[1] / "static" / "assets"
 
         def path_ds(name):
+            """Return the set of path `d` attributes in an SVG asset."""
             return set(
                 re.findall(r'\bd="([^"]+)"', (root / name).read_text(encoding="utf-8"))
             )

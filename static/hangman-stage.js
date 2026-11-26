@@ -1,3 +1,4 @@
+/* eslint-env browser */
 /**
  * Hangman frame transitions.
  *
@@ -13,13 +14,19 @@
   let token = 0
   const cache = Object.create(null)
 
+  /** @returns {boolean} */
   function prefersReducedMotion () {
-    return !!(
+    return Boolean(
       window.matchMedia &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
+        window.matchMedia('(prefers-reduced-motion: reduce)').matches
     )
   }
 
+  /**
+   * @param {HTMLElement} stage
+   * @param {HTMLImageElement} front
+   * @returns {HTMLElement}
+   */
   function ensureHost (stage, front) {
     let host = stage.querySelector('.hangman-stage-svg')
     if (!host) {
@@ -33,6 +40,10 @@
     return host
   }
 
+  /**
+   * @param {string} text
+   * @returns {SVGSVGElement}
+   */
   function parseSvg (text) {
     const doc = new DOMParser().parseFromString(text, 'image/svg+xml')
     const svg = doc.documentElement
@@ -46,22 +57,33 @@
     return document.importNode(svg, true)
   }
 
+  /**
+   * @param {Element} root
+   * @returns {string[]}
+   */
   function pathKeys (root) {
     return Array.prototype.map
-      .call(root.querySelectorAll('path'), function (path) {
-        return path.getAttribute('d') || ''
-      })
+      .call(root.querySelectorAll('path'), (path) => path.getAttribute('d') || '')
       .filter(Boolean)
   }
 
+  /**
+   * @param {string[]} keys
+   * @returns {Object.<string, boolean>}
+   */
   function keySet (keys) {
     const seen = Object.create(null)
-    keys.forEach(function (key) {
+    keys.forEach((key) => {
       seen[key] = true
     })
     return seen
   }
 
+  /**
+   * @param {string[]} oldKeys
+   * @param {string[]} newKeys
+   * @returns {boolean}
+   */
   function isAdditive (oldKeys, newKeys) {
     if (!oldKeys.length) {
       return false
@@ -75,33 +97,45 @@
     return newKeys.length >= oldKeys.length
   }
 
+  /**
+   * @param {string} src
+   * @returns {Promise<string>}
+   */
   function loadSvg (src) {
     if (cache[src]) {
       return Promise.resolve(cache[src])
     }
     return fetch(src, { credentials: 'same-origin' })
-      .then(function (res) {
+      .then((res) => {
         if (!res.ok) {
-          throw new Error('svg ' + res.status)
+          throw new Error(`svg ${res.status}`)
         }
         return res.text()
       })
-      .then(function (text) {
+      .then((text) => {
         cache[src] = text
         return text
       })
   }
 
+  /**
+   * @param {SVGSVGElement} svg
+   * @returns {string}
+   */
   function viewBoxOf (svg) {
     const raw = svg.getAttribute('viewBox')
     if (raw) {
       return raw
     }
-    const w = svg.getAttribute('width') || '1728'
-    const h = svg.getAttribute('height') || '1296'
-    return '0 0 ' + w + ' ' + h
+    const width = svg.getAttribute('width') || '1728'
+    const height = svg.getAttribute('height') || '1296'
+    return `0 0 ${width} ${height}`
   }
 
+  /**
+   * @param {SVGPathElement} path
+   * @returns {DOMRect|null}
+   */
   function pathBox (path) {
     try {
       const box = path.getBBox()
@@ -109,17 +143,21 @@
         return null
       }
       return box
-    } catch (err) {
+    } catch {
       return null
     }
   }
 
+  /**
+   * @param {ArrayLike<SVGPathElement>} paths
+   * @returns {{x: number, y: number, width: number, height: number}|null}
+   */
   function unionBox (paths) {
     let minX = Infinity
     let minY = Infinity
     let maxX = -Infinity
     let maxY = -Infinity
-    Array.prototype.forEach.call(paths, function (path) {
+    Array.prototype.forEach.call(paths, (path) => {
       const box = pathBox(path)
       if (!box) {
         return
@@ -140,25 +178,42 @@
     }
   }
 
+  /**
+   * @param {SVGPathElement} path
+   * @returns {boolean}
+   */
   function isStrokePath (path) {
     const cls = path.getAttribute('class') || ''
     return cls.indexOf('st3') !== -1
   }
 
-  function easeOutCubic (t) {
-    return 1 - Math.pow(1 - t, 3)
+  /**
+   * @param {number} progress
+   * @returns {number}
+   */
+  function easeOutCubic (progress) {
+    return 1 - Math.pow(1 - progress, 3)
   }
 
+  /**
+   * @param {Element} el
+   * @param {number} from
+   * @param {number} to
+   * @param {number} ms
+   * @param {number} mine
+   * @param {Function} [done]
+   */
   function animateDash (el, from, to, ms, mine, done) {
     const start = performance.now()
+    /** @param {number} now */
     function frame (now) {
       if (mine !== token) {
         return
       }
-      const t = Math.min(1, (now - start) / ms)
-      const value = from + (to - from) * easeOutCubic(t)
+      const progress = Math.min(1, (now - start) / ms)
+      const value = from + (to - from) * easeOutCubic(progress)
       el.setAttribute('stroke-dashoffset', String(value))
-      if (t < 1) {
+      if (progress < 1) {
         requestAnimationFrame(frame)
       } else if (done) {
         done()
@@ -167,6 +222,7 @@
     requestAnimationFrame(frame)
   }
 
+  /** @param {HTMLElement} host */
   function clearInkOverlay (host) {
     const overlay = host.querySelector('svg.hangman-ink-overlay')
     if (overlay) {
@@ -174,6 +230,10 @@
     }
   }
 
+  /**
+   * @param {HTMLElement} host
+   * @param {SVGSVGElement} svg
+   */
   function mountBase (host, svg) {
     clearInkOverlay(host)
     svg.classList.add('hangman-base')
@@ -185,6 +245,11 @@
     }
   }
 
+  /**
+   * @param {HTMLElement} host
+   * @param {SVGSVGElement} svg
+   * @param {Function} done
+   */
   function crossfadeTo (host, svg, done) {
     clearInkOverlay(host)
     const current = host.querySelector('svg.hangman-base')
@@ -196,13 +261,13 @@
       return
     }
     current.classList.add('hangman-fade-out')
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
         svg.classList.add('is-shown')
         current.classList.add('is-hidden')
       })
     })
-    setTimeout(function () {
+    setTimeout(() => {
       if (current.parentNode === host) {
         current.remove()
       }
@@ -211,6 +276,10 @@
     }, 420)
   }
 
+  /**
+   * @param {SVGSVGElement} svg
+   * @returns {SVGDefsElement}
+   */
   function ensureDefs (svg) {
     let defs = svg.querySelector('defs')
     if (!defs) {
@@ -220,26 +289,31 @@
     return defs
   }
 
+  /**
+   * @param {SVGPathElement[]} paths
+   * @param {number} mine
+   * @param {Function} done
+   */
   function drawStrokePaths (paths, mine, done) {
     if (!paths.length) {
       done()
       return
     }
     let remaining = paths.length
-    paths.forEach(function (path, index) {
+    paths.forEach((path, index) => {
       let length = 1
       try {
         length = Math.max(path.getTotalLength(), 1)
-      } catch (err) {
+      } catch {
         length = 400
       }
       path.setAttribute('stroke-dasharray', String(length))
       path.setAttribute('stroke-dashoffset', String(length))
-      setTimeout(function () {
+      setTimeout(() => {
         if (mine !== token) {
           return
         }
-        animateDash(path, length, 0, 700, mine, function () {
+        animateDash(path, length, 0, 700, mine, () => {
           path.removeAttribute('stroke-dasharray')
           path.removeAttribute('stroke-dashoffset')
           remaining -= 1
@@ -251,32 +325,42 @@
     })
   }
 
+  /**
+   * @param {SVGPathElement[]} paths
+   * @returns {SVGPathElement[]}
+   */
   function sortPathsForStrokeDirection (paths) {
     const group = unionBox(paths)
     const vertical = !group || group.height >= group.width * 0.85
-    return paths.slice().sort(function (a, b) {
-      const ba = pathBox(a)
-      const bb = pathBox(b)
-      if (!ba || !bb) {
+    return paths.slice().sort((pathA, pathB) => {
+      const boxA = pathBox(pathA)
+      const boxB = pathBox(pathB)
+      if (!boxA || !boxB) {
         return 0
       }
       if (vertical) {
-        const dy = ba.y - bb.y
-        if (Math.abs(dy) > 3) {
-          return dy
+        const deltaY = boxA.y - boxB.y
+        if (Math.abs(deltaY) > 3) {
+          return deltaY
         }
-        return ba.x - bb.x
+        return boxA.x - boxB.x
       }
-      const dx = ba.x - bb.x
-      if (Math.abs(dx) > 3) {
-        return dx
+      const deltaX = boxA.x - boxB.x
+      if (Math.abs(deltaX) > 3) {
+        return deltaX
       }
-      return ba.y - bb.y
+      return boxA.y - boxB.y
     })
   }
 
   /**
    * Wipe one filled brush path along its own long axis (stroke direction).
+   *
+   * @param {SVGSVGElement} svg
+   * @param {SVGPathElement} path
+   * @param {number} index
+   * @param {number} mine
+   * @param {Function} done
    */
   function paintOneFill (svg, path, index, mine, done) {
     const box = pathBox(path)
@@ -288,7 +372,7 @@
     }
 
     const defs = ensureDefs(svg)
-    const maskId = 'hangman-ink-mask-' + String(mine) + '-' + String(index)
+    const maskId = `hangman-ink-mask-${String(mine)}-${String(index)}`
     const mask = document.createElementNS(SVG_NS, 'mask')
     mask.setAttribute('id', maskId)
     mask.setAttribute('maskUnits', 'userSpaceOnUse')
@@ -312,7 +396,7 @@
     defs.appendChild(mask)
 
     const wrap = document.createElementNS(SVG_NS, 'g')
-    wrap.setAttribute('mask', 'url(#' + maskId + ')')
+    wrap.setAttribute('mask', `url(#${maskId})`)
     wrap.classList.add('hangman-ink-wrap')
     parent.insertBefore(wrap, path)
     wrap.appendChild(path)
@@ -320,45 +404,26 @@
     path.style.visibility = ''
 
     const vertical = box.height >= box.width * 0.9
-    const cx = box.x + box.width / 2
-    const cy = box.y + box.height / 2
+    const centerX = box.x + box.width / 2
+    const centerY = box.y + box.height / 2
     const brushWidth = Math.max((vertical ? box.width : box.height) * 1.4, 6)
     const pad = brushWidth * 0.4
-    let d
-    if (vertical) {
-      d =
-        'M ' +
-        cx +
-        ' ' +
-        (box.y - pad) +
-        ' L ' +
-        cx +
-        ' ' +
-        (box.y + box.height + pad)
-    } else {
-      d =
-        'M ' +
-        (box.x - pad) +
-        ' ' +
-        cy +
-        ' L ' +
-        (box.x + box.width + pad) +
-        ' ' +
-        cy
-    }
-    brush.setAttribute('d', d)
+    const brushPathD = vertical
+      ? `M ${centerX} ${box.y - pad} L ${centerX} ${box.y + box.height + pad}`
+      : `M ${box.x - pad} ${centerY} L ${box.x + box.width + pad} ${centerY}`
+    brush.setAttribute('d', brushPathD)
     brush.setAttribute('stroke-width', String(brushWidth))
 
     let length = 1
     try {
       length = Math.max(brush.getTotalLength(), 1)
-    } catch (err) {
+    } catch {
       length = Math.max(vertical ? box.height : box.width, 1) + pad * 2
     }
     brush.setAttribute('stroke-dasharray', String(length))
     brush.setAttribute('stroke-dashoffset', String(length))
 
-    animateDash(brush, length, 0, FILL_STROKE_MS, mine, function () {
+    animateDash(brush, length, 0, FILL_STROKE_MS, mine, () => {
       if (mine !== token) {
         return
       }
@@ -370,7 +435,7 @@
       cover.setAttribute('fill', '#fff')
       mask.appendChild(cover)
 
-      requestAnimationFrame(function () {
+      requestAnimationFrame(() => {
         if (mine !== token) {
           return
         }
@@ -387,6 +452,12 @@
     })
   }
 
+  /**
+   * @param {SVGSVGElement} svg
+   * @param {SVGPathElement[]} paths
+   * @param {number} mine
+   * @param {Function} done
+   */
   function wipeFillPaths (svg, paths, mine, done) {
     if (!paths.length) {
       done()
@@ -395,12 +466,12 @@
 
     const ordered = sortPathsForStrokeDirection(paths)
     let remaining = ordered.length
-    ordered.forEach(function (path, index) {
-      setTimeout(function () {
+    ordered.forEach((path, index) => {
+      setTimeout(() => {
         if (mine !== token) {
           return
         }
-        paintOneFill(svg, path, index, mine, function () {
+        paintOneFill(svg, path, index, mine, () => {
           remaining -= 1
           if (remaining <= 0) {
             done()
@@ -413,25 +484,28 @@
   /**
    * Mount the final frame immediately. Stroke parts draw along their path;
    * filled parts each wipe along their own stroke direction, staggered.
+   *
+   * @param {HTMLElement} host
+   * @param {SVGSVGElement} nextSvg
+   * @param {string[]} oldKeys
+   * @param {number} mine
+   * @param {Function} done
    */
   function wipeInFresh (host, nextSvg, oldKeys, mine, done) {
     const seen = keySet(oldKeys)
     const strokes = []
     const fills = []
-    Array.prototype.forEach.call(
-      nextSvg.querySelectorAll('path'),
-      function (path) {
-        const key = path.getAttribute('d') || ''
-        if (!key || seen[key]) {
-          return
-        }
-        if (isStrokePath(path)) {
-          strokes.push(path)
-        } else {
-          fills.push(path)
-        }
+    Array.prototype.forEach.call(nextSvg.querySelectorAll('path'), (path) => {
+      const key = path.getAttribute('d') || ''
+      if (!key || seen[key]) {
+        return
       }
-    )
+      if (isStrokePath(path)) {
+        strokes.push(path)
+      } else {
+        fills.push(path)
+      }
+    })
 
     if (!strokes.length && !fills.length) {
       mountBase(host, nextSvg)
@@ -439,14 +513,14 @@
       return
     }
 
-    fills.forEach(function (path) {
+    fills.forEach((path) => {
       path.style.visibility = 'hidden'
     })
-    strokes.forEach(function (path) {
+    strokes.forEach((path) => {
       let length = 1
       try {
         length = Math.max(path.getTotalLength(), 1)
-      } catch (err) {
+      } catch {
         length = 400
       }
       path.setAttribute('stroke-dasharray', String(length))
@@ -456,6 +530,7 @@
     mountBase(host, nextSvg)
 
     let pending = 0
+    /** Mark one of the parallel stroke/fill groups finished. */
     function oneDone () {
       pending -= 1
       if (pending <= 0) {
@@ -483,6 +558,10 @@
     }
   }
 
+  /**
+   * @param {HTMLImageElement} front
+   * @param {string} src
+   */
   function snapImg (front, src) {
     front.setAttribute('src', src)
   }
@@ -519,6 +598,7 @@
     const oldSvg = host.querySelector('svg.hangman-base')
     const oldKeys = oldSvg ? pathKeys(oldSvg) : []
 
+    /** Fall back to plain <img> if SVG load/parse fails. */
     function fail () {
       if (mine !== token) {
         return
@@ -530,6 +610,9 @@
       front.removeAttribute('data-hangman-src')
     }
 
+    /**
+     * @param {string} srcDone
+     */
     function commit (srcDone) {
       if (mine !== token) {
         return
@@ -539,7 +622,7 @@
     }
 
     loadSvg(src)
-      .then(function (text) {
+      .then((text) => {
         if (mine !== token) {
           return
         }
@@ -548,6 +631,7 @@
         const newKeys = pathKeys(svg)
         const additive = !immediate && isAdditive(oldKeys, newKeys)
 
+        /** Finish this transition and sync the backing <img>. */
         function done () {
           commit(src)
         }
