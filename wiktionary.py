@@ -654,23 +654,24 @@ def _local_gloss(language, term):
 
 
 def _native_lookup(word, language):
-    """Return (gloss, source) from native Wiktionary then a local dictionary."""
+    """Return ``(gloss, source, page)`` from native Wiktionary then a local dictionary."""
     shown = game.display_word(language, word) or word
     candidates = _native_candidates(word, language)
     for term in candidates:
         gloss = _native_wiktionary_gloss(language, term)
         # Reject circular stubs even when the page title differs (maîson → Maison).
         if gloss and _usable(gloss, shown) and _usable(gloss, term):
-            return gloss, _SOURCE_WIKTIONARY
+            return gloss, _SOURCE_WIKTIONARY, term
     local_name = _SOURCE_LOCAL.get(language)
     for term in candidates:
         gloss = _local_gloss(language, term)
         if gloss and _usable(gloss, shown):
-            return gloss, local_name or _SOURCE_WIKTIONARY
-    return None, None
+            return gloss, local_name or _SOURCE_WIKTIONARY, term
+    return None, None, None
 
 
 def _en_rest_gloss(word):
+    """Return ``(gloss, page_title)`` from en.wiktionary REST, or ``(None, None)``."""
     shown = game.display_word("en", word) or word
     for term in _titles(shown, "en"):
         payload = _fetch_en(term)
@@ -678,27 +679,53 @@ def _en_rest_gloss(word):
             continue
         gloss = _pick(payload, "en", word=term)
         if gloss:
-            return gloss
+            return gloss, term
+    return None, None
+
+
+def _source_url(source, language, page):
+    """Public dictionary page for the gloss attribution chip."""
+    page = (page or "").strip()
+    if not page or not source:
+        return None
+    quoted = urllib.parse.quote(page)
+    if source == _SOURCE_WIKTIONARY:
+        host = _NATIVE_HOST.get(language) or "en"
+        title = page.replace(" ", "_")
+        return "https://{host}.wiktionary.org/wiki/{term}".format(
+            host=host,
+            term=urllib.parse.quote(title, safe=""),
+        )
+    if source == "DWDS":
+        return _DWDS.format(term=quoted)
+    if source == "Dexonline":
+        return _DEXONLINE.format(term=quoted)
+    if source == "TDK":
+        return "https://sozluk.gov.tr/?ara={term}".format(term=quoted)
+    if source == "RAE":
+        return "https://dle.rae.es/{term}".format(term=quoted)
+    if source == "Priberam":
+        return _PRIBERAM.format(term=quoted)
     return None
 
 
 def _lookup(word, language):
-    """Return (gloss, source) or (None, None)."""
+    """Return ``(gloss, source, page)`` or ``(None, None, None)``."""
     if language not in _LANG_KEY:
-        return None, None
+        return None, None, None
     if language == "en":
-        gloss = _en_rest_gloss(word)
+        gloss, page = _en_rest_gloss(word)
         if gloss:
-            return gloss, _SOURCE_WIKTIONARY
+            return gloss, _SOURCE_WIKTIONARY, page
         return _native_lookup(word, "en")
     # Never fall back to English Wiktionary for other languages.
     return _native_lookup(word, language)
 
 
 def define_entry(word, language):
-    """Return ``{definition, source}`` or None for a miss / empty gloss.
+    """Return ``{definition, source, source_url}`` or None for a miss / empty gloss.
 
-    Firestore caches hits and misses (with source) under word_glosses.
+    Firestore caches hits and misses (with source + url) under word_glosses.
     """
     language = game.coerce_language(language)
     shown = (game.display_word(language, word) or word or "").strip().lower()
@@ -712,18 +739,27 @@ def define_entry(word, language):
         text = cached.get("definition")
         if not text:
             return None
+        source = cached.get("source") or _SOURCE_WIKTIONARY
+        url = cached.get("source_url") or _source_url(source, language, shown)
         return {
             "definition": text,
-            "source": cached.get("source") or _SOURCE_WIKTIONARY,
+            "source": source,
+            "source_url": url,
         }
-    gloss, source = _lookup(shown, language)
+    gloss, source, page = _lookup(shown, language)
+    source = source or (_SOURCE_WIKTIONARY if gloss else None)
+    url = _source_url(source, language, page or shown) if gloss else None
     try:
-        firebaseDB.set_word_gloss(language, shown, gloss, source=source)
+        firebaseDB.set_word_gloss(language, shown, gloss, source=source, source_url=url)
     except Exception:
         pass
     if not gloss:
         return None
-    return {"definition": gloss, "source": source or _SOURCE_WIKTIONARY}
+    return {
+        "definition": gloss,
+        "source": source or _SOURCE_WIKTIONARY,
+        "source_url": url,
+    }
 
 
 def define(word, language):

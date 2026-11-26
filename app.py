@@ -500,9 +500,13 @@ def define_word():
     word = request.args.get("word") or ""
     entry = wiktionary.define_entry(word, language)
     if not entry:
-        return jsonify({"definition": None, "source": None})
+        return jsonify({"definition": None, "source": None, "source_url": None})
     return jsonify(
-        {"definition": entry.get("definition"), "source": entry.get("source")}
+        {
+            "definition": entry.get("definition"),
+            "source": entry.get("source"),
+            "source_url": entry.get("source_url"),
+        }
     )
 
 
