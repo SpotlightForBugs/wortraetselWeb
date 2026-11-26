@@ -1211,24 +1211,16 @@ cap-widget {
     font-size: 1.05rem;
   }
 
-  .mp-entry-actions,
-  .mp-join-form {
-    flex-direction: column;
-    align-items: stretch;
+  .mp-entry-actions {
+    gap: 12px;
   }
 
-  .mp-entry form {
-    flex-direction: column;
+  .mp-join-row {
+    flex-wrap: nowrap;
   }
 
-  .mp-entry input[name="code"],
-  .mp-entry input[name="guest_name"],
-  .mp-entry .btn {
+  .mp-entry input[name="guest_name"] {
     width: 100%;
-  }
-
-  .mp-entry-or {
-    text-align: center;
   }
 
   .sheet {
@@ -1618,34 +1610,76 @@ body.dark .mp-letters.locked .btn-primary:disabled {
 
 .mp-entry-actions {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 14px;
 }
 
-.mp-entry form {
+.mp-create-form,
+.mp-join-form {
   display: flex;
+  flex-direction: column;
   gap: 8px;
   margin: 0;
+  width: 100%;
+}
+
+.mp-create-form .btn,
+.mp-join-form .btn {
+  width: 100%;
+  min-height: 44px;
+}
+
+.mp-join-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  width: 100%;
+}
+
+.mp-join-row .btn {
+  width: auto;
+  flex: 0 0 auto;
+  padding-inline: 18px;
+  white-space: nowrap;
 }
 
 .mp-entry input[name="code"] {
   font: inherit;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.22em;
   text-transform: uppercase;
-  width: 9.5ch;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
   height: 44px;
-  padding: 0 10px;
+  padding: 0 12px;
+  text-align: center;
   color: var(--text);
-  background: var(--card);
+  background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 8px;
+  box-sizing: border-box;
 }
 
 .mp-entry-or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
   color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: lowercase;
+}
+
+.mp-entry-or::before,
+.mp-entry-or::after {
+  content: "";
+  flex: 1 1 auto;
+  height: 1px;
+  background: var(--line);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1712,22 +1746,15 @@ body.dark .mp-letters.locked .btn-primary:disabled {
 }
 
 .mp-entry input[name="guest_name"] {
-  height: 44px;
-}
-
-.mp-entry input[name="guest_name"] {
   font: inherit;
-  width: 11rem;
-  padding: 0 10px;
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
   color: var(--text);
-  background: var(--card);
+  background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 8px;
   box-sizing: border-box;
-}
-
-.mp-join-form {
-  flex-wrap: wrap;
 }
 
 .account-soft {
