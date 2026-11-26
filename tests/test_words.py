@@ -63,7 +63,7 @@ class WordListTests(unittest.TestCase):
         self.assertEqual(game.normalize_word("Straße"), "strasse")
 
     def test_german_board_keeps_digraphs_while_playing(self):
-        # Mid-game stays in play form; umlauts only appear on win/lose.
+        """Mid-game tiles stay ae/oe/ue; umlauts only appear on win/lose."""
         self.assertEqual(len("aalraeucherei"), 13)
         self.assertEqual(len(game.display_word("de", "aalraeucherei")), 12)
         blank = game.reveal("aalraeucherei", [], "playing", "de")
@@ -94,6 +94,7 @@ class WordListTests(unittest.TestCase):
         self.assertEqual(won, ["m", "ü", "l", "l", "e", "r"])
 
     def test_eszett_collapses_only_on_result(self):
+        """ss stays two tiles while playing and becomes ß on a finished round."""
         self.assertEqual(game.display_word("de", "strasse"), "Straße")
         self.assertEqual(
             game.reveal("strasse", ["s", "t", "r", "a", "e"], "playing", "de"),
