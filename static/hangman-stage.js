@@ -203,12 +203,15 @@
   function wipeInFresh (host, nextSvg, oldKeys, mine, done) {
     const seen = keySet(oldKeys)
     const fresh = []
-    Array.prototype.forEach.call(nextSvg.querySelectorAll('path'), function (path) {
-      const key = path.getAttribute('d') || ''
-      if (key && !seen[key]) {
-        fresh.push(path)
+    Array.prototype.forEach.call(
+      nextSvg.querySelectorAll('path'),
+      function (path) {
+        const key = path.getAttribute('d') || ''
+        if (key && !seen[key]) {
+          fresh.push(path)
+        }
       }
-    })
+    )
 
     if (!fresh.length) {
       mountBase(host, nextSvg)
