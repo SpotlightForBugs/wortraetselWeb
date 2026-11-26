@@ -25,6 +25,7 @@
     )
   }
 
+  /** Basename of a drawing URL, without query string. */
   function assetName (src) {
     return String(src || '')
       .split('/')
@@ -32,11 +33,13 @@
       .split('?')[0]
   }
 
+  /** True for won/killed terminal frames. */
   function isEndFrame (src) {
     const name = assetName(src)
     return name === 'won.svg' || name === 'killed.svg'
   }
 
+  /** True for the empty-hill base frame (new round). */
   function isBaseFrame (src) {
     return assetName(src) === 'base.svg'
   }
@@ -54,6 +57,7 @@
     return host
   }
 
+  /** Cancel any pending crossfade settle timer. */
   function clearFadeTimer () {
     if (fadeTimer) {
       clearTimeout(fadeTimer)
@@ -66,7 +70,7 @@
     clearInkOverlay(host)
     Array.prototype.slice
       .call(host.querySelectorAll('svg'))
-      .forEach(function (node) {
+      .forEach((node) => {
         if (node !== keep) {
           node.remove()
         }
@@ -87,6 +91,7 @@
     }
   }
 
+  /** Newest hangman-base SVG in the host, or null. */
   function latestBase (host) {
     const bases = host.querySelectorAll('svg.hangman-base')
     return bases.length ? bases[bases.length - 1] : null
@@ -254,8 +259,8 @@
       return
     }
     current.classList.add('hangman-fade-out')
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
         if (mine !== token) {
           return
         }
@@ -264,7 +269,7 @@
       })
     })
     clearFadeTimer()
-    fadeTimer = setTimeout(function () {
+    fadeTimer = setTimeout(() => {
       fadeTimer = 0
       if (mine !== token) {
         return
