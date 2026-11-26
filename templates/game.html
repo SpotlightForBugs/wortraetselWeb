@@ -148,48 +148,54 @@ block content %}
   </section>
 
   <section class="panel mp-entry">
-    <h2 data-i18n="mp_title">{{ copy.mp_title }}</h2>
-    <p data-i18n="mp_pitch">{{ copy.mp_pitch }}</p>
-    <p class="mp-entry-guest" id="mp-guest-hint" data-i18n="mp_host_login" {% if not guest %}hidden{% endif %}>
-      {{ copy.mp_host_login }}
-    </p>
-    <div class="mp-entry-actions">
-      <form method="post" action="{{ url_for('multiplayer_create') }}" id="mp-create-form" class="mp-create-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-success" id="mp-create-btn" data-i18n="mp_create" {% if guest %}disabled{% endif %}>{{ copy.mp_create }}</button>
-      </form>
-      <div class="mp-entry-or" role="separator">
-        <span data-i18n="mp_or">{{ copy.mp_or }}</span>
-      </div>
-      <form method="post" action="{{ url_for('multiplayer_join') }}" class="mp-join-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <input
-          name="guest_name"
-          maxlength="20"
-          autocomplete="nickname"
-          placeholder="{{ copy.mp_your_name }}"
-          aria-label="{{ copy.mp_your_name }}"
-          value="{{ session.get('guest_name', '') }}"
-          {% if not guest %}hidden{% endif %}
-          id="mp-guest-name"
-        />
-        <div class="mp-join-row">
-          <input
-            name="code"
-            maxlength="5"
-            minlength="5"
-            required
-            autocomplete="off"
-            autocapitalize="characters"
-            spellcheck="false"
-            pattern="[A-Za-z2-9]{5}"
-            placeholder="ABCDE"
-            aria-label="{{ copy.mp_code }}"
-          />
-          <button type="submit" class="btn btn-primary" data-i18n="mp_join">{{ copy.mp_join }}</button>
+    <details class="mp-entry-fold" id="mp-entry-fold">
+      <summary class="mp-entry-summary">
+        <span class="mp-entry-summary-title" data-i18n="mp_title">{{ copy.mp_title }}</span>
+        <span class="mp-entry-summary-hint" data-i18n="mp_pitch">{{ copy.mp_pitch }}</span>
+      </summary>
+      <div class="mp-entry-body">
+        <p class="mp-entry-guest" id="mp-guest-hint" data-i18n="mp_host_login" {% if not guest %}hidden{% endif %}>
+          {{ copy.mp_host_login }}
+        </p>
+        <div class="mp-entry-actions">
+          <form method="post" action="{{ url_for('multiplayer_create') }}" id="mp-create-form" class="mp-create-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-success" id="mp-create-btn" data-i18n="mp_create" {% if guest %}disabled{% endif %}>{{ copy.mp_create }}</button>
+          </form>
+          <div class="mp-entry-or" role="separator">
+            <span data-i18n="mp_or">{{ copy.mp_or }}</span>
+          </div>
+          <form method="post" action="{{ url_for('multiplayer_join') }}" class="mp-join-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input
+              name="guest_name"
+              maxlength="20"
+              autocomplete="nickname"
+              placeholder="{{ copy.mp_your_name }}"
+              aria-label="{{ copy.mp_your_name }}"
+              value="{{ session.get('guest_name', '') }}"
+              {% if not guest %}hidden{% endif %}
+              id="mp-guest-name"
+            />
+            <div class="mp-join-row">
+              <input
+                name="code"
+                maxlength="5"
+                minlength="5"
+                required
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                pattern="[A-Za-z2-9]{5}"
+                placeholder="ABCDE"
+                aria-label="{{ copy.mp_code }}"
+              />
+              <button type="submit" class="btn btn-primary" data-i18n="mp_join">{{ copy.mp_join }}</button>
+            </div>
+          </form>
         </div>
-      </form>
-    </div>
+      </div>
+    </details>
   </section>
 
   <section class="panel leaderboard">
@@ -1235,18 +1241,24 @@ block content %}
       return;
     }
     var gain = points > 0;
-    var label = (gain ? "+" : "") + points;
     var streak = Number(guess.streak) || 0;
     var combo = Number(guess.combo) || 0;
-    if (gain && streak > 1 && combo > 0) {
-      label += " ×" + streak;
-    }
     var node = document.createElement("div");
     node.className =
       "points-pop " +
       (gain ? "is-gain" : "is-loss") +
-      (streak > 1 ? " is-combo" : "");
-    node.textContent = label;
+      (gain && streak > 1 && combo > 0 ? " is-combo" : "");
+    var value = document.createElement("span");
+    value.className = "points-pop-value";
+    value.textContent = (gain ? "+" : "") + points;
+    node.appendChild(value);
+    if (gain && streak > 1 && combo > 0) {
+      var badge = document.createElement("span");
+      badge.className = "points-pop-combo";
+      var template = (copy && copy.combo_n) || "combo {n}";
+      badge.textContent = template.split("{n}").join(String(streak));
+      node.appendChild(badge);
+    }
     node.setAttribute("aria-live", "polite");
     var anchor = null;
     if (guess.letter) {
@@ -1781,6 +1793,24 @@ block content %}
       motionQuery.addListener(onMotionChange);
     }
   }
+
+  (function bootMpEntryFold() {
+    var fold = document.getElementById("mp-entry-fold");
+    if (!fold) {
+      return;
+    }
+    var key = "hangman-mp-entry-open";
+    try {
+      if (localStorage.getItem(key) === "1") {
+        fold.open = true;
+      }
+    } catch (err) {}
+    fold.addEventListener("toggle", function () {
+      try {
+        localStorage.setItem(key, fold.open ? "1" : "0");
+      } catch (err) {}
+    });
+  })();
 
   if (!document.getElementById("result-layer").hidden) {
     syncScrollLock();
