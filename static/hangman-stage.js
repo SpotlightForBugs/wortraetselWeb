@@ -2,8 +2,8 @@
  * Hangman frame transitions.
  *
  * Miss frames are additive Illustrator exports. Settled art stays mounted; only
- * newly added filled brush paths wipe in through a clip. Win/kill and other
- * non-additive swaps crossfade whole drawings — no outline racing.
+ * newly added filled brush paths reveal through a centerline brush mask in SVG
+ * user units (not CSS px). Win/kill crossfade whole drawings.
  */
 (function (global) {
   const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -130,6 +130,28 @@
     }
   }
 
+  function easeOutCubic (t) {
+    return 1 - Math.pow(1 - t, 3)
+  }
+
+  function animateDash (el, from, to, ms, mine, done) {
+    const start = performance.now()
+    function frame (now) {
+      if (mine !== token) {
+        return
+      }
+      const t = Math.min(1, (now - start) / ms)
+      const value = from + (to - from) * easeOutCubic(t)
+      el.setAttribute('stroke-dashoffset', String(value))
+      if (t < 1) {
+        requestAnimationFrame(frame)
+      } else if (done) {
+        done()
+      }
+    }
+    requestAnimationFrame(frame)
+  }
+
   function clearInkOverlay (host) {
     const overlay = host.querySelector('svg.hangman-ink-overlay')
     if (overlay) {
@@ -175,21 +197,18 @@
   }
 
   /**
-   * Keep the settled drawing mounted. Wipe in clones of only the new paths,
-   * then swap the base to the full next frame once the ink is visible.
+   * Keep settled art mounted. Reveal only new filled paths with a brush-tip
+   * mask that travels along the part's long axis in SVG user units.
    */
-  function wipeInFresh (host, nextSvg, oldKeys, done) {
+  function wipeInFresh (host, nextSvg, oldKeys, mine, done) {
     const seen = keySet(oldKeys)
     const fresh = []
-    Array.prototype.forEach.call(
-      nextSvg.querySelectorAll('path'),
-      function (path) {
-        const key = path.getAttribute('d') || ''
-        if (key && !seen[key]) {
-          fresh.push(path)
-        }
+    Array.prototype.forEach.call(nextSvg.querySelectorAll('path'), function (path) {
+      const key = path.getAttribute('d') || ''
+      if (key && !seen[key]) {
+        fresh.push(path)
       }
-    )
+    })
 
     if (!fresh.length) {
       mountBase(host, nextSvg)
@@ -210,15 +229,33 @@
     }
 
     const defs = document.createElementNS(SVG_NS, 'defs')
-    const clipId = 'hangman-ink-clip-' + String(token)
-    const clip = document.createElementNS(SVG_NS, 'clipPath')
-    clip.setAttribute('id', clipId)
-    clip.setAttribute('clipPathUnits', 'userSpaceOnUse')
-    defs.appendChild(clip)
+    const maskId = 'hangman-ink-mask-' + String(mine)
+    const mask = document.createElementNS(SVG_NS, 'mask')
+    mask.setAttribute('id', maskId)
+    mask.setAttribute('maskUnits', 'userSpaceOnUse')
+    mask.setAttribute('maskContentUnits', 'userSpaceOnUse')
+
+    const hide = document.createElementNS(SVG_NS, 'rect')
+    const vb = viewBoxOf(nextSvg).split(/\s+/).map(Number)
+    hide.setAttribute('x', String(vb[0] || 0))
+    hide.setAttribute('y', String(vb[1] || 0))
+    hide.setAttribute('width', String(vb[2] || 1728))
+    hide.setAttribute('height', String(vb[3] || 1296))
+    hide.setAttribute('fill', '#000')
+    mask.appendChild(hide)
+
+    const brush = document.createElementNS(SVG_NS, 'path')
+    brush.setAttribute('fill', 'none')
+    brush.setAttribute('stroke', '#fff')
+    brush.setAttribute('stroke-linecap', 'round')
+    brush.setAttribute('stroke-linejoin', 'round')
+    mask.appendChild(brush)
+
+    defs.appendChild(mask)
     overlay.appendChild(defs)
 
     const layer = document.createElementNS(SVG_NS, 'g')
-    layer.setAttribute('clip-path', 'url(#' + clipId + ')')
+    layer.setAttribute('mask', 'url(#' + maskId + ')')
     fresh.forEach(function (path) {
       layer.appendChild(path.cloneNode(true))
     })
@@ -232,44 +269,54 @@
       return
     }
 
-    const pad = Math.max(box.width, box.height) * 0.1
     const vertical = box.height >= box.width * 0.85
-    const rect = document.createElementNS(SVG_NS, 'rect')
-    const x = box.x - pad
-    const y = box.y - pad
-    const w = box.width + pad * 2
-    const h = box.height + pad * 2
-    rect.setAttribute('x', String(x))
-    rect.setAttribute('y', String(y))
+    const cx = box.x + box.width / 2
+    const cy = box.y + box.height / 2
+    // Brush width tracks the short axis so the part reveals at true thickness,
+    // with a round tip traveling along the long axis (not a fat rectangular slab).
+    const brushWidth = (vertical ? box.width : box.height) * 1.15
+    const pad = brushWidth * 0.35
+    let d
     if (vertical) {
-      rect.setAttribute('width', String(w))
-      rect.setAttribute('height', '0')
-      rect.style.height = '0px'
+      d =
+        'M ' +
+        cx +
+        ' ' +
+        (box.y - pad) +
+        ' L ' +
+        cx +
+        ' ' +
+        (box.y + box.height + pad)
     } else {
-      rect.setAttribute('width', '0')
-      rect.setAttribute('height', String(h))
-      rect.style.width = '0px'
+      d =
+        'M ' +
+        (box.x - pad) +
+        ' ' +
+        cy +
+        ' L ' +
+        (box.x + box.width + pad) +
+        ' ' +
+        cy
     }
-    clip.appendChild(rect)
+    brush.setAttribute('d', d)
+    brush.setAttribute('stroke-width', String(Math.max(brushWidth, 8)))
 
-    requestAnimationFrame(function () {
-      requestAnimationFrame(function () {
-        if (vertical) {
-          rect.style.transition = 'height 0.65s cubic-bezier(0.22, 1, 0.36, 1)'
-          rect.style.height = h + 'px'
-          rect.setAttribute('height', String(h))
-        } else {
-          rect.style.transition = 'width 0.65s cubic-bezier(0.22, 1, 0.36, 1)'
-          rect.style.width = w + 'px'
-          rect.setAttribute('width', String(w))
-        }
-      })
-    })
+    let length = 1
+    try {
+      length = Math.max(brush.getTotalLength(), 1)
+    } catch (err) {
+      length = Math.max(vertical ? box.height : box.width, 1) + pad * 2
+    }
+    brush.setAttribute('stroke-dasharray', String(length))
+    brush.setAttribute('stroke-dashoffset', String(length))
 
-    setTimeout(function () {
+    animateDash(brush, length, 0, 700, mine, function () {
+      if (mine !== token) {
+        return
+      }
       mountBase(host, nextSvg)
       done()
-    }, 700)
+    })
   }
 
   function snapImg (front, src) {
@@ -348,7 +395,7 @@
         }
 
         if (additive) {
-          wipeInFresh(host, svg, oldKeys, done)
+          wipeInFresh(host, svg, oldKeys, mine, done)
           return
         }
 

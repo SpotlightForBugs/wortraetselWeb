@@ -17,6 +17,8 @@ class HangmanStageAssetTests(unittest.TestCase):
         self.assertIn("wipeInFresh", JS)
         self.assertIn("isAdditive", JS)
         self.assertIn("hangman-ink-overlay", JS)
+        self.assertIn("hangman-ink-mask", JS)
+        self.assertIn("animateDash", JS)
         self.assertNotIn("strokeDashoffset", JS)
 
     def test_overlay_styles_exist(self):
