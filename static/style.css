@@ -1563,7 +1563,8 @@ body.dark .mp-letters.locked .btn-primary:disabled {
   opacity: 0.45;
 }
 
-.mp-toast {
+.mp-toast,
+.game-toast {
   position: fixed;
   left: 50%;
   bottom: 24px;
@@ -1576,7 +1577,11 @@ body.dark .mp-letters.locked .btn-primary:disabled {
   font-weight: 700;
   box-shadow: var(--shadow);
   z-index: 50;
-  word-break: break-all;
+  word-break: break-word;
+}
+
+.game-toast {
+  z-index: 55;
 }
 
 .mp-entry {

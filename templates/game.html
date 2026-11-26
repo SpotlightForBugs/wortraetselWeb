@@ -285,6 +285,8 @@ block content %}
   </div>
 </div>
 
+<div class="game-toast" id="game-toast" role="status" aria-live="polite" hidden></div>
+
 <div id="account-layer" class="sheet auth-sheet" hidden>
   <section class="auth-card auth-card--settings" role="dialog" aria-modal="true" aria-labelledby="account-title">
     <button
@@ -1789,6 +1791,20 @@ block content %}
     }
   });
 
+  var gameToastTimer = null;
+  function showGameToast(message) {
+    var node = document.getElementById("game-toast");
+    if (!node || !message) {
+      return;
+    }
+    node.textContent = message;
+    node.hidden = false;
+    clearTimeout(gameToastTimer);
+    gameToastTimer = setTimeout(function () {
+      node.hidden = true;
+    }, 3200);
+  }
+
   function bindAuth(form) {
     form.addEventListener("submit", function (event) {
       event.preventDefault();
@@ -1807,6 +1823,9 @@ block content %}
           error.hidden = true;
           applyState(data);
           closeAuth();
+          showGameToast(
+            form.id === "register-form" ? copy.registered : copy.logged_in,
+          );
         })
         .catch(function () {
           var error = document.getElementById("auth-error");
