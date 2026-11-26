@@ -1,4 +1,4 @@
-"""Sanity checks for the hangman stage crossfade helper."""
+"""Sanity checks for the hangman stage draw / morph helper."""
 
 import unittest
 from pathlib import Path
@@ -14,13 +14,41 @@ class HangmanStageAssetTests(unittest.TestCase):
         self.assertIn("HangmanStage", JS)
         self.assertIn("setDrawing", JS)
         self.assertIn("prefers-reduced-motion", JS)
+        self.assertIn("strokeDashoffset", JS)
+        self.assertIn("isAdditive", JS)
 
     def test_overlay_styles_exist(self):
-        self.assertIn(".hangman-image-overlay", CSS)
-        self.assertIn(".hangman-image-overlay.is-shown", CSS)
+        self.assertIn(".hangman-stage-svg", CSS)
+        self.assertIn(".hangman-stage-svg.is-fading", CSS)
+        self.assertIn("has-inline-hangman", CSS)
 
     def test_layout_loads_helper(self):
         self.assertIn("hangman-stage.js", LAYOUT)
+
+    def test_miss_frames_are_path_additive(self):
+        """Stroke-draw relies on later miss frames containing earlier paths."""
+        import re
+
+        def path_ds(name):
+            text = (ROOT / "static" / "assets" / name).read_text(encoding="utf-8")
+            return set(re.findall(r'\bd="([^"]+)"', text))
+
+        sequence = [
+            "base.svg",
+            "Hangman1_01_Zeichenflache_1.svg",
+            "Hangman2_01_Zeichenflache_1.svg",
+            "Hangman3_01_Zeichenflache_1.svg",
+            "Hangman4_01_Zeichenflache_1.svg",
+            "Hangman5_01_Zeichenflache_1.svg",
+            "Hangman6_01_Zeichenflache_1.svg",
+            "Hangman7_01_Zeichenflache_1.svg",
+            "Hangman8_01_Zeichenflache_1.svg",
+        ]
+        prev = path_ds(sequence[0])
+        for name in sequence[1:]:
+            cur = path_ds(name)
+            self.assertTrue(prev <= cur, msg=f"{name} should keep prior paths")
+            prev = cur
 
 
 if __name__ == "__main__":

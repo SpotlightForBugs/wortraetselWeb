@@ -1817,6 +1817,17 @@ block content %}
     });
   })();
 
+  (function hydrateHangman() {
+    var img = document.getElementById("drawing");
+    if (!img || !window.HangmanStage) {
+      return;
+    }
+    var src = themedDrawingSrc(img.getAttribute("src"));
+    if (src) {
+      HangmanStage.setDrawing(img, src, { immediate: true });
+    }
+  })();
+
   if (!document.getElementById("result-layer").hidden) {
     syncScrollLock();
     fitDrawing();
