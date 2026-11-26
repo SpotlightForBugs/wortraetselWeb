@@ -500,4 +500,3 @@ def score_after_round(saved, points, board_score):
     if board_score is None or int(board_score) == saved:
         return saved + points
     return int(board_score)
-
