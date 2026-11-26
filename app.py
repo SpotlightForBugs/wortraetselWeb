@@ -225,6 +225,7 @@ def _payload(leaderboard=None):
         if found is not None:
             session["shown_score"] = found
     dark = bool(session.get("dark_mode", False))
+    visible = _visible_score()
     state = i18n.client_state(
         language,
         session.get("word") or "",
@@ -233,10 +234,11 @@ def _payload(leaderboard=None):
         result=session.get("result"),
         pending=session.get("pending_score") or 0,
         dark=dark,
+        total=visible,
     )
     guest = "username" not in session
     state["score_line"] = _score_line(language)
-    state["shown_score"] = _visible_score()
+    state["shown_score"] = visible
     state["dark"] = dark
     state["guest"] = guest
     state["username"] = (
@@ -366,17 +368,29 @@ def _result_prefs():
 def game():
     if request.method == "POST":
         _ensure_round()
+        last_guess = None
         if not session.get("result"):
             incoming = (request.form.get("letter") or "").lower()
             before = set(session.get("letters") or [])
+            word = session["word"]
+            language = play_logic.coerce_language(session.get("language"))
             letters, wrong, _status = play_logic.apply_guess(
-                session["word"],
+                word,
                 session.get("letters") or [],
                 session.get("wrong_guesses") or 0,
                 incoming,
             )
             session["letters"] = letters
             session["wrong_guesses"] = wrong
+            if (
+                len(incoming) == 1
+                and incoming.isalpha()
+                and incoming not in before
+            ):
+                last_guess = {
+                    "letter": incoming.upper(),
+                    "points": play_logic.score_guess(language, word, incoming),
+                }
             if not before and letters:
                 _warm_gloss(session.get("word"), session.get("language"))
             if (
@@ -388,7 +402,10 @@ def game():
                 session["score"] = session.get("score", 0) + 1
             _settle_round()
         if _wants_json():
-            return jsonify(_payload())
+            payload = _payload()
+            if last_guess:
+                payload["last_guess"] = last_guess
+            return jsonify(payload)
         return redirect(url_for("game"))
 
     auth = request.args.get("auth")

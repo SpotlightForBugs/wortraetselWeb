@@ -249,7 +249,7 @@ block content %}
       </div>
     </aside>
     <section class="auth-card result-card" role="dialog" aria-modal="true">
-      <p id="result-message">{{ result.message if result else '' }}</p>
+      <p id="result-message" class="{% if result and result.success %}is-score{% endif %}">{{ result.message if result else '' }}</p>
       <p id="result-worth" {% if not result or not result.offer %}hidden{% endif %}>
         {{ result.worth if result else '' }}
       </p>
@@ -1143,16 +1143,19 @@ block content %}
   function paintResult(result) {
     var layer = document.getElementById("result-layer");
     var info = document.getElementById("info-panel");
+    var message = document.getElementById("result-message");
     clearResultAdvance();
     if (!result) {
       layer.hidden = true;
       if (info) info.hidden = true;
+      message.classList.remove("is-score");
       clearDrawingFit();
       syncScrollLock();
       paintDefinition("");
       return;
     }
-    document.getElementById("result-message").textContent = result.message;
+    message.textContent = result.message;
+    message.classList.toggle("is-score", !!result.success);
     var worth = document.getElementById("result-worth");
     worth.hidden = !result.offer;
     worth.textContent = result.worth || "";
@@ -1165,6 +1168,40 @@ block content %}
     syncScrollLock();
     armResultAdvance();
     paintDefinition(result.word || "");
+  }
+
+  function spawnPointsPop(guess) {
+    if (!guess || guess.points == null) {
+      return;
+    }
+    var points = Number(guess.points);
+    if (!isFinite(points) || points === 0) {
+      return;
+    }
+    var gain = points > 0;
+    var label = (gain ? "+" : "") + points;
+    var node = document.createElement("div");
+    node.className = "points-pop " + (gain ? "is-gain" : "is-loss");
+    node.textContent = label;
+    node.setAttribute("aria-live", "polite");
+    var anchor = null;
+    if (guess.letter) {
+      anchor = document.querySelector(
+        '#game-form-Big button[value="' + guess.letter + '"]'
+      );
+    }
+    var rect = (anchor || document.getElementById("word") || document.body).getBoundingClientRect();
+    var x = rect.left + rect.width / 2;
+    var y = rect.top + Math.min(rect.height * 0.35, 28);
+    node.style.left = x + "px";
+    node.style.top = y + "px";
+    document.body.appendChild(node);
+    requestAnimationFrame(function () {
+      node.classList.add("is-on");
+    });
+    window.setTimeout(function () {
+      node.remove();
+    }, 1100);
   }
 
   function applyState(data) {
@@ -1192,6 +1229,9 @@ block content %}
     if (data.result_prefs) {
       applyResultPrefs(data.result_prefs, false);
       writeStoredResultPrefs(resultPrefs);
+    }
+    if (data.last_guess) {
+      spawnPointsPop(data.last_guess);
     }
     if ("result" in data) {
       paintResult(data.result);

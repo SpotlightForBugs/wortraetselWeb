@@ -875,7 +875,14 @@ def match_accept_language(header):
 
 
 def client_state(
-    language, word, letters, wrong_guesses, result=None, pending=0, dark=False
+    language,
+    word,
+    letters,
+    wrong_guesses,
+    result=None,
+    pending=0,
+    dark=False,
+    total=None,
 ):
     """Board data the page can apply without loading a new document."""
     language = language if language in _STRINGS else "en"
@@ -902,11 +909,19 @@ def client_state(
     if result:
         shown = game.display_word(language, result.get("word") or word or "")
         offer = bool(result.get("offer"))
+        points = int(result.get("points") or 0)
+        total_score = int(total) if total is not None else points
+        if result.get("success"):
+            message = text(language, "score_line", n=total_score)
+        else:
+            message = text(language, "loss")
         state["result"] = {
             "success": bool(result.get("success")),
             "offer": offer,
             "word": shown,
-            "message": text(language, "win" if result.get("success") else "loss"),
+            "points": points,
+            "total": total_score,
+            "message": message,
             "worth": (
                 text(language, "worth", n=result.get("points", pending))
                 if offer
