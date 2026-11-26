@@ -249,7 +249,7 @@ block content %}
       </div>
     </aside>
     <section class="auth-card result-card" role="dialog" aria-modal="true">
-      <p id="result-message" class="{% if result and result.success %}is-score{% endif %}">{{ result.message if result else '' }}</p>
+      <p id="result-message" class="{% if result and result.success %}is-score {% if result.points < 0 %}is-loss{% else %}is-gain{% endif %}{% endif %}">{{ result.message if result else '' }}</p>
       <p id="result-worth" {% if not result or not result.offer %}hidden{% endif %}>
         {{ result.worth if result else '' }}
       </p>
@@ -1196,14 +1196,18 @@ block content %}
     if (!result) {
       layer.hidden = true;
       if (info) info.hidden = true;
-      message.classList.remove("is-score");
+      message.classList.remove("is-score", "is-gain", "is-loss");
       clearDrawingFit();
       syncScrollLock();
       paintDefinition("");
       return;
     }
     message.textContent = result.message;
-    message.classList.toggle("is-score", !!result.success && scoreAnimEnabled());
+    var showScore = !!result.success;
+    var points = Number(result.points);
+    message.classList.toggle("is-score", showScore);
+    message.classList.toggle("is-gain", showScore && !(isFinite(points) && points < 0));
+    message.classList.toggle("is-loss", showScore && isFinite(points) && points < 0);
     var worth = document.getElementById("result-worth");
     worth.hidden = !result.offer;
     worth.textContent = result.worth || "";

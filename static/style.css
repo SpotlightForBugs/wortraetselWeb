@@ -597,6 +597,26 @@ tr.me {
   animation: result-score-in 520ms cubic-bezier(0.22, 1.2, 0.36, 1) both;
 }
 
+.result-card #result-message.is-gain {
+  color: #1b8f4e;
+}
+
+.result-card #result-message.is-loss {
+  color: #c0392b;
+}
+
+body.dark .result-card #result-message.is-gain {
+  color: #3dce7a;
+}
+
+body.dark .result-card #result-message.is-loss {
+  color: #ff6b5c;
+}
+
+html[data-score-anim="off"] .result-card #result-message.is-score {
+  animation: none;
+}
+
 @keyframes result-score-in {
   0% {
     opacity: 0;
@@ -682,7 +702,6 @@ body.dark .points-pop.is-loss {
   color: #ff6b5c;
 }
 
-html[data-score-anim="off"] .result-card #result-message.is-score,
 html[data-score-anim="off"] .points-pop,
 html[data-score-anim="off"] .points-pop.is-on {
   animation: none !important;
