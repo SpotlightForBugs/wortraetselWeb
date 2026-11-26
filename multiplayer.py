@@ -184,8 +184,14 @@ def _finish(room, status, now=None):
     word = room["word"]
     letters = room.get("letters") or []
     language = room.get("language")
+    # Letter+combo points already landed on each player; skip the solo clear bonus.
     points = game.calculate_points(
-        room.get("wrong_guesses") or 0, word, letters, status == "won", language
+        room.get("wrong_guesses") or 0,
+        word,
+        letters,
+        status == "won",
+        language,
+        clear=False,
     )
     shares = round_shares(room["players"])
     room["state"] = "finished"
@@ -215,13 +221,23 @@ def guess(room, player_id, letter, now=None):
         return room, "mp_bad_letter"
     word = room["word"]
     language = room.get("language")
-    delta = game.score_guess(language, word, letter)
     letters, wrong, status = game.apply_guess(
         word, room.get("letters") or [], room.get("wrong_guesses") or 0, letter
     )
     players = [dict(p) for p in room["players"]]
     index = int(room.get("turn") or 0) % len(players)
     players[index]["strikes"] = 0
+    hit = letter in word
+    if hit:
+        streak = int(players[index].get("combo") or 0) + 1
+        players[index]["combo"] = streak
+        players[index]["hits"] = players[index].get("hits", 0) + word.count(letter)
+    else:
+        streak = 0
+        players[index]["combo"] = 0
+        players[index]["misses"] = players[index].get("misses", 0) + 1
+    parts = game.score_guess_parts(language, word, letter, streak=streak)
+    delta = parts["points"]
     players[index]["round"] = players[index].get("round", 0) + delta
     players[index]["score"] = players[index].get("score", 0) + delta
     stamp = time.time() if now is None else now
@@ -235,15 +251,15 @@ def guess(room, player_id, letter, now=None):
             "player": player_id,
             "letter": letter.upper(),
             "points": delta,
+            "base": parts["base"],
+            "combo": parts["combo"],
+            "streak": parts["streak"],
             "value": game.letter_value(language, letter),
         },
         turn_started=stamp,
         updated_at=stamp,
     )
-    if letter in word:
-        players[index]["hits"] = players[index].get("hits", 0) + word.count(letter)
-    else:
-        players[index]["misses"] = players[index].get("misses", 0) + 1
+    if not hit:
         room["turn"] = (index + 1) % len(players)
     if status != "playing":
         room = _finish(room, status, now=stamp)

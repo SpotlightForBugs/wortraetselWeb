@@ -235,24 +235,78 @@ def letter_value(language, letter):
     )
 
 
-def score_guess(language, word, letter):
-    """Points for one guess: +value×hits, or a transparent miss based on value."""
+def word_length_factor(word):
+    """Longer words pay more per hit; tiers stay easy to read."""
+    length = len(word or "")
+    if length <= 4:
+        return 1.0
+    if length <= 6:
+        return 1.15
+    if length <= 8:
+        return 1.3
+    if length <= 11:
+        return 1.45
+    return 1.6
+
+
+def combo_extra(base, streak):
+    """Extra points for consecutive hits. streak includes this hit."""
+    if base <= 0 or int(streak or 0) < 2:
+        return 0
+    # +20% per prior hit in the streak, capped at +100%.
+    return round(base * min(1.0, (int(streak) - 1) * 0.2))
+
+
+def clear_bonus(wrong_guesses, success):
+    """Win payoff for unused lives (perfect clear = 135)."""
+    if not success:
+        return 0
+    lives = max(0, 9 - int(wrong_guesses or 0))
+    return lives * 15
+
+
+def score_guess_parts(language, word, letter, streak=0):
+    """Break down one guess: base (rarity×length), combo, and total."""
     letter = (letter or "").lower()
     value = letter_value(language, letter)
     count = (word or "").count(letter)
-    if count:
-        return value * count
-    # Missing a rare letter costs more; the value table stays the one source of truth.
-    return -max(_LETTER_VALUE_FLOOR, value // 4)
+    if not count:
+        miss = -max(_LETTER_VALUE_FLOOR, value // 4)
+        return {"points": miss, "base": miss, "combo": 0, "streak": 0}
+    base = round(value * count * word_length_factor(word))
+    streak = int(streak or 0)
+    combo = combo_extra(base, streak)
+    return {
+        "points": base + combo,
+        "base": base,
+        "combo": combo,
+        "streak": streak,
+    }
+
+
+def score_guess(language, word, letter, streak=0):
+    """Points for one guess: rarity×length (+combo), or a rarity-based miss."""
+    return score_guess_parts(language, word, letter, streak=streak)["points"]
 
 
 def calculate_points(
-    wrong_guesses: int, word: str, guessed_letters: list, success: bool, language="en"
+    wrong_guesses: int,
+    word: str,
+    guessed_letters: list,
+    success: bool,
+    language="en",
+    *,
+    clear=True,
 ):
-    """Sum of per-letter scores for the round in this language."""
+    """Replay per-guess scores (with combo) and optional clear bonus on a win."""
     points = 0
+    streak = 0
     for letter in guessed_letters or []:
-        points += score_guess(language, word, letter)
+        hit = letter in (word or "")
+        streak = streak + 1 if hit else 0
+        points += score_guess(language, word, letter, streak=streak)
+    if clear:
+        points += clear_bonus(wrong_guesses, success)
     return points
 
 

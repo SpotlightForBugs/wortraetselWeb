@@ -186,25 +186,38 @@ def set_banned(email, banned):
 
 # Reveal-panel auto-advance preferences (seconds; 0 = instant).
 _RESULT_AUTOSKIP_SECS = frozenset({0, 5, 10, 15, 20, 25, 30})
-_RESULT_AUTOSKIP_DEFAULT = {"autoskip": True, "seconds": 10}
+_RESULT_AUTOSKIP_DEFAULT = {"autoskip": True, "seconds": 10, "score_anim": True}
+
+
+def _coerce_bool(value, default=True):
+    if isinstance(value, str):
+        return value.strip().lower() in ("1", "true", "yes", "on")
+    if value is None:
+        return bool(default)
+    return bool(value)
 
 
 def normalize_result_prefs(raw=None):
-    """Clamp autoskip prefs to the supported UI values."""
+    """Clamp gameplay prefs to the supported UI values."""
     data = raw if isinstance(raw, dict) else {}
     autoskip = data.get("autoskip", data.get("result_autoskip", True))
     seconds = data.get("seconds", data.get("result_autoskip_sec", 10))
+    score_anim = data.get("score_anim", data.get("result_score_anim", True))
     try:
         seconds = int(seconds)
     except (TypeError, ValueError):
         seconds = 10
     if seconds not in _RESULT_AUTOSKIP_SECS:
         seconds = 10
-    return {"autoskip": bool(autoskip), "seconds": seconds}
+    return {
+        "autoskip": _coerce_bool(autoskip, True),
+        "seconds": seconds,
+        "score_anim": _coerce_bool(score_anim, True),
+    }
 
 
 def get_result_prefs(email):
-    """Return result auto-advance prefs for a user, or defaults."""
+    """Return gameplay prefs for a user, or defaults."""
     flags = _user_flags(email)
     if not flags:
         return dict(_RESULT_AUTOSKIP_DEFAULT)
@@ -212,12 +225,13 @@ def get_result_prefs(email):
         {
             "autoskip": flags.get("result_autoskip", True),
             "seconds": flags.get("result_autoskip_sec", 10),
+            "score_anim": flags.get("result_score_anim", True),
         }
     )
 
 
-def set_result_prefs(email, autoskip=None, seconds=None):
-    """Persist result auto-advance prefs on the users document."""
+def set_result_prefs(email, autoskip=None, seconds=None, score_anim=None):
+    """Persist gameplay prefs on the users document."""
     document = getDocumentFor(email)
     if not document:
         return False
@@ -226,11 +240,16 @@ def set_result_prefs(email, autoskip=None, seconds=None):
         autoskip = current["autoskip"]
     if seconds is None:
         seconds = current["seconds"]
-    prefs = normalize_result_prefs({"autoskip": autoskip, "seconds": seconds})
+    if score_anim is None:
+        score_anim = current["score_anim"]
+    prefs = normalize_result_prefs(
+        {"autoskip": autoskip, "seconds": seconds, "score_anim": score_anim}
+    )
     document.update(
         {
             "result_autoskip": prefs["autoskip"],
             "result_autoskip_sec": prefs["seconds"],
+            "result_score_anim": prefs["score_anim"],
         }
     )
     return True

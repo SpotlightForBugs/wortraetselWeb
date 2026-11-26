@@ -112,6 +112,7 @@ def _start_round(language=None):
     session["letters"] = []
     session["score"] = 0
     session["wrong_guesses"] = 0
+    session["hit_streak"] = 0
 
 
 def _ensure_round():
@@ -383,12 +384,22 @@ def _play_letter(incoming):
     fresh = len(incoming) == 1 and incoming.isalpha() and incoming not in before
     last_guess = None
     if fresh:
+        hit = incoming in word
+        if hit:
+            session["hit_streak"] = int(session.get("hit_streak") or 0) + 1
+            session["score"] = session.get("score", 0) + 1
+            streak = session["hit_streak"]
+        else:
+            session["hit_streak"] = 0
+            streak = 0
+        parts = play_logic.score_guess_parts(language, word, incoming, streak=streak)
         last_guess = {
             "letter": incoming.upper(),
-            "points": play_logic.score_guess(language, word, incoming),
+            "points": parts["points"],
+            "base": parts["base"],
+            "combo": parts["combo"],
+            "streak": parts["streak"],
         }
-        if incoming in word:
-            session["score"] = session.get("score", 0) + 1
     if not before and letters:
         _warm_gloss(session.get("word"), session.get("language"))
     _settle_round()
@@ -682,24 +693,28 @@ def account_delete():
 
 @app.route("/account/result_prefs", methods=["POST"])
 def account_result_prefs():
-    """Save reveal auto-advance prefs (Firestore for accounts, session for guests)."""
+    """Save gameplay prefs (Firestore for accounts, session for guests)."""
     raw = request.get_json(silent=True) or {}
     if request.form:
         raw = {
             "autoskip": request.form.get("autoskip", raw.get("autoskip")),
             "seconds": request.form.get("seconds", raw.get("seconds")),
+            "score_anim": request.form.get("score_anim", raw.get("score_anim")),
         }
-    # Checkbox / JSON may send "true"/"false" or 1/0.
-    autoskip = raw.get("autoskip", True)
-    if isinstance(autoskip, str):
-        autoskip = autoskip.strip().lower() in ("1", "true", "yes", "on")
     prefs = firebaseDB.normalize_result_prefs(
-        {"autoskip": autoskip, "seconds": raw.get("seconds", 10)}
+        {
+            "autoskip": raw.get("autoskip", True),
+            "seconds": raw.get("seconds", 10),
+            "score_anim": raw.get("score_anim", True),
+        }
     )
     if "username" in session:
         try:
             ok = firebaseDB.set_result_prefs(
-                session["username"], prefs["autoskip"], prefs["seconds"]
+                session["username"],
+                prefs["autoskip"],
+                prefs["seconds"],
+                prefs["score_anim"],
             )
         except Exception:
             ok = False

@@ -349,6 +349,14 @@ block content %}
             {% endfor %}
           </select>
         </label>
+        <label class="info-autoskip" for="score-anim">
+          <input
+            type="checkbox"
+            id="score-anim"
+            {% if state_json.result_prefs.score_anim %}checked{% endif %}
+          />
+          <span data-i18n="score_anim">{{ copy.score_anim }}</span>
+        </label>
       </div>
     </section>
 
@@ -878,21 +886,55 @@ block content %}
   var resultAdvancePaused = false;
   var RESULT_PREF_KEY = "hangman-result-prefs";
   var RESULT_PREF_SECS = [0, 5, 10, 15, 20, 25, 30];
-  var resultPrefs = { autoskip: true, seconds: 10 };
+  var resultPrefs = { autoskip: true, seconds: 10, score_anim: true };
+
+  function prefersReducedMotion() {
+    return !!(
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  function defaultScoreAnim() {
+    return !prefersReducedMotion();
+  }
+
+  function scoreAnimEnabled() {
+    if (prefersReducedMotion()) {
+      return false;
+    }
+    return !!resultPrefs.score_anim;
+  }
+
+  function syncScoreAnimAttr() {
+    document.documentElement.setAttribute(
+      "data-score-anim",
+      scoreAnimEnabled() ? "on" : "off",
+    );
+  }
+
+  function coercePrefBool(value, fallback) {
+    if (typeof value === "string") {
+      return ["1", "true", "yes", "on"].indexOf(value.toLowerCase()) !== -1;
+    }
+    if (typeof value === "boolean") {
+      return value;
+    }
+    return fallback;
+  }
 
   function normalizeResultPrefs(raw) {
     var data = raw && typeof raw === "object" ? raw : {};
-    var autoskip = data.autoskip;
-    if (typeof autoskip === "string") {
-      autoskip = ["1", "true", "yes", "on"].indexOf(autoskip.toLowerCase()) !== -1;
-    } else if (typeof autoskip !== "boolean") {
-      autoskip = true;
-    }
+    var autoskip = coercePrefBool(data.autoskip, true);
     var seconds = parseInt(data.seconds, 10);
     if (RESULT_PREF_SECS.indexOf(seconds) === -1) {
       seconds = 10;
     }
-    return { autoskip: !!autoskip, seconds: seconds };
+    var scoreAnim =
+      data.score_anim === undefined
+        ? defaultScoreAnim()
+        : coercePrefBool(data.score_anim, defaultScoreAnim());
+    return { autoskip: !!autoskip, seconds: seconds, score_anim: !!scoreAnim };
   }
 
   function readStoredResultPrefs() {
@@ -914,11 +956,14 @@ block content %}
   function syncResultPrefControls() {
     var toggle = document.getElementById("result-autoskip");
     var delay = document.getElementById("result-autoskip-sec");
+    var anim = document.getElementById("score-anim");
     if (toggle) toggle.checked = !!resultPrefs.autoskip;
     if (delay) {
       delay.value = String(resultPrefs.seconds);
       delay.disabled = !resultPrefs.autoskip;
     }
+    if (anim) anim.checked = !!resultPrefs.score_anim;
+    syncScoreAnimAttr();
   }
 
   function applyResultPrefs(raw, persist) {
@@ -929,6 +974,7 @@ block content %}
       var body = tokenBody();
       body.append("autoskip", resultPrefs.autoskip ? "true" : "false");
       body.append("seconds", String(resultPrefs.seconds));
+      body.append("score_anim", resultPrefs.score_anim ? "true" : "false");
       postForm("/account/result_prefs", body)
         .then(function (data) {
           if (data && data.result_prefs) {
@@ -1155,7 +1201,7 @@ block content %}
       return;
     }
     message.textContent = result.message;
-    message.classList.toggle("is-score", !!result.success);
+    message.classList.toggle("is-score", !!result.success && scoreAnimEnabled());
     var worth = document.getElementById("result-worth");
     worth.hidden = !result.offer;
     worth.textContent = result.worth || "";
@@ -1171,7 +1217,7 @@ block content %}
   }
 
   function spawnPointsPop(guess) {
-    if (!guess || guess.points == null) {
+    if (!scoreAnimEnabled() || !guess || guess.points == null) {
       return;
     }
     var points = Number(guess.points);
@@ -1180,8 +1226,16 @@ block content %}
     }
     var gain = points > 0;
     var label = (gain ? "+" : "") + points;
+    var streak = Number(guess.streak) || 0;
+    var combo = Number(guess.combo) || 0;
+    if (gain && streak > 1 && combo > 0) {
+      label += " ×" + streak;
+    }
     var node = document.createElement("div");
-    node.className = "points-pop " + (gain ? "is-gain" : "is-loss");
+    node.className =
+      "points-pop " +
+      (gain ? "is-gain" : "is-loss") +
+      (streak > 1 ? " is-combo" : "");
     node.textContent = label;
     node.setAttribute("aria-live", "polite");
     var anchor = null;
@@ -1665,21 +1719,31 @@ block content %}
       applyResultPrefs(stored, false);
     } else if (bootState.result_prefs) {
       applyResultPrefs(bootState.result_prefs, false);
+      // First browser visit with reduced motion: default the toggle off.
+      if (!stored && prefersReducedMotion()) {
+        resultPrefs.score_anim = false;
+        syncResultPrefControls();
+      }
       writeStoredResultPrefs(resultPrefs);
     } else if (stored) {
       applyResultPrefs(stored, false);
     } else {
-      syncResultPrefControls();
+      applyResultPrefs(
+        { autoskip: true, seconds: 10, score_anim: defaultScoreAnim() },
+        false,
+      );
     }
   })();
 
   var autoskipToggle = document.getElementById("result-autoskip");
   var autoskipDelay = document.getElementById("result-autoskip-sec");
+  var scoreAnimToggle = document.getElementById("score-anim");
   function onResultPrefsChanged() {
     applyResultPrefs(
       {
         autoskip: autoskipToggle ? autoskipToggle.checked : true,
         seconds: autoskipDelay ? autoskipDelay.value : 10,
+        score_anim: scoreAnimToggle ? scoreAnimToggle.checked : defaultScoreAnim(),
       },
       true,
     );
@@ -1692,6 +1756,20 @@ block content %}
   }
   if (autoskipDelay) {
     autoskipDelay.addEventListener("change", onResultPrefsChanged);
+  }
+  if (scoreAnimToggle) {
+    scoreAnimToggle.addEventListener("change", onResultPrefsChanged);
+  }
+  if (window.matchMedia) {
+    var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    var onMotionChange = function () {
+      syncScoreAnimAttr();
+    };
+    if (motionQuery.addEventListener) {
+      motionQuery.addEventListener("change", onMotionChange);
+    } else if (motionQuery.addListener) {
+      motionQuery.addListener(onMotionChange);
+    }
   }
 
   if (!document.getElementById("result-layer").hidden) {

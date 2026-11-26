@@ -664,6 +664,10 @@ tr.me {
   color: #c0392b;
 }
 
+.points-pop.is-combo {
+  font-size: clamp(1.5rem, 4.8vw, 2.25rem);
+}
+
 body.dark .points-pop {
   text-shadow:
     0 1px 0 rgba(0, 0, 0, 0.35),
@@ -678,15 +682,25 @@ body.dark .points-pop.is-loss {
   color: #ff6b5c;
 }
 
+html[data-score-anim="off"] .result-card #result-message.is-score,
+html[data-score-anim="off"] .points-pop,
+html[data-score-anim="off"] .points-pop.is-on {
+  animation: none !important;
+}
+
+html[data-score-anim="off"] .points-pop {
+  display: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .result-card #result-message.is-score {
     animation: none;
   }
 
+  .points-pop,
   .points-pop.is-on {
-    animation: none;
-    opacity: 1;
-    transform: translate(-50%, -28px) scale(1);
+    animation: none !important;
+    display: none;
   }
 }
 

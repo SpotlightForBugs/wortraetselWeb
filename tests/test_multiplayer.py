@@ -78,7 +78,7 @@ class GuessTests(unittest.TestCase):
         room, _ = multiplayer.guess(room, "p2", "t")
         self.assertEqual(room["state"], "finished")
         self.assertEqual(room["result"]["status"], "won")
-        expected = sum(game.score_guess("en", "cat", ch) for ch in "zcat")
+        expected = game.calculate_points(1, "cat", list("zcat"), True, "en", clear=False)
         self.assertEqual(room["result"]["points"], expected)
         self.assertEqual(room["result"]["winner"], "p2")
         self.assertEqual(room["result"]["shares"]["p2"], room["players"][1]["round"])
@@ -170,8 +170,13 @@ class RulesTests(unittest.TestCase):
         room, _ = multiplayer.guess(room, "p2", "a")
         room, _ = multiplayer.guess(room, "p2", "b")
         shares = room["result"]["shares"]
-        host = game.score_guess("en", "cab", "c") + game.score_guess("en", "cab", "z")
-        guest = game.score_guess("en", "cab", "a") + game.score_guess("en", "cab", "b")
+        # Host: hit then miss. Guest: two consecutive hits (combo on the second).
+        host = game.score_guess("en", "cab", "c", streak=1) + game.score_guess(
+            "en", "cab", "z"
+        )
+        guest = game.score_guess("en", "cab", "a", streak=1) + game.score_guess(
+            "en", "cab", "b", streak=2
+        )
         self.assertEqual(shares, {"host": host, "p2": guest})
         self.assertEqual([p["score"] for p in room["players"]], [host, guest])
         self.assertEqual(room["result"]["points"], host + guest)
