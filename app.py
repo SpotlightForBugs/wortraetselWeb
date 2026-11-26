@@ -364,39 +364,42 @@ def _result_prefs():
     return firebaseDB.normalize_result_prefs(session.get("result_prefs"))
 
 
+def _play_letter(incoming):
+    """Apply one solo guess. Returns last_guess payload or None."""
+    if session.get("result"):
+        return None
+    incoming = (incoming or "").lower()
+    before = set(session.get("letters") or [])
+    word = session["word"]
+    language = play_logic.coerce_language(session.get("language"))
+    letters, wrong, _status = play_logic.apply_guess(
+        word,
+        session.get("letters") or [],
+        session.get("wrong_guesses") or 0,
+        incoming,
+    )
+    session["letters"] = letters
+    session["wrong_guesses"] = wrong
+    fresh = len(incoming) == 1 and incoming.isalpha() and incoming not in before
+    last_guess = None
+    if fresh:
+        last_guess = {
+            "letter": incoming.upper(),
+            "points": play_logic.score_guess(language, word, incoming),
+        }
+        if incoming in word:
+            session["score"] = session.get("score", 0) + 1
+    if not before and letters:
+        _warm_gloss(session.get("word"), session.get("language"))
+    _settle_round()
+    return last_guess
+
+
 @app.route("/", methods=["GET", "POST"])
 def game():
     if request.method == "POST":
         _ensure_round()
-        last_guess = None
-        if not session.get("result"):
-            incoming = (request.form.get("letter") or "").lower()
-            before = set(session.get("letters") or [])
-            word = session["word"]
-            language = play_logic.coerce_language(session.get("language"))
-            letters, wrong, _status = play_logic.apply_guess(
-                word,
-                session.get("letters") or [],
-                session.get("wrong_guesses") or 0,
-                incoming,
-            )
-            session["letters"] = letters
-            session["wrong_guesses"] = wrong
-            if len(incoming) == 1 and incoming.isalpha() and incoming not in before:
-                last_guess = {
-                    "letter": incoming.upper(),
-                    "points": play_logic.score_guess(language, word, incoming),
-                }
-            if not before and letters:
-                _warm_gloss(session.get("word"), session.get("language"))
-            if (
-                len(incoming) == 1
-                and incoming.isalpha()
-                and incoming not in before
-                and incoming in session["word"]
-            ):
-                session["score"] = session.get("score", 0) + 1
-            _settle_round()
+        last_guess = _play_letter(request.form.get("letter"))
         if _wants_json():
             payload = _payload()
             if last_guess:
