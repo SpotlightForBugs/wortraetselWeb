@@ -181,12 +181,15 @@
   function wipeInFresh (host, nextSvg, oldKeys, done) {
     const seen = keySet(oldKeys)
     const fresh = []
-    Array.prototype.forEach.call(nextSvg.querySelectorAll('path'), function (path) {
-      const key = path.getAttribute('d') || ''
-      if (key && !seen[key]) {
-        fresh.push(path)
+    Array.prototype.forEach.call(
+      nextSvg.querySelectorAll('path'),
+      function (path) {
+        const key = path.getAttribute('d') || ''
+        if (key && !seen[key]) {
+          fresh.push(path)
+        }
       }
-    })
+    )
 
     if (!fresh.length) {
       mountBase(host, nextSvg)
@@ -252,13 +255,11 @@
     requestAnimationFrame(function () {
       requestAnimationFrame(function () {
         if (vertical) {
-          rect.style.transition =
-            'height 0.65s cubic-bezier(0.22, 1, 0.36, 1)'
+          rect.style.transition = 'height 0.65s cubic-bezier(0.22, 1, 0.36, 1)'
           rect.style.height = h + 'px'
           rect.setAttribute('height', String(h))
         } else {
-          rect.style.transition =
-            'width 0.65s cubic-bezier(0.22, 1, 0.36, 1)'
+          rect.style.transition = 'width 0.65s cubic-bezier(0.22, 1, 0.36, 1)'
           rect.style.width = w + 'px'
           rect.setAttribute('width', String(w))
         }
