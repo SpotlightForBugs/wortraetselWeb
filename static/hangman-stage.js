@@ -68,13 +68,11 @@
   /** Leave exactly one settled base SVG in the host (or empty). */
   function settleHost (host, keep) {
     clearInkOverlay(host)
-    Array.prototype.slice
-      .call(host.querySelectorAll('svg'))
-      .forEach((node) => {
-        if (node !== keep) {
-          node.remove()
-        }
-      })
+    Array.prototype.slice.call(host.querySelectorAll('svg')).forEach((node) => {
+      if (node !== keep) {
+        node.remove()
+      }
+    })
     if (!keep) {
       return
     }
