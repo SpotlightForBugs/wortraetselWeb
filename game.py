@@ -511,7 +511,5 @@ def finish_game(
     legacy_account=False,
     language="en",
 ):
-    points = calculate_points(wrong_guesses, word, all_guesses, success, language)
-    import firebaseDB  # skipcq: PYL-R0401 - avoid import cycle at module load
-
-    firebaseDB.setScore(username, points)
+    """Return round points. Persistence stays in the caller to avoid import cycles."""
+    return calculate_points(wrong_guesses, word, all_guesses, success, language)

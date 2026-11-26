@@ -1,6 +1,6 @@
 import unittest
 
-import game  # skipcq: PYL-R0401 - game lazily imports firebaseDB for finish_game
+import game
 
 
 class LetterScoringTests(unittest.TestCase):

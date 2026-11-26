@@ -159,25 +159,7 @@ def _settle_round():
     )
     offer = False
     if "username" in session:
-        if success:
-            play_logic.finish_game(
-                session["username"],
-                word=word,
-                wrong_guesses=session["wrong_guesses"],
-                success=True,
-                all_guesses=session["letters"],
-                language=language,
-            )
-        else:
-            play_logic.finish_game(
-                session["username"],
-                word=word,
-                wrong_guesses=session["wrong_guesses"],
-                success=False,
-                all_guesses=session["letters"],
-                legacy_account=accounts.is_legacy(session["username"]),
-                language=language,
-            )
+        firebaseDB.setScore(session["username"], points)
         before = session.get("shown_score") or 0
         session["shown_score"] = play_logic.score_after_round(
             before, points, _board_score()
