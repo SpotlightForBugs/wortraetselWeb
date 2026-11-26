@@ -169,9 +169,11 @@ select {
 }
 
 .stage {
+  position: relative;
   background: #fff;
   border-radius: 12px;
   aspect-ratio: 1728 / 1296;
+  overflow: hidden;
 }
 
 body.dark .stage {
@@ -184,6 +186,34 @@ body.dark .stage {
   aspect-ratio: 1728 / 1296;
   object-fit: contain;
   display: block;
+}
+
+.hangman-image-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+  margin: 0;
+  opacity: 0;
+  transform: translateY(10px) scale(0.985);
+  pointer-events: none;
+  transition:
+    opacity 0.32s ease,
+    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.hangman-image-overlay.is-shown {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hangman-image-overlay {
+    transition: none;
+    transform: none;
+  }
 }
 
 .word {
