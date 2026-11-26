@@ -322,10 +322,7 @@
     const vertical = box.height >= box.width * 0.9
     const cx = box.x + box.width / 2
     const cy = box.y + box.height / 2
-    const brushWidth = Math.max(
-      (vertical ? box.width : box.height) * 1.4,
-      6
-    )
+    const brushWidth = Math.max((vertical ? box.width : box.height) * 1.4, 6)
     const pad = brushWidth * 0.4
     let d
     if (vertical) {
