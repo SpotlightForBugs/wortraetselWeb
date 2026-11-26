@@ -46,6 +46,7 @@ class NormalizeResultPrefsTests(unittest.TestCase):
         )
 
     def test_score_anim_coerces_strings(self):
+        """Checkbox/JSON string values become booleans for score_anim."""
         self.assertFalse(
             firebaseDB.normalize_result_prefs({"score_anim": "false"})["score_anim"]
         )

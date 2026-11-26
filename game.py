@@ -512,6 +512,6 @@ def finish_game(
     language="en",
 ):
     points = calculate_points(wrong_guesses, word, all_guesses, success, language)
-    import firebaseDB
+    import firebaseDB  # skipcq: PYL-R0401 - avoid import cycle at module load
 
     firebaseDB.setScore(username, points)

@@ -190,6 +190,7 @@ _RESULT_AUTOSKIP_DEFAULT = {"autoskip": True, "seconds": 10, "score_anim": True}
 
 
 def _coerce_bool(value, default=True):
+    """Parse checkbox/JSON values into a boolean."""
     if isinstance(value, str):
         return value.strip().lower() in ("1", "true", "yes", "on")
     if value is None:

@@ -1,6 +1,6 @@
 import unittest
 
-import game
+import game  # skipcq: PYL-R0401 - game lazily imports firebaseDB for finish_game
 
 
 class LetterScoringTests(unittest.TestCase):
@@ -21,6 +21,7 @@ class LetterScoringTests(unittest.TestCase):
         self.assertEqual(miss, -max(5, game.letter_value("en", "z") // 4))
 
     def test_longer_words_pay_more_per_hit(self):
+        """Hits on longer words scale up by word_length_factor."""
         short = game.score_guess("en", "cat", "c")
         long = game.score_guess("en", "caterpillar", "c")
         self.assertGreater(long, short)
@@ -33,6 +34,7 @@ class LetterScoringTests(unittest.TestCase):
         )
 
     def test_combo_boosts_consecutive_hits(self):
+        """Streak > 1 adds a combo bonus on top of the base hit value."""
         base = game.score_guess("en", "book", "b", streak=1)
         combo = game.score_guess("en", "book", "b", streak=3)
         self.assertGreater(combo, base)
@@ -42,11 +44,13 @@ class LetterScoringTests(unittest.TestCase):
         self.assertGreater(parts["combo"], 0)
 
     def test_clear_bonus_rewards_unused_lives(self):
+        """Winning with lives left pays a flat clear bonus."""
         self.assertEqual(game.clear_bonus(0, True), 135)
         self.assertEqual(game.clear_bonus(3, True), 90)
         self.assertEqual(game.clear_bonus(0, False), 0)
 
     def test_round_total_replays_combo_and_clear_bonus(self):
+        """calculate_points replays streaks and can include the clear bonus."""
         letters = ["z", "c", "a", "t"]
         points = game.calculate_points(1, "cat", letters, True, "en")
         streak = 0

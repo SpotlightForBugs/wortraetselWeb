@@ -206,6 +206,23 @@ def _finish(room, status, now=None):
     return touch(room, now)
 
 
+def _score_player_guess(player, language, word, letter):
+    """Update combo/hits and return (hit, score breakdown) for one letter."""
+    hit = letter in word
+    if hit:
+        streak = int(player.get("combo") or 0) + 1
+        player["combo"] = streak
+        player["hits"] = player.get("hits", 0) + word.count(letter)
+    else:
+        streak = 0
+        player["combo"] = 0
+        player["misses"] = player.get("misses", 0) + 1
+    parts = game.score_guess_parts(language, word, letter, streak=streak)
+    player["round"] = player.get("round", 0) + parts["points"]
+    player["score"] = player.get("score", 0) + parts["points"]
+    return hit, parts
+
+
 def guess(room, player_id, letter, now=None):
     """Apply one guess. A hit keeps the turn, a miss passes it on.
 
@@ -227,19 +244,7 @@ def guess(room, player_id, letter, now=None):
     players = [dict(p) for p in room["players"]]
     index = int(room.get("turn") or 0) % len(players)
     players[index]["strikes"] = 0
-    hit = letter in word
-    if hit:
-        streak = int(players[index].get("combo") or 0) + 1
-        players[index]["combo"] = streak
-        players[index]["hits"] = players[index].get("hits", 0) + word.count(letter)
-    else:
-        streak = 0
-        players[index]["combo"] = 0
-        players[index]["misses"] = players[index].get("misses", 0) + 1
-    parts = game.score_guess_parts(language, word, letter, streak=streak)
-    delta = parts["points"]
-    players[index]["round"] = players[index].get("round", 0) + delta
-    players[index]["score"] = players[index].get("score", 0) + delta
+    hit, parts = _score_player_guess(players[index], language, word, letter)
     stamp = time.time() if now is None else now
     room = dict(
         room,
@@ -250,7 +255,7 @@ def guess(room, player_id, letter, now=None):
         last_guess={
             "player": player_id,
             "letter": letter.upper(),
-            "points": delta,
+            "points": parts["points"],
             "base": parts["base"],
             "combo": parts["combo"],
             "streak": parts["streak"],
