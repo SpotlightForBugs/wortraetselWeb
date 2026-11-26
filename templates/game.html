@@ -148,44 +148,54 @@ block content %}
   </section>
 
   <section class="panel mp-entry">
-    <h2 data-i18n="mp_title">{{ copy.mp_title }}</h2>
-    <p data-i18n="mp_pitch">{{ copy.mp_pitch }}</p>
-    <p class="mp-entry-guest" id="mp-guest-hint" data-i18n="mp_host_login" {% if not guest %}hidden{% endif %}>
-      {{ copy.mp_host_login }}
-    </p>
-    <div class="mp-entry-actions">
-      <form method="post" action="{{ url_for('multiplayer_create') }}" id="mp-create-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-success" id="mp-create-btn" data-i18n="mp_create" {% if guest %}disabled{% endif %}>{{ copy.mp_create }}</button>
-      </form>
-      <span class="mp-entry-or" data-i18n="mp_or">{{ copy.mp_or }}</span>
-      <form method="post" action="{{ url_for('multiplayer_join') }}" class="mp-join-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <input
-          name="guest_name"
-          maxlength="20"
-          autocomplete="nickname"
-          placeholder="{{ copy.mp_your_name }}"
-          aria-label="{{ copy.mp_your_name }}"
-          value="{{ session.get('guest_name', '') }}"
-          {% if not guest %}hidden{% endif %}
-          id="mp-guest-name"
-        />
-        <input
-          name="code"
-          maxlength="5"
-          minlength="5"
-          required
-          autocomplete="off"
-          autocapitalize="characters"
-          spellcheck="false"
-          pattern="[A-Za-z2-9]{5}"
-          placeholder="ABCDE"
-          aria-label="{{ copy.mp_code }}"
-        />
-        <button type="submit" class="btn" data-i18n="mp_join">{{ copy.mp_join }}</button>
-      </form>
-    </div>
+    <details class="mp-entry-fold" id="mp-entry-fold">
+      <summary class="mp-entry-summary">
+        <span class="mp-entry-summary-title" data-i18n="mp_title">{{ copy.mp_title }}</span>
+        <span class="mp-entry-summary-hint" data-i18n="mp_pitch">{{ copy.mp_pitch }}</span>
+      </summary>
+      <div class="mp-entry-body">
+        <p class="mp-entry-guest" id="mp-guest-hint" data-i18n="mp_host_login" {% if not guest %}hidden{% endif %}>
+          {{ copy.mp_host_login }}
+        </p>
+        <div class="mp-entry-actions">
+          <form method="post" action="{{ url_for('multiplayer_create') }}" id="mp-create-form" class="mp-create-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-success" id="mp-create-btn" data-i18n="mp_create" {% if guest %}disabled{% endif %}>{{ copy.mp_create }}</button>
+          </form>
+          <div class="mp-entry-or" role="separator">
+            <span data-i18n="mp_or">{{ copy.mp_or }}</span>
+          </div>
+          <form method="post" action="{{ url_for('multiplayer_join') }}" class="mp-join-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <input
+              name="guest_name"
+              maxlength="20"
+              autocomplete="nickname"
+              placeholder="{{ copy.mp_your_name }}"
+              aria-label="{{ copy.mp_your_name }}"
+              value="{{ session.get('guest_name', '') }}"
+              {% if not guest %}hidden{% endif %}
+              id="mp-guest-name"
+            />
+            <div class="mp-join-row">
+              <input
+                name="code"
+                maxlength="5"
+                minlength="5"
+                required
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                pattern="[A-Za-z2-9]{5}"
+                placeholder="ABCDE"
+                aria-label="{{ copy.mp_code }}"
+              />
+              <button type="submit" class="btn btn-primary" data-i18n="mp_join">{{ copy.mp_join }}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </details>
   </section>
 
   <section class="panel leaderboard">
@@ -249,7 +259,7 @@ block content %}
       </div>
     </aside>
     <section class="auth-card result-card" role="dialog" aria-modal="true">
-      <p id="result-message">{{ result.message if result else '' }}</p>
+      <p id="result-message" class="{% if result and result.success %}is-score {% if result.points < 0 %}is-loss{% else %}is-gain{% endif %}{% endif %}">{{ result.message if result else '' }}</p>
       <p id="result-worth" {% if not result or not result.offer %}hidden{% endif %}>
         {{ result.worth if result else '' }}
       </p>
@@ -284,6 +294,8 @@ block content %}
     </section>
   </div>
 </div>
+
+<div class="game-toast" id="game-toast" role="status" aria-live="polite" hidden></div>
 
 <div id="account-layer" class="sheet auth-sheet" hidden>
   <section class="auth-card auth-card--settings" role="dialog" aria-modal="true" aria-labelledby="account-title">
@@ -348,6 +360,14 @@ block content %}
             </option>
             {% endfor %}
           </select>
+        </label>
+        <label class="info-autoskip" for="score-anim">
+          <input
+            type="checkbox"
+            id="score-anim"
+            {% if state_json.result_prefs.score_anim %}checked{% endif %}
+          />
+          <span data-i18n="score_anim">{{ copy.score_anim }}</span>
         </label>
       </div>
     </section>
@@ -878,21 +898,55 @@ block content %}
   var resultAdvancePaused = false;
   var RESULT_PREF_KEY = "hangman-result-prefs";
   var RESULT_PREF_SECS = [0, 5, 10, 15, 20, 25, 30];
-  var resultPrefs = { autoskip: true, seconds: 10 };
+  var resultPrefs = { autoskip: true, seconds: 10, score_anim: true };
+
+  function prefersReducedMotion() {
+    return !!(
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    );
+  }
+
+  function defaultScoreAnim() {
+    return !prefersReducedMotion();
+  }
+
+  function scoreAnimEnabled() {
+    if (prefersReducedMotion()) {
+      return false;
+    }
+    return !!resultPrefs.score_anim;
+  }
+
+  function syncScoreAnimAttr() {
+    document.documentElement.setAttribute(
+      "data-score-anim",
+      scoreAnimEnabled() ? "on" : "off",
+    );
+  }
+
+  function coercePrefBool(value, fallback) {
+    if (typeof value === "string") {
+      return ["1", "true", "yes", "on"].indexOf(value.toLowerCase()) !== -1;
+    }
+    if (typeof value === "boolean") {
+      return value;
+    }
+    return fallback;
+  }
 
   function normalizeResultPrefs(raw) {
     var data = raw && typeof raw === "object" ? raw : {};
-    var autoskip = data.autoskip;
-    if (typeof autoskip === "string") {
-      autoskip = ["1", "true", "yes", "on"].indexOf(autoskip.toLowerCase()) !== -1;
-    } else if (typeof autoskip !== "boolean") {
-      autoskip = true;
-    }
+    var autoskip = coercePrefBool(data.autoskip, true);
     var seconds = parseInt(data.seconds, 10);
     if (RESULT_PREF_SECS.indexOf(seconds) === -1) {
       seconds = 10;
     }
-    return { autoskip: !!autoskip, seconds: seconds };
+    var scoreAnim =
+      data.score_anim === undefined
+        ? defaultScoreAnim()
+        : coercePrefBool(data.score_anim, defaultScoreAnim());
+    return { autoskip: !!autoskip, seconds: seconds, score_anim: !!scoreAnim };
   }
 
   function readStoredResultPrefs() {
@@ -914,11 +968,14 @@ block content %}
   function syncResultPrefControls() {
     var toggle = document.getElementById("result-autoskip");
     var delay = document.getElementById("result-autoskip-sec");
+    var anim = document.getElementById("score-anim");
     if (toggle) toggle.checked = !!resultPrefs.autoskip;
     if (delay) {
       delay.value = String(resultPrefs.seconds);
       delay.disabled = !resultPrefs.autoskip;
     }
+    if (anim) anim.checked = !!resultPrefs.score_anim;
+    syncScoreAnimAttr();
   }
 
   function applyResultPrefs(raw, persist) {
@@ -929,6 +986,7 @@ block content %}
       var body = tokenBody();
       body.append("autoskip", resultPrefs.autoskip ? "true" : "false");
       body.append("seconds", String(resultPrefs.seconds));
+      body.append("score_anim", resultPrefs.score_anim ? "true" : "false");
       postForm("/account/result_prefs", body)
         .then(function (data) {
           if (data && data.result_prefs) {
@@ -1143,16 +1201,23 @@ block content %}
   function paintResult(result) {
     var layer = document.getElementById("result-layer");
     var info = document.getElementById("info-panel");
+    var message = document.getElementById("result-message");
     clearResultAdvance();
     if (!result) {
       layer.hidden = true;
       if (info) info.hidden = true;
+      message.classList.remove("is-score", "is-gain", "is-loss");
       clearDrawingFit();
       syncScrollLock();
       paintDefinition("");
       return;
     }
-    document.getElementById("result-message").textContent = result.message;
+    message.textContent = result.message;
+    var showScore = !!result.success;
+    var points = Number(result.points);
+    message.classList.toggle("is-score", showScore);
+    message.classList.toggle("is-gain", showScore && !(isFinite(points) && points < 0));
+    message.classList.toggle("is-loss", showScore && isFinite(points) && points < 0);
     var worth = document.getElementById("result-worth");
     worth.hidden = !result.offer;
     worth.textContent = result.worth || "";
@@ -1165,6 +1230,54 @@ block content %}
     syncScrollLock();
     armResultAdvance();
     paintDefinition(result.word || "");
+  }
+
+  function spawnPointsPop(guess) {
+    if (!scoreAnimEnabled() || !guess || guess.points == null) {
+      return;
+    }
+    var points = Number(guess.points);
+    if (!isFinite(points) || points === 0) {
+      return;
+    }
+    var gain = points > 0;
+    var streak = Number(guess.streak) || 0;
+    var combo = Number(guess.combo) || 0;
+    var node = document.createElement("div");
+    node.className =
+      "points-pop " +
+      (gain ? "is-gain" : "is-loss") +
+      (gain && streak > 1 && combo > 0 ? " is-combo" : "");
+    var value = document.createElement("span");
+    value.className = "points-pop-value";
+    value.textContent = (gain ? "+" : "") + points;
+    node.appendChild(value);
+    if (gain && streak > 1 && combo > 0) {
+      var badge = document.createElement("span");
+      badge.className = "points-pop-combo";
+      var template = (copy && copy.combo_n) || "combo {n}";
+      badge.textContent = template.split("{n}").join(String(streak));
+      node.appendChild(badge);
+    }
+    node.setAttribute("aria-live", "polite");
+    var anchor = null;
+    if (guess.letter) {
+      anchor = document.querySelector(
+        '#game-form-Big button[value="' + guess.letter + '"]'
+      );
+    }
+    var rect = (anchor || document.getElementById("word") || document.body).getBoundingClientRect();
+    var x = rect.left + rect.width / 2;
+    var y = rect.top + Math.min(rect.height * 0.35, 28);
+    node.style.left = x + "px";
+    node.style.top = y + "px";
+    document.body.appendChild(node);
+    requestAnimationFrame(function () {
+      node.classList.add("is-on");
+    });
+    window.setTimeout(function () {
+      node.remove();
+    }, 1100);
   }
 
   function applyState(data) {
@@ -1192,6 +1305,9 @@ block content %}
     if (data.result_prefs) {
       applyResultPrefs(data.result_prefs, false);
       writeStoredResultPrefs(resultPrefs);
+    }
+    if (data.last_guess) {
+      spawnPointsPop(data.last_guess);
     }
     if ("result" in data) {
       paintResult(data.result);
@@ -1625,21 +1741,31 @@ block content %}
       applyResultPrefs(stored, false);
     } else if (bootState.result_prefs) {
       applyResultPrefs(bootState.result_prefs, false);
+      // First browser visit with reduced motion: default the toggle off.
+      if (!stored && prefersReducedMotion()) {
+        resultPrefs.score_anim = false;
+        syncResultPrefControls();
+      }
       writeStoredResultPrefs(resultPrefs);
     } else if (stored) {
       applyResultPrefs(stored, false);
     } else {
-      syncResultPrefControls();
+      applyResultPrefs(
+        { autoskip: true, seconds: 10, score_anim: defaultScoreAnim() },
+        false,
+      );
     }
   })();
 
   var autoskipToggle = document.getElementById("result-autoskip");
   var autoskipDelay = document.getElementById("result-autoskip-sec");
+  var scoreAnimToggle = document.getElementById("score-anim");
   function onResultPrefsChanged() {
     applyResultPrefs(
       {
         autoskip: autoskipToggle ? autoskipToggle.checked : true,
         seconds: autoskipDelay ? autoskipDelay.value : 10,
+        score_anim: scoreAnimToggle ? scoreAnimToggle.checked : defaultScoreAnim(),
       },
       true,
     );
@@ -1653,6 +1779,38 @@ block content %}
   if (autoskipDelay) {
     autoskipDelay.addEventListener("change", onResultPrefsChanged);
   }
+  if (scoreAnimToggle) {
+    scoreAnimToggle.addEventListener("change", onResultPrefsChanged);
+  }
+  if (window.matchMedia) {
+    var motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    var onMotionChange = function () {
+      syncScoreAnimAttr();
+    };
+    if (motionQuery.addEventListener) {
+      motionQuery.addEventListener("change", onMotionChange);
+    } else if (motionQuery.addListener) {
+      motionQuery.addListener(onMotionChange);
+    }
+  }
+
+  (function bootMpEntryFold() {
+    var fold = document.getElementById("mp-entry-fold");
+    if (!fold) {
+      return;
+    }
+    var key = "hangman-mp-entry-open";
+    try {
+      if (localStorage.getItem(key) === "1") {
+        fold.open = true;
+      }
+    } catch (err) {}
+    fold.addEventListener("toggle", function () {
+      try {
+        localStorage.setItem(key, fold.open ? "1" : "0");
+      } catch (err) {}
+    });
+  })();
 
   if (!document.getElementById("result-layer").hidden) {
     syncScrollLock();
@@ -1670,6 +1828,20 @@ block content %}
       fitDrawing();
     }
   });
+
+  var gameToastTimer = null;
+  function showGameToast(message) {
+    var node = document.getElementById("game-toast");
+    if (!node || !message) {
+      return;
+    }
+    node.textContent = message;
+    node.hidden = false;
+    clearTimeout(gameToastTimer);
+    gameToastTimer = setTimeout(function () {
+      node.hidden = true;
+    }, 3200);
+  }
 
   function bindAuth(form) {
     form.addEventListener("submit", function (event) {
@@ -1689,6 +1861,9 @@ block content %}
           error.hidden = true;
           applyState(data);
           closeAuth();
+          showGameToast(
+            form.id === "register-form" ? copy.registered : copy.logged_in,
+          );
         })
         .catch(function () {
           var error = document.getElementById("auth-error");

@@ -29,6 +29,8 @@ _STRINGS = {
         "result_autoskip": "Auto-advance",
         "result_autoskip_delay": "Delay",
         "result_autoskip_instant": "Instant",
+        "score_anim": "Score animations",
+        "combo_n": "combo {n}",
         "email": "Email",
         "password": "Password",
         "name_label": "Name on the leaderboard",
@@ -50,6 +52,8 @@ _STRINGS = {
         "delete_account_help": "This permanently removes your account and leaderboard score.",
         "delete_account_confirm": "Delete your account permanently?",
         "account_saved": "Saved.",
+        "logged_in": "Signed in.",
+        "registered": "Account created.",
         "guest_save_hint": "Create an account to keep this score on the leaderboard",
         "bad_name": "Pick a name between 2 and 20 characters.",
         "weak_password": "Use at least 6 characters for the new password.",
@@ -129,6 +133,8 @@ _STRINGS = {
         "result_autoskip": "Automatisch weiter",
         "result_autoskip_delay": "Wartezeit",
         "result_autoskip_instant": "Sofort",
+        "score_anim": "Punkte-Animationen",
+        "combo_n": "Combo {n}",
         "email": "E-Mail",
         "password": "Passwort",
         "name_label": "Name auf der Bestenliste",
@@ -150,6 +156,8 @@ _STRINGS = {
         "delete_account_help": "Das entfernt dein Konto und deinen Leaderboard-Stand dauerhaft.",
         "delete_account_confirm": "Konto wirklich dauerhaft löschen?",
         "account_saved": "Gespeichert.",
+        "logged_in": "Angemeldet.",
+        "registered": "Konto erstellt.",
         "guest_save_hint": "Erstelle ein Konto, um diese Punkte auf dem Leaderboard zu behalten",
         "bad_name": "Wähle einen Namen mit 2 bis 20 Zeichen.",
         "weak_password": "Das neue Passwort braucht mindestens 6 Zeichen.",
@@ -229,6 +237,8 @@ _STRINGS = {
         "result_autoskip": "Avance automático",
         "result_autoskip_delay": "Espera",
         "result_autoskip_instant": "Al instante",
+        "score_anim": "Animaciones de puntos",
+        "combo_n": "combo {n}",
         "email": "Correo",
         "password": "Contraseña",
         "name_label": "Nombre en la clasificación",
@@ -250,6 +260,8 @@ _STRINGS = {
         "delete_account_help": "Esto elimina tu cuenta y tu puntuación del ranking de forma permanente.",
         "delete_account_confirm": "¿Eliminar tu cuenta de forma permanente?",
         "account_saved": "Guardado.",
+        "logged_in": "Sesión iniciada.",
+        "registered": "Cuenta creada.",
         "guest_save_hint": "Crea una cuenta para conservar esta puntuación en el ranking",
         "bad_name": "Elige un nombre de 2 a 20 caracteres.",
         "weak_password": "Usa al menos 6 caracteres para la nueva contraseña.",
@@ -329,6 +341,8 @@ _STRINGS = {
         "result_autoskip": "Passage automatique",
         "result_autoskip_delay": "Délai",
         "result_autoskip_instant": "Immédiat",
+        "score_anim": "Animations de score",
+        "combo_n": "combo {n}",
         "email": "E-mail",
         "password": "Mot de passe",
         "name_label": "Nom au classement",
@@ -350,6 +364,8 @@ _STRINGS = {
         "delete_account_help": "Cela supprime définitivement ton compte et ton score du classement.",
         "delete_account_confirm": "Supprimer définitivement ton compte ?",
         "account_saved": "Enregistré.",
+        "logged_in": "Connecté.",
+        "registered": "Compte créé.",
         "guest_save_hint": "Crée un compte pour garder ce score au classement",
         "bad_name": "Choisis un nom de 2 à 20 caractères.",
         "weak_password": "Le nouveau mot de passe doit faire au moins 6 caractères.",
@@ -429,6 +445,8 @@ _STRINGS = {
         "result_autoskip": "Avanzamento automatico",
         "result_autoskip_delay": "Attesa",
         "result_autoskip_instant": "Subito",
+        "score_anim": "Animazioni del punteggio",
+        "combo_n": "combo {n}",
         "email": "Email",
         "password": "Password",
         "name_label": "Nome in classifica",
@@ -450,6 +468,8 @@ _STRINGS = {
         "delete_account_help": "Questo elimina definitivamente il tuo account e il punteggio in classifica.",
         "delete_account_confirm": "Eliminare definitivamente l'account?",
         "account_saved": "Salvato.",
+        "logged_in": "Accesso effettuato.",
+        "registered": "Account creato.",
         "guest_save_hint": "Crea un account per tenere questo punteggio in classifica",
         "bad_name": "Scegli un nome da 2 a 20 caratteri.",
         "weak_password": "Usa almeno 6 caratteri per la nuova password.",
@@ -529,6 +549,8 @@ _STRINGS = {
         "result_autoskip": "Avanço automático",
         "result_autoskip_delay": "Espera",
         "result_autoskip_instant": "Imediato",
+        "score_anim": "Animações de pontuação",
+        "combo_n": "combo {n}",
         "email": "E-mail",
         "password": "Senha",
         "name_label": "Nome no ranking",
@@ -550,6 +572,8 @@ _STRINGS = {
         "delete_account_help": "Isso remove permanentemente sua conta e pontuação do ranking.",
         "delete_account_confirm": "Excluir sua conta permanentemente?",
         "account_saved": "Salvo.",
+        "logged_in": "Sessão iniciada.",
+        "registered": "Conta criada.",
         "guest_save_hint": "Crie uma conta para manter esta pontuação no ranking",
         "bad_name": "Escolha um nome de 2 a 20 caracteres.",
         "weak_password": "Use pelo menos 6 caracteres na nova senha.",
@@ -629,6 +653,8 @@ _STRINGS = {
         "result_autoskip": "Trecere automată",
         "result_autoskip_delay": "Așteptare",
         "result_autoskip_instant": "Imediat",
+        "score_anim": "Animații de scor",
+        "combo_n": "combo {n}",
         "email": "E-mail",
         "password": "Parolă",
         "name_label": "Nume în clasament",
@@ -650,6 +676,8 @@ _STRINGS = {
         "delete_account_help": "Aceasta îți șterge definitiv contul și scorul din clasament.",
         "delete_account_confirm": "Ștergi contul definitiv?",
         "account_saved": "Salvat.",
+        "logged_in": "Autentificat.",
+        "registered": "Cont creat.",
         "guest_save_hint": "Creează un cont ca să păstrezi scorul în clasament",
         "bad_name": "Alege un nume între 2 și 20 de caractere.",
         "weak_password": "Parola nouă trebuie să aibă cel puțin 6 caractere.",
@@ -729,6 +757,8 @@ _STRINGS = {
         "result_autoskip": "Otomatik geçiş",
         "result_autoskip_delay": "Bekleme",
         "result_autoskip_instant": "Anında",
+        "score_anim": "Puan animasyonları",
+        "combo_n": "kombo {n}",
         "email": "E-posta",
         "password": "Parola",
         "name_label": "Sıralamadaki ad",
@@ -750,6 +780,8 @@ _STRINGS = {
         "delete_account_help": "Bu, hesabını ve skor tablosundaki puanını kalıcı olarak siler.",
         "delete_account_confirm": "Hesabın kalıcı olarak silinsin mi?",
         "account_saved": "Kaydedildi.",
+        "logged_in": "Giriş yapıldı.",
+        "registered": "Hesap oluşturuldu.",
         "guest_save_hint": "Bu skoru tabloda tutmak için bir hesap oluştur",
         "bad_name": "2 ile 20 karakter arasında bir ad seç.",
         "weak_password": "Yeni parola en az 6 karakter olmalı.",
@@ -875,7 +907,14 @@ def match_accept_language(header):
 
 
 def client_state(
-    language, word, letters, wrong_guesses, result=None, pending=0, dark=False
+    language,
+    word,
+    letters,
+    wrong_guesses,
+    result=None,
+    pending=0,
+    dark=False,
+    total=None,
 ):
     """Board data the page can apply without loading a new document."""
     language = language if language in _STRINGS else "en"
@@ -902,11 +941,20 @@ def client_state(
     if result:
         shown = game.display_word(language, result.get("word") or word or "")
         offer = bool(result.get("offer"))
+        points = int(result.get("points") or 0)
+        total_score = int(total) if total is not None else points
+        if result.get("success"):
+            # Round delta with an explicit sign, not the absolute total.
+            message = f"+{points}" if points > 0 else str(points)
+        else:
+            message = text(language, "loss")
         state["result"] = {
             "success": bool(result.get("success")),
             "offer": offer,
             "word": shown,
-            "message": text(language, "win" if result.get("success") else "loss"),
+            "points": points,
+            "total": total_score,
+            "message": message,
             "worth": (
                 text(language, "worth", n=result.get("points", pending))
                 if offer

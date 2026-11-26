@@ -112,6 +112,7 @@ def _start_round(language=None):
     session["letters"] = []
     session["score"] = 0
     session["wrong_guesses"] = 0
+    session["hit_streak"] = 0
 
 
 def _ensure_round():
@@ -158,25 +159,7 @@ def _settle_round():
     )
     offer = False
     if "username" in session:
-        if success:
-            play_logic.finish_game(
-                session["username"],
-                word=word,
-                wrong_guesses=session["wrong_guesses"],
-                success=True,
-                all_guesses=session["letters"],
-                language=language,
-            )
-        else:
-            play_logic.finish_game(
-                session["username"],
-                word=word,
-                wrong_guesses=session["wrong_guesses"],
-                success=False,
-                all_guesses=session["letters"],
-                legacy_account=accounts.is_legacy(session["username"]),
-                language=language,
-            )
+        firebaseDB.setScore(session["username"], points)
         before = session.get("shown_score") or 0
         session["shown_score"] = play_logic.score_after_round(
             before, points, _board_score()
@@ -225,6 +208,7 @@ def _payload(leaderboard=None):
         if found is not None:
             session["shown_score"] = found
     dark = bool(session.get("dark_mode", False))
+    visible = _visible_score()
     state = i18n.client_state(
         language,
         session.get("word") or "",
@@ -233,10 +217,11 @@ def _payload(leaderboard=None):
         result=session.get("result"),
         pending=session.get("pending_score") or 0,
         dark=dark,
+        total=visible,
     )
     guest = "username" not in session
     state["score_line"] = _score_line(language)
-    state["shown_score"] = _visible_score()
+    state["shown_score"] = visible
     state["dark"] = dark
     state["guest"] = guest
     state["username"] = (
@@ -362,33 +347,57 @@ def _result_prefs():
     return firebaseDB.normalize_result_prefs(session.get("result_prefs"))
 
 
+def _play_letter(incoming):
+    """Apply one solo guess. Returns last_guess payload or None."""
+    if session.get("result"):
+        return None
+    incoming = (incoming or "").lower()
+    before = set(session.get("letters") or [])
+    word = session["word"]
+    language = play_logic.coerce_language(session.get("language"))
+    letters, wrong, _status = play_logic.apply_guess(
+        word,
+        session.get("letters") or [],
+        session.get("wrong_guesses") or 0,
+        incoming,
+    )
+    session["letters"] = letters
+    session["wrong_guesses"] = wrong
+    fresh = len(incoming) == 1 and incoming.isalpha() and incoming not in before
+    last_guess = None
+    if fresh:
+        hit = incoming in word
+        if hit:
+            session["hit_streak"] = int(session.get("hit_streak") or 0) + 1
+            session["score"] = session.get("score", 0) + 1
+            streak = session["hit_streak"]
+        else:
+            session["hit_streak"] = 0
+            streak = 0
+        parts = play_logic.score_guess_parts(language, word, incoming, streak=streak)
+        last_guess = {
+            "letter": incoming.upper(),
+            "points": parts["points"],
+            "base": parts["base"],
+            "combo": parts["combo"],
+            "streak": parts["streak"],
+        }
+    if not before and letters:
+        _warm_gloss(session.get("word"), session.get("language"))
+    _settle_round()
+    return last_guess
+
+
 @app.route("/", methods=["GET", "POST"])
 def game():
     if request.method == "POST":
         _ensure_round()
-        if not session.get("result"):
-            incoming = (request.form.get("letter") or "").lower()
-            before = set(session.get("letters") or [])
-            letters, wrong, _status = play_logic.apply_guess(
-                session["word"],
-                session.get("letters") or [],
-                session.get("wrong_guesses") or 0,
-                incoming,
-            )
-            session["letters"] = letters
-            session["wrong_guesses"] = wrong
-            if not before and letters:
-                _warm_gloss(session.get("word"), session.get("language"))
-            if (
-                len(incoming) == 1
-                and incoming.isalpha()
-                and incoming not in before
-                and incoming in session["word"]
-            ):
-                session["score"] = session.get("score", 0) + 1
-            _settle_round()
+        last_guess = _play_letter(request.form.get("letter"))
         if _wants_json():
-            return jsonify(_payload())
+            payload = _payload()
+            if last_guess:
+                payload["last_guess"] = last_guess
+            return jsonify(payload)
         return redirect(url_for("game"))
 
     auth = request.args.get("auth")
@@ -666,24 +675,28 @@ def account_delete():
 
 @app.route("/account/result_prefs", methods=["POST"])
 def account_result_prefs():
-    """Save reveal auto-advance prefs (Firestore for accounts, session for guests)."""
+    """Save gameplay prefs (Firestore for accounts, session for guests)."""
     raw = request.get_json(silent=True) or {}
     if request.form:
         raw = {
             "autoskip": request.form.get("autoskip", raw.get("autoskip")),
             "seconds": request.form.get("seconds", raw.get("seconds")),
+            "score_anim": request.form.get("score_anim", raw.get("score_anim")),
         }
-    # Checkbox / JSON may send "true"/"false" or 1/0.
-    autoskip = raw.get("autoskip", True)
-    if isinstance(autoskip, str):
-        autoskip = autoskip.strip().lower() in ("1", "true", "yes", "on")
     prefs = firebaseDB.normalize_result_prefs(
-        {"autoskip": autoskip, "seconds": raw.get("seconds", 10)}
+        {
+            "autoskip": raw.get("autoskip", True),
+            "seconds": raw.get("seconds", 10),
+            "score_anim": raw.get("score_anim", True),
+        }
     )
     if "username" in session:
         try:
             ok = firebaseDB.set_result_prefs(
-                session["username"], prefs["autoskip"], prefs["seconds"]
+                session["username"],
+                prefs["autoskip"],
+                prefs["seconds"],
+                prefs["score_anim"],
             )
         except Exception:
             ok = False

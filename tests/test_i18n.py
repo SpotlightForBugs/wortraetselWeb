@@ -33,9 +33,12 @@ class LanguageTests(unittest.TestCase):
             ["h", "a", "u", "s"],
             1,
             result={"success": True, "word": "haus", "offer": True, "points": 900},
+            total=1284,
         )
         self.assertEqual(state["status"], "won")
-        self.assertEqual(state["result"]["message"], "Geschafft.")
+        self.assertEqual(state["result"]["message"], "+900")
+        self.assertEqual(state["result"]["total"], 1284)
+        self.assertEqual(state["result"]["points"], 900)
         self.assertEqual(state["result"]["word"], "Haus")
         self.assertIn("900", state["result"]["worth"])
         self.assertEqual(state["copy"]["log_in"], "Anmelden")

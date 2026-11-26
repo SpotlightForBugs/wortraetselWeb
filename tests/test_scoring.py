@@ -20,10 +20,51 @@ class LetterScoringTests(unittest.TestCase):
         self.assertLess(miss, 0)
         self.assertEqual(miss, -max(5, game.letter_value("en", "z") // 4))
 
-    def test_round_total_sums_each_guess(self):
-        points = game.calculate_points(1, "cat", ["z", "c", "a", "t"], True, "en")
-        expected = sum(game.score_guess("en", "cat", ch) for ch in "zcat")
+    def test_longer_words_pay_more_per_hit(self):
+        """Hits on longer words scale up by word_length_factor."""
+        short = game.score_guess("en", "cat", "c")
+        long = game.score_guess("en", "caterpillar", "c")
+        self.assertGreater(long, short)
+        self.assertEqual(short, game.letter_value("en", "c"))
+        self.assertEqual(
+            long,
+            round(
+                game.letter_value("en", "c") * game.word_length_factor("caterpillar")
+            ),
+        )
+
+    def test_combo_boosts_consecutive_hits(self):
+        """Streak > 1 adds a combo bonus on top of the base hit value."""
+        base = game.score_guess("en", "book", "b", streak=1)
+        combo = game.score_guess("en", "book", "b", streak=3)
+        self.assertGreater(combo, base)
+        parts = game.score_guess_parts("en", "book", "b", streak=3)
+        self.assertEqual(parts["points"], parts["base"] + parts["combo"])
+        self.assertEqual(parts["streak"], 3)
+        self.assertGreater(parts["combo"], 0)
+
+    def test_clear_bonus_rewards_unused_lives(self):
+        """Winning with lives left pays a flat clear bonus."""
+        self.assertEqual(game.clear_bonus(0, True), 135)
+        self.assertEqual(game.clear_bonus(3, True), 90)
+        self.assertEqual(game.clear_bonus(0, False), 0)
+
+    def test_round_total_replays_combo_and_clear_bonus(self):
+        """calculate_points replays streaks and can include the clear bonus."""
+        letters = ["z", "c", "a", "t"]
+        points = game.calculate_points(1, "cat", letters, True, "en")
+        streak = 0
+        expected = 0
+        for letter in letters:
+            hit = letter in "cat"
+            streak = streak + 1 if hit else 0
+            expected += game.score_guess("en", "cat", letter, streak=streak)
+        expected += game.clear_bonus(1, True)
         self.assertEqual(points, expected)
+        without_clear = game.calculate_points(
+            1, "cat", letters, True, "en", clear=False
+        )
+        self.assertEqual(without_clear, expected - game.clear_bonus(1, True))
 
 
 if __name__ == "__main__":
