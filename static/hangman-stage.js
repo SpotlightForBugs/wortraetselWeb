@@ -1,9 +1,10 @@
 /**
  * Hangman frame transitions.
  *
- * Miss frames are additive Illustrator exports. Settled art stays mounted; only
- * newly added filled brush paths reveal through a centerline brush mask in SVG
- * user units (not CSS px). Win/kill crossfade whole drawings.
+ * Miss frames are additive Illustrator exports. Settled art stays put. New
+ * stroke paths (e.g. the head) draw with dashoffset. New filled brush paths
+ * wipe in through an in-place user-unit brush mask — no end remount that
+ * suddenly fattens the ink.
  */
 (function (global) {
   const SVG_NS = 'http://www.w3.org/2000/svg'
@@ -130,6 +131,11 @@
     }
   }
 
+  function isStrokePath (path) {
+    const cls = path.getAttribute('class') || ''
+    return cls.indexOf('st3') !== -1
+  }
+
   function easeOutCubic (t) {
     return 1 - Math.pow(1 - t, 3)
   }
@@ -196,50 +202,62 @@
     }, 420)
   }
 
-  /**
-   * Keep settled art mounted. Reveal only new filled paths with a brush-tip
-   * mask that travels along the part's long axis in SVG user units.
-   */
-  function wipeInFresh (host, nextSvg, oldKeys, mine, done) {
-    const seen = keySet(oldKeys)
-    const fresh = []
-    Array.prototype.forEach.call(
-      nextSvg.querySelectorAll('path'),
-      function (path) {
-        const key = path.getAttribute('d') || ''
-        if (key && !seen[key]) {
-          fresh.push(path)
-        }
-      }
-    )
+  function ensureDefs (svg) {
+    let defs = svg.querySelector('defs')
+    if (!defs) {
+      defs = document.createElementNS(SVG_NS, 'defs')
+      svg.insertBefore(defs, svg.firstChild)
+    }
+    return defs
+  }
 
-    if (!fresh.length) {
-      mountBase(host, nextSvg)
+  function drawStrokePaths (paths, mine, done) {
+    if (!paths.length) {
+      done()
+      return
+    }
+    let remaining = paths.length
+    paths.forEach(function (path) {
+      let length = 1
+      try {
+        length = Math.max(path.getTotalLength(), 1)
+      } catch (err) {
+        length = 400
+      }
+      path.setAttribute('stroke-dasharray', String(length))
+      path.setAttribute('stroke-dashoffset', String(length))
+      animateDash(path, length, 0, 700, mine, function () {
+        path.removeAttribute('stroke-dasharray')
+        path.removeAttribute('stroke-dashoffset')
+        remaining -= 1
+        if (remaining <= 0) {
+          done()
+        }
+      })
+    })
+  }
+
+  function wipeFillPaths (svg, paths, mine, done) {
+    if (!paths.length) {
       done()
       return
     }
 
-    clearInkOverlay(host)
-
-    const overlay = document.createElementNS(SVG_NS, 'svg')
-    overlay.classList.add('hangman-ink-overlay')
-    overlay.setAttribute('viewBox', viewBoxOf(nextSvg))
-    overlay.setAttribute('aria-hidden', 'true')
-
-    const style = nextSvg.querySelector('style')
-    if (style) {
-      overlay.appendChild(style.cloneNode(true))
+    const box = unionBox(paths)
+    if (!box) {
+      done()
+      return
     }
 
-    const defs = document.createElementNS(SVG_NS, 'defs')
+    const defs = ensureDefs(svg)
     const maskId = 'hangman-ink-mask-' + String(mine)
     const mask = document.createElementNS(SVG_NS, 'mask')
     mask.setAttribute('id', maskId)
     mask.setAttribute('maskUnits', 'userSpaceOnUse')
     mask.setAttribute('maskContentUnits', 'userSpaceOnUse')
 
+    const vb = viewBoxOf(svg).split(/\s+/).map(Number)
     const hide = document.createElementNS(SVG_NS, 'rect')
-    const vb = viewBoxOf(nextSvg).split(/\s+/).map(Number)
     hide.setAttribute('x', String(vb[0] || 0))
     hide.setAttribute('y', String(vb[1] || 0))
     hide.setAttribute('width', String(vb[2] || 1728))
@@ -253,32 +271,29 @@
     brush.setAttribute('stroke-linecap', 'round')
     brush.setAttribute('stroke-linejoin', 'round')
     mask.appendChild(brush)
-
     defs.appendChild(mask)
-    overlay.appendChild(defs)
 
-    const layer = document.createElementNS(SVG_NS, 'g')
-    layer.setAttribute('mask', 'url(#' + maskId + ')')
-    fresh.forEach(function (path) {
-      layer.appendChild(path.cloneNode(true))
+    // Cover every fresh fill path with the same mask while it lives in-tree.
+    const masked = []
+    paths.forEach(function (path) {
+      const parent = path.parentNode
+      if (!parent) {
+        return
+      }
+      const wrap = document.createElementNS(SVG_NS, 'g')
+      wrap.setAttribute('mask', 'url(#' + maskId + ')')
+      wrap.classList.add('hangman-ink-wrap')
+      parent.insertBefore(wrap, path)
+      wrap.appendChild(path)
+      masked.push(wrap)
     })
-    overlay.appendChild(layer)
-    host.appendChild(overlay)
-
-    const box = unionBox(layer.querySelectorAll('path'))
-    if (!box) {
-      mountBase(host, nextSvg)
-      done()
-      return
-    }
 
     const vertical = box.height >= box.width * 0.85
     const cx = box.x + box.width / 2
     const cy = box.y + box.height / 2
-    // Brush width tracks the short axis so the part reveals at true thickness,
-    // with a round tip traveling along the long axis (not a fat rectangular slab).
-    const brushWidth = (vertical ? box.width : box.height) * 1.15
-    const pad = brushWidth * 0.35
+    // Slightly oversize so the final frame matches unmasked ink (no fattening snap).
+    const brushWidth = (vertical ? box.width : box.height) * 1.35
+    const pad = brushWidth * 0.45
     let d
     if (vertical) {
       d =
@@ -317,9 +332,110 @@
       if (mine !== token) {
         return
       }
+      // Finish fully covered, then unwrap in place — same pixels, no remount.
+      const cover = document.createElementNS(SVG_NS, 'rect')
+      cover.setAttribute('x', String(box.x - pad))
+      cover.setAttribute('y', String(box.y - pad))
+      cover.setAttribute('width', String(box.width + pad * 2))
+      cover.setAttribute('height', String(box.height + pad * 2))
+      cover.setAttribute('fill', '#fff')
+      mask.appendChild(cover)
+
+      requestAnimationFrame(function () {
+        if (mine !== token) {
+          return
+        }
+        masked.forEach(function (wrap) {
+          const parent = wrap.parentNode
+          if (!parent) {
+            return
+          }
+          while (wrap.firstChild) {
+            parent.insertBefore(wrap.firstChild, wrap)
+          }
+          wrap.remove()
+        })
+        mask.remove()
+        done()
+      })
+    })
+  }
+
+  /**
+   * Mount the final frame immediately. Stroke parts draw like the head;
+   * filled parts wipe in-place so completion does not fatten the ink.
+   */
+  function wipeInFresh (host, nextSvg, oldKeys, mine, done) {
+    const seen = keySet(oldKeys)
+    const strokes = []
+    const fills = []
+    Array.prototype.forEach.call(
+      nextSvg.querySelectorAll('path'),
+      function (path) {
+        const key = path.getAttribute('d') || ''
+        if (!key || seen[key]) {
+          return
+        }
+        if (isStrokePath(path)) {
+          strokes.push(path)
+        } else {
+          fills.push(path)
+        }
+      }
+    )
+
+    if (!strokes.length && !fills.length) {
       mountBase(host, nextSvg)
       done()
+      return
+    }
+
+    // Hide fresh fills until masked so the mount does not flash full ink.
+    fills.forEach(function (path) {
+      path.style.visibility = 'hidden'
     })
+    strokes.forEach(function (path) {
+      let length = 1
+      try {
+        length = Math.max(path.getTotalLength(), 1)
+      } catch (err) {
+        length = 400
+      }
+      path.setAttribute('stroke-dasharray', String(length))
+      path.setAttribute('stroke-dashoffset', String(length))
+    })
+
+    mountBase(host, nextSvg)
+
+    let pending = 0
+    function oneDone () {
+      pending -= 1
+      if (pending <= 0) {
+        done()
+      }
+    }
+
+    if (strokes.length) {
+      pending += 1
+    }
+    if (fills.length) {
+      pending += 1
+    }
+    if (!pending) {
+      done()
+      return
+    }
+
+    if (strokes.length) {
+      drawStrokePaths(strokes, mine, oneDone)
+    }
+    if (fills.length) {
+      // Keep fills hidden until the mask wrap is attached, then reveal.
+      wipeFillPaths(nextSvg, fills, mine, oneDone)
+      fills.forEach(function (path) {
+        path.style.visibility = ''
+      })
+    }
   }
 
   function snapImg (front, src) {
